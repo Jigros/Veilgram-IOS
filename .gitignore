@@ -84,3 +84,13 @@ xcode-files
 **/node_modules/
 tools/sim-watcher/dist/
 .mcp.json
+
+# Veilgram local-only configuration and signing material
+.env
+.env.*
+!.env.example
+.veilgram-private/
+*.mobileprovision
+*.p12
+*.pfx
+*.xcconfig.local
