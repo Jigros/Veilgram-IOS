@@ -1,6 +1,6 @@
 # Veilgram architecture (research decision)
 
-Provisional base: official [Telegram-iOS](https://github.com/TelegramMessenger/Telegram-iOS) at `6ad963e5b62d354da79040f388ae2b9132fb17b8`. Selection remains conditional on BUILD-0. Swiftgram at `cf8b23beaaac4126a396337ac2d5be13f9f76b66` is a reference for existing iOS behavior. Do not transplant its whole tree without license and merge review.
+Provisional base: official [Telegram-iOS](https://github.com/TelegramMessenger/Telegram-iOS) at `6ad963e5b62d354da79040f388ae2b9132fb17b8`. BUILD-0 passed for this unmodified upstream in the public build-only repository; this does not verify a Veilgram branch build. Swiftgram at `cf8b23beaaac4126a396337ac2d5be13f9f76b66` is a reference for existing iOS behavior. Do not transplant its whole tree without license and merge review.
 
 Proposed boundaries: small, documented hooks at TelegramCore network/read, update processing, and UI integration points; separate Veilgram settings, archive, filters and UI modules where Bazel target layout permits. An account-scoped SQLite archive is a candidate, not a finalized implementation. It must use versioned migrations, a distinct storage lifecycle from Telegram cache, explicit export/import without keys, and bounded media retention. Archived records must not masquerade as server messages.
 
