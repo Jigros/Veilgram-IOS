@@ -36,8 +36,10 @@ enum VeilgramMediaArchiveTests {
         )
 
         var document = VeilgramMediaArchiveDocument()
-        expect(try VeilgramMediaArchiveEngine.appendAvailable(document: &document, item: item1, eligibility: eligible), "item1 not archived")
-        expect(try VeilgramMediaArchiveEngine.appendAvailable(document: &document, item: item2, eligibility: eligible), "item2 not archived")
+        let appended1 = try VeilgramMediaArchiveEngine.appendAvailable(document: &document, item: item1, eligibility: eligible)
+        expect(appended1, "item1 not archived")
+        let appended2 = try VeilgramMediaArchiveEngine.appendAvailable(document: &document, item: item2, eligibility: eligible)
+        expect(appended2, "item2 not archived")
         expect(VeilgramMediaArchiveEngine.totalAvailableBytes(document) == 150, "byte total mismatch")
 
         let evicted = VeilgramMediaArchiveEngine.enforceQuota(document: &document, maximumBytes: 100)
