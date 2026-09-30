@@ -106,6 +106,14 @@ func chatHistoryEntriesForView(
         }
     }
     
+    let veilgramAdOptions = VeilgramChannelAdClassifier.options(accountId: context.account.id.int64)
+    let veilgramIsBroadcastChannel: Bool
+    if let channel = chatPeer as? TelegramChannel, case .broadcast = channel.info {
+        veilgramIsBroadcastChannel = true
+    } else {
+        veilgramIsBroadcastChannel = false
+    }
+    
     var joinMessage: Message?
     if (associatedData.subject?.isService ?? false) {
         
@@ -219,6 +227,19 @@ func chatHistoryEntriesForView(
             }
         }
         
+        let veilgramIsServiceMessage = message.media.contains(where: { $0 is TelegramMediaAction })
+        let veilgramDecision = VeilgramChannelAdClassifier.classify(
+            VeilgramChannelAdInput(
+                text: message.text,
+                isBroadcastChannel: veilgramIsBroadcastChannel,
+                isOfficialSponsoredMessage: message.adAttribute != nil,
+                isServiceMessage: veilgramIsServiceMessage,
+                channelId: message.id.peerId.toInt64()
+            ),
+            options: veilgramAdOptions
+        )
+        let veilgramLikelyChannelAd = veilgramDecision.action != .keep
+        
         var contentTypeHint: ChatMessageEntryContentType = .generic
         
         for media in message.media {
@@ -264,7 +285,7 @@ func chatHistoryEntriesForView(
                     isCentered = link.isCentered
                 }
                 
-                let attributes = ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: message.index == associatedData.currentlyPlayingMessageId, isCentered: isCentered, authorStoryStats: message.author.flatMap { view.peerStoryStats[$0.id] }, displayContinueThreadFooter: false, pinToTop: pinToTop)
+                let attributes = ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: message.index == associatedData.currentlyPlayingMessageId, isCentered: isCentered, authorStoryStats: message.author.flatMap { view.peerStoryStats[$0.id] }, displayContinueThreadFooter: false, pinToTop: pinToTop, veilgramLikelyChannelAd: veilgramLikelyChannelAd)
                 
                 let groupStableId = currentState.messageGroupStableId(messageStableId: message.stableId, groupId: messageGroupingKey, isLocal: Namespaces.Message.allLocal.contains(message.id.namespace))
                 var found = false
@@ -310,7 +331,7 @@ func chatHistoryEntriesForView(
                     isCentered = link.isCentered
                 }
                 
-                entries.append(.MessageEntry(message, presentationData, isRead, entry.location, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: message.index == associatedData.currentlyPlayingMessageId, isCentered: isCentered, authorStoryStats: message.author.flatMap { view.peerStoryStats[$0.id] }, displayContinueThreadFooter: false, pinToTop: pinToTop)))
+                entries.append(.MessageEntry(message, presentationData, isRead, entry.location, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: message.index == associatedData.currentlyPlayingMessageId, isCentered: isCentered, authorStoryStats: message.author.flatMap { view.peerStoryStats[$0.id] }, displayContinueThreadFooter: false, pinToTop: pinToTop, veilgramLikelyChannelAd: veilgramLikelyChannelAd)))
             }
         } else {
             let selection: ChatHistoryMessageSelection
@@ -320,7 +341,7 @@ func chatHistoryEntriesForView(
                 selection = .none
             }
             
-            entries.append(.MessageEntry(message, presentationData, isRead, entry.location, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: message.index == associatedData.currentlyPlayingMessageId, isCentered: false, authorStoryStats: message.author.flatMap { view.peerStoryStats[$0.id] }, displayContinueThreadFooter: false, pinToTop: pinToTop)))
+            entries.append(.MessageEntry(message, presentationData, isRead, entry.location, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: message.index == associatedData.currentlyPlayingMessageId, isCentered: false, authorStoryStats: message.author.flatMap { view.peerStoryStats[$0.id] }, displayContinueThreadFooter: false, pinToTop: pinToTop, veilgramLikelyChannelAd: veilgramLikelyChannelAd)))
         }
     }
     
