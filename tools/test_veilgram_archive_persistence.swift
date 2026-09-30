@@ -17,9 +17,12 @@ enum VeilgramArchivePersistenceTests {
             store: VeilgramProtectedLocalStore(rootURL: root)
         )
 
-        expect(try persistence.loadMessageArchive().messages.isEmpty, "missing message archive should be empty")
-        expect(try persistence.loadEditHistory().records.isEmpty, "missing edit history should be empty")
-        expect(try persistence.loadMediaArchive().items.isEmpty, "missing media archive should be empty")
+        let emptyMessageArchive = try persistence.loadMessageArchive()
+        let emptyEditHistory = try persistence.loadEditHistory()
+        let emptyMediaArchive = try persistence.loadMediaArchive()
+        expect(emptyMessageArchive.messages.isEmpty, "missing message archive should be empty")
+        expect(emptyEditHistory.records.isEmpty, "missing edit history should be empty")
+        expect(emptyMediaArchive.items.isEmpty, "missing media archive should be empty")
 
         let message = VeilgramArchivedMessage(
             key: VeilgramArchivedMessageKey(peerId: 1, namespace: 0, id: 2),
@@ -31,7 +34,8 @@ enum VeilgramArchivePersistenceTests {
         )
         let messageDoc = VeilgramMessageArchiveDocument(messages: [message])
         try persistence.saveMessageArchive(messageDoc)
-        expect(try persistence.loadMessageArchive() == messageDoc, "message archive restart roundtrip failed")
+        let loadedMessageDoc = try persistence.loadMessageArchive()
+        expect(loadedMessageDoc == messageDoc, "message archive restart roundtrip failed")
 
         let edit = VeilgramEditHistoryRevision(timestamp: 30, text: "old text", entities: [])
         let editDoc = VeilgramEditHistoryDocument(records: [
@@ -41,7 +45,8 @@ enum VeilgramArchivePersistenceTests {
             )
         ])
         try persistence.saveEditHistory(editDoc)
-        expect(try persistence.loadEditHistory() == editDoc, "edit history restart roundtrip failed")
+        let loadedEditDoc = try persistence.loadEditHistory()
+        expect(loadedEditDoc == editDoc, "edit history restart roundtrip failed")
 
         let media = VeilgramMediaArchiveItem(
             key: VeilgramMediaArchiveKey(peerId: 1, messageNamespace: 0, messageId: 2, mediaIndex: 0),
@@ -53,7 +58,8 @@ enum VeilgramArchivePersistenceTests {
         )
         let mediaDoc = VeilgramMediaArchiveDocument(items: [media])
         try persistence.saveMediaArchive(mediaDoc)
-        expect(try persistence.loadMediaArchive() == mediaDoc, "media metadata restart roundtrip failed")
+        let loadedMediaDoc = try persistence.loadMediaArchive()
+        expect(loadedMediaDoc == mediaDoc, "media metadata restart roundtrip failed")
 
         let names = [
             VeilgramArchivePersistence.messageArchiveFileName,
