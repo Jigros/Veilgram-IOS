@@ -79,6 +79,27 @@ enum VeilgramMessageFilterPersistenceTests {
         let exists = try persistence.store.fileExists(fileName: VeilgramMessageFilterPersistence.fileName)
         expect(!exists, "removeAll left local filter data")
 
+        let facadeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("veilgram-filter-facade-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: facadeRoot) }
+        let facade = VeilgramFilterStoreAPI(
+            store: VeilgramProtectedLocalStore(rootURL: facadeRoot)
+        )
+        let newId = try facade.addTextContainsRule(
+            name: "Deals",
+            needle: "discount",
+            collapse: false,
+            peerId: nil
+        )
+        var summaries = try facade.listRules()
+        expect(summaries.count == 1, "facade add/list failed")
+        expect(summaries[0].id == newId && summaries[0].isEnabled, "facade summary mismatch")
+        try facade.setEnabled(ruleId: newId, enabled: false)
+        summaries = try facade.listRules()
+        expect(!summaries[0].isEnabled, "facade toggle failed")
+        try facade.remove(ruleId: newId)
+        expect(try facade.listRules().isEmpty, "facade delete failed")
+
         print("PASS: \(checks) filter persistence integration checks")
     }
 }
