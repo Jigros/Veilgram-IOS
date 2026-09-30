@@ -9,14 +9,23 @@ import TelegramPresentationData
 /// screen; no Telegram network/storage behavior is modified by these values.
 final class VeilgramSettingsController: ViewController, UITableViewDataSource, UITableViewDelegate {
     private let accountContext: AccountContext
-    private let preferenceKey: String
+    private let roadmapPreferenceKey: String
+    private let adFilterPreferenceKey: String
+    private let adCollapsePreferenceKey: String
     private let tableView = UITableView(frame: .zero, style: .insetGrouped)
     private var showRoadmap: Bool
+    private var adFilterEnabled: Bool
+    private var adCollapseEnabled: Bool
 
     init(context: AccountContext) {
         self.accountContext = context
-        self.preferenceKey = "veilgram.settings.v1.\(context.account.id.int64).showRoadmap"
-        self.showRoadmap = UserDefaults.standard.bool(forKey: self.preferenceKey)
+        let accountPrefix = "veilgram.settings.v1.\(context.account.id.int64)"
+        self.roadmapPreferenceKey = "\(accountPrefix).showRoadmap"
+        self.adFilterPreferenceKey = "\(accountPrefix).channelAdFilterEnabled"
+        self.adCollapsePreferenceKey = "\(accountPrefix).channelAdCollapseEnabled"
+        self.showRoadmap = UserDefaults.standard.bool(forKey: self.roadmapPreferenceKey)
+        self.adFilterEnabled = UserDefaults.standard.bool(forKey: self.adFilterPreferenceKey)
+        self.adCollapseEnabled = UserDefaults.standard.bool(forKey: self.adCollapsePreferenceKey)
         let presentation = context.sharedContext.currentPresentationData.with { $0 }
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentation, style: .glass))
         self.title = "Veilgram"
@@ -52,7 +61,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
-        case 0: return 2
+        case 0: return 4
         default: return showRoadmap ? 4 : 0
         }
     }
@@ -63,7 +72,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
 
     func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         return section == 0
-            ? "Experimental menu visibility is stored on this device separately for each account. It does not change Telegram messages, privacy status or network requests."
+            ? "Settings are stored locally and separately for each account. Channel-ad analysis is fully on-device. Official Telegram Sponsored Messages are outside this filter. Collapse is a preview preference and will not hide posts until the reveal UI is implemented."
             : "Message archive, edit history, media archive and filters have not been implemented. No functions are silently enabled."
     }
 
@@ -74,11 +83,29 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             if indexPath.row == 0 {
                 cell.textLabel?.text = "Version"
                 cell.detailTextLabel?.text = "Research build • Telegram-iOS 12.9.2 foundation"
-            } else {
+            } else if indexPath.row == 1 {
                 cell.textLabel?.text = "Show development roadmap"
                 let control = UISwitch()
                 control.isOn = self.showRoadmap
                 control.addTarget(self, action: #selector(roadmapChanged(_:)), for: .valueChanged)
+                cell.accessoryView = control
+            } else if indexPath.row == 2 {
+                cell.textLabel?.text = "Detect channel ads locally"
+                cell.detailTextLabel?.text = "Ordinary channel posts only • on-device"
+                let control = UISwitch()
+                control.isOn = self.adFilterEnabled
+                control.addTarget(self, action: #selector(adFilterChanged(_:)), for: .valueChanged)
+                cell.accessoryView = control
+            } else {
+                cell.textLabel?.text = "Collapse high-confidence ads"
+                cell.detailTextLabel?.text = self.adFilterEnabled
+                    ? "Preview setting • reveal UI not implemented yet"
+                    : "Enable local detection first"
+                cell.textLabel?.textColor = self.adFilterEnabled ? .label : .secondaryLabel
+                let control = UISwitch()
+                control.isEnabled = self.adFilterEnabled
+                control.isOn = self.adCollapseEnabled
+                control.addTarget(self, action: #selector(adCollapseChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
             }
         } else {
@@ -92,7 +119,22 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
 
     @objc private func roadmapChanged(_ sender: UISwitch) {
         self.showRoadmap = sender.isOn
-        UserDefaults.standard.set(sender.isOn, forKey: self.preferenceKey)
+        UserDefaults.standard.set(sender.isOn, forKey: self.roadmapPreferenceKey)
         self.tableView.reloadSections(IndexSet(integer: 1), with: .automatic)
+    }
+
+    @objc private func adFilterChanged(_ sender: UISwitch) {
+        self.adFilterEnabled = sender.isOn
+        UserDefaults.standard.set(sender.isOn, forKey: self.adFilterPreferenceKey)
+        if !sender.isOn {
+            self.adCollapseEnabled = false
+            UserDefaults.standard.set(false, forKey: self.adCollapsePreferenceKey)
+        }
+        self.tableView.reloadRows(at: [IndexPath(row: 3, section: 0)], with: .none)
+    }
+
+    @objc private func adCollapseChanged(_ sender: UISwitch) {
+        self.adCollapseEnabled = sender.isOn
+        UserDefaults.standard.set(sender.isOn, forKey: self.adCollapsePreferenceKey)
     }
 }
