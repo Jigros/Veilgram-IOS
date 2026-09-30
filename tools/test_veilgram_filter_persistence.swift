@@ -98,7 +98,8 @@ enum VeilgramMessageFilterPersistenceTests {
         summaries = try facade.listRules()
         expect(!summaries[0].isEnabled, "facade toggle failed")
         try facade.remove(ruleId: newId)
-        expect(try facade.listRules().isEmpty, "facade delete failed")
+        let summariesAfterDelete = try facade.listRules()
+        expect(summariesAfterDelete.isEmpty, "facade delete failed")
 
         print("PASS: \(checks) filter persistence integration checks")
     }
