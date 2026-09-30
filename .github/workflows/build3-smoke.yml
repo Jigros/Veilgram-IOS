@@ -1,0 +1,91 @@
+name: BUILD-3 settings UI simulator launch smoke
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["BUILD-3 Veilgram settings simulator compile"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  settings-launch:
+    if: |
+      github.repository == 'Jigros/Veilgram-IOS' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - name: Select exact source run
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SOURCE_RUN: ${{ github.event.workflow_run.id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            run_id="$SOURCE_RUN"
+          else
+            run_id="$(gh run list -R Jigros/Veilgram-IOS --workflow build3.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+          fi
+          test -n "$run_id" && test "$run_id" != "null"
+          echo "VEILGRAM_SOURCE_RUN=$run_id" >> "$GITHUB_ENV"
+          echo "Selected successful BUILD-3 run $run_id"
+      - name: Download validated settings simulator artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build3-settings-evidence
+          run-id: ${{ env.VEILGRAM_SOURCE_RUN }}
+          repository: Jigros/Veilgram-IOS
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/build3
+      - name: Independently validate hash and app identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          ipa="$RUNNER_TEMP/build3/build3-simulator.ipa"
+          test -s "$ipa"
+          expected="$(awk '{print $1}' "$RUNNER_TEMP/build3/build3-ipa.sha256")"
+          actual="$(shasum -a 256 "$ipa" | awk '{print $1}')"
+          test "$actual" = "$expected"
+          /usr/bin/python3 - "$ipa" <<'PY'
+          import plistlib,sys,zipfile
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              files=[n for n in z.namelist() if n.startswith("Payload/") and n.count("/")==2 and n.endswith(".app/Info.plist")]
+              assert len(files)==1,files
+              info=plistlib.loads(z.read(files[0]))
+              assert info["CFBundleIdentifier"]=="org.veilgram.buildone",info
+              print("PASS: verified source SHA256 and app identity (no authentication)")
+          PY
+      - name: Boot isolated simulator, install and launch
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          udid="$(xcrun simctl list -j devices available | python3 -c 'import json,sys; devices=json.load(sys.stdin)["devices"]; print(next(d["udid"] for r,v in devices.items() if "iOS" in r for d in v if d["state"] == "Shutdown" and d["isAvailable"]))')"
+          echo "Selected simulator $udid"
+          trap 'xcrun simctl shutdown "$udid" || true' EXIT
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+          mkdir -p "$RUNNER_TEMP/build3-unpacked"
+          ditto -x -k "$RUNNER_TEMP/build3/build3-simulator.ipa" "$RUNNER_TEMP/build3-unpacked"
+          app="$(find "$RUNNER_TEMP/build3-unpacked/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)"
+          test -n "$app"
+          xcrun simctl install "$udid" "$app"
+          xcrun simctl launch "$udid" org.veilgram.buildone | tee "$RUNNER_TEMP/build3-launch.txt"
+          sleep 8
+          xcrun simctl io "$udid" screenshot "$RUNNER_TEMP/build3-launch.png"
+          test -s "$RUNNER_TEMP/build3-launch.png"
+      - name: Preserve launch evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build3-settings-launch-evidence
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/build3-launch.txt
+            ${{ runner.temp }}/build3-launch.png
