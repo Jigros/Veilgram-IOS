@@ -56,6 +56,7 @@ jobs:
           xcodebuild -version
           test "$(xcodebuild -version | head -1)" = "Xcode 26.2"
           git rev-parse HEAD > "$RUNNER_TEMP/build1-source-sha.txt"
+          echo "Branded source SHA: $(cat "$RUNNER_TEMP/build1-source-sha.txt")"
           date -u +%Y-%m-%dT%H:%M:%SZ > "$RUNNER_TEMP/build1-date.txt"
 
       - name: Generate synthetic compile-only config
@@ -87,8 +88,8 @@ jobs:
             --configurationPath=build1-configuration.json \
             --xcodeManagedCodesigning \
             --configuration=debug_sim_arm64 \
-            --buildNumber=1 > "$RUNNER_TEMP/build1-compile.log" 2>&1
-          result=$?
+            --buildNumber=1 2>&1 | tee "$RUNNER_TEMP/build1-compile.log"
+          result=${PIPESTATUS[0]}
           echo "Compile exit: $result"
           printf '%s\n' "$result" > "$RUNNER_TEMP/build1-exit-code.txt"
           if [ "$result" -ne 0 ]; then
@@ -121,3 +122,16 @@ jobs:
             ${{ runner.temp }}/build1-exit-code.txt
             ${{ runner.temp }}/build1-identity.json
             ${{ runner.temp }}/build1-ipa.sha256
+
+      - name: Upload diagnostic compilation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build1-diagnostics
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/build1-compile.log
+            ${{ runner.temp }}/build1-exit-code.txt
+            ${{ runner.temp }}/build1-source-sha.txt
+            ${{ runner.temp }}/build1-submodules.txt
