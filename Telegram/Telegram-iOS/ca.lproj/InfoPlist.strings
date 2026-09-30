@@ -1,3 +1,4 @@
+"CFBundleDisplayName" = "Veilgram";
 /* Localized versions of Info.plist keys */
 
 "NSContactsUsageDescription" = "Telegram pujarà automàticament els vostres contactes als seus servidors xifrats, perquè pugueu connectar-vos amb els amics des de qualsevol dispositiu.";
