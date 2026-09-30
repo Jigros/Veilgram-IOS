@@ -32,6 +32,20 @@ enum VeilgramChannelAdClassifierTests {
         var collapse = label
         collapse.collapseEnabled = true
 
+        let suite = "veilgram-adfilter-tests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var persisted = VeilgramChannelAdClassifier.options(accountId: 77, defaults: defaults)
+        precondition(!persisted.enabled && !persisted.collapseEnabled)
+        defaults.set(true, forKey: "veilgram.settings.v1.77.channelAdFilterEnabled")
+        defaults.set(true, forKey: "veilgram.settings.v1.77.channelAdCollapseEnabled")
+        persisted = VeilgramChannelAdClassifier.options(accountId: 77, defaults: defaults)
+        precondition(persisted.enabled && persisted.collapseEnabled)
+        defaults.set(false, forKey: "veilgram.settings.v1.77.channelAdFilterEnabled")
+        persisted = VeilgramChannelAdClassifier.options(accountId: 77, defaults: defaults)
+        precondition(!persisted.enabled && !persisted.collapseEnabled)
+        tests += 3
+
         check("#реклама erid:abcdef123", options: disabled, action: .keep)
         check("#реклама erid:abcdef123", official: true, options: collapse, action: .keep)
         check("#реклама erid:abcdef123", channel: false, options: collapse, action: .keep)
