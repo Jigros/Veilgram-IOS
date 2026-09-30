@@ -8,15 +8,88 @@ public struct VeilgramFilterRuleSummary: Equatable {
     public let detail: String
 }
 
+public struct VeilgramFilterRenderDecision: Equatable {
+    public let ruleId: String
+    public let label: String
+    public let shouldCollapse: Bool
+
+    public init(ruleId: String, label: String, shouldCollapse: Bool) {
+        self.ruleId = ruleId
+        self.label = label
+        self.shouldCollapse = shouldCollapse
+    }
+}
+
+public enum VeilgramFilterRuntime {
+    private static func key(accountId: Int64) -> String {
+        return "veilgram.filters.runtime.v1.\(accountId)"
+    }
+
+    static func update(
+        accountId: Int64,
+        document: VeilgramMessageFilterDocument,
+        defaults: UserDefaults = .standard
+    ) throws {
+        let data = try VeilgramMessageFilterEngine.encode(document)
+        defaults.set(data, forKey: key(accountId: accountId))
+    }
+
+    static func remove(
+        accountId: Int64,
+        defaults: UserDefaults = .standard
+    ) {
+        defaults.removeObject(forKey: key(accountId: accountId))
+    }
+
+    public static func evaluate(
+        accountId: Int64,
+        text: String,
+        peerId: Int64,
+        hasLink: Bool,
+        isForwarded: Bool,
+        defaults: UserDefaults = .standard
+    ) -> VeilgramFilterRenderDecision? {
+        guard let data = defaults.data(forKey: key(accountId: accountId)),
+              let document = try? VeilgramMessageFilterEngine.decode(data) else {
+            return nil
+        }
+
+        let matches = VeilgramMessageFilterEngine.matches(
+            VeilgramMessageFilterInput(
+                text: text,
+                peerId: peerId,
+                hasLink: hasLink,
+                isForwarded: isForwarded
+            ),
+            document: document
+        )
+        guard let first = matches.first,
+              let rule = document.rules.first(where: { $0.id == first.ruleId }) else {
+            return nil
+        }
+
+        return VeilgramFilterRenderDecision(
+            ruleId: first.ruleId,
+            label: String(rule.name.prefix(48)),
+            shouldCollapse: matches.contains(where: { $0.action == .collapse })
+        )
+    }
+}
+
 public final class VeilgramFilterStoreAPI {
     private let persistence: VeilgramMessageFilterPersistence
+    private let accountId: Int64?
 
     public init(accountId: Int64) throws {
         self.persistence = try VeilgramMessageFilterPersistence.accountStore(accountId: accountId)
+        self.accountId = accountId
+        let document = try self.persistence.load()
+        try VeilgramFilterRuntime.update(accountId: accountId, document: document)
     }
 
     init(store: VeilgramProtectedLocalStore) {
         self.persistence = VeilgramMessageFilterPersistence(store: store)
+        self.accountId = nil
     }
 
     public func listRules() throws -> [VeilgramFilterRuleSummary] {
@@ -78,7 +151,7 @@ public final class VeilgramFilterStoreAPI {
             reverse: false
         )
         document.rules.append(rule)
-        try self.persistence.save(document)
+        try self.save(document)
         return id
     }
 
@@ -88,17 +161,20 @@ public final class VeilgramFilterStoreAPI {
             return
         }
         document.rules[index].enabled = enabled
-        try self.persistence.save(document)
+        try self.save(document)
     }
 
     public func remove(ruleId: String) throws {
         var document = try self.persistence.load()
         document.rules.removeAll(where: { $0.id == ruleId })
-        try self.persistence.save(document)
+        try self.save(document)
     }
 
     public func removeAll() throws {
         try self.persistence.removeAll()
+        if let accountId = self.accountId {
+            VeilgramFilterRuntime.remove(accountId: accountId)
+        }
     }
 
     public func exportData(createdAt: Int32) throws -> Data {
@@ -109,6 +185,16 @@ public final class VeilgramFilterStoreAPI {
     }
 
     public func importData(_ data: Data) throws {
-        _ = try self.persistence.importAndSave(data)
+        let document = try self.persistence.importAndSave(data)
+        if let accountId = self.accountId {
+            try VeilgramFilterRuntime.update(accountId: accountId, document: document)
+        }
+    }
+
+    private func save(_ document: VeilgramMessageFilterDocument) throws {
+        try self.persistence.save(document)
+        if let accountId = self.accountId {
+            try VeilgramFilterRuntime.update(accountId: accountId, document: document)
+        }
     }
 }
