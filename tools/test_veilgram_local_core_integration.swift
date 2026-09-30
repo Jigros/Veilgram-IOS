@@ -5,6 +5,42 @@ enum VeilgramLocalCoreIntegrationTests {
     static func main() throws {
         var checks = 0
 
+        let preferenceSuite = "veilgram-runtime-prefs-\(UUID().uuidString)"
+        let preferenceDefaults = UserDefaults(suiteName: preferenceSuite)!
+        defer { preferenceDefaults.removePersistentDomain(forName: preferenceSuite) }
+        let preferenceAccount: Int64 = 99
+        precondition(!VeilgramArchiveRuntimePreferences.messageArchiveEnabled(
+            accountPeerId: preferenceAccount,
+            defaults: preferenceDefaults
+        ))
+        precondition(!VeilgramArchiveRuntimePreferences.editHistoryEnabled(
+            accountPeerId: preferenceAccount,
+            defaults: preferenceDefaults
+        ))
+        VeilgramArchiveRuntimePreferences.setMessageArchiveEnabled(
+            true,
+            accountPeerId: preferenceAccount,
+            defaults: preferenceDefaults
+        )
+        precondition(VeilgramArchiveRuntimePreferences.messageArchiveEnabled(
+            accountPeerId: preferenceAccount,
+            defaults: preferenceDefaults
+        ))
+        precondition(!VeilgramArchiveRuntimePreferences.editHistoryEnabled(
+            accountPeerId: preferenceAccount,
+            defaults: preferenceDefaults
+        ))
+        VeilgramArchiveRuntimePreferences.setEditHistoryEnabled(
+            true,
+            accountPeerId: preferenceAccount,
+            defaults: preferenceDefaults
+        )
+        precondition(VeilgramArchiveRuntimePreferences.editHistoryEnabled(
+            accountPeerId: preferenceAccount,
+            defaults: preferenceDefaults
+        ))
+        checks += 5
+
         let ordinary = VeilgramArchiveEligibility(
             isCloudMessage: true,
             isSecretChat: false,
