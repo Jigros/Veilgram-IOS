@@ -28,3 +28,17 @@
 - [ ] Keep trademark attribution separate from source-code copyright/license notices. Never delete Telegram copyright or third-party license notices as a branding shortcut.
 
 This inventory is a release-blocker checklist, not a claim of completed icon replacement.
+
+## Verified assembled BUILD-2 evidence (2026-10-01)
+
+Independently downloaded successful [BUILD-2 run 36714922763](https://github.com/Jigros/Veilgram-IOS/actions/runs/36714922763) on NixOS. IPA SHA256 `a42a46b754ca822e7fc2a1dee79b6d7f19e5078fdf9ec3691414a676244a11c1` and ARM64 iOS Mach-O platform verification PASS (host + six extensions).
+
+Inspected actual `Payload/Telegram.app/Info.plist` rather than just repository source:
+
+- `CFBundleIdentifier` = `org.veilgram.buildtwo` and `CFBundleDisplayName` = `Veilgram`.
+- `CFBundleIcons.CFBundlePrimaryIcon.CFBundleIconName` = **`Telegram`** with `CFBundleIconFiles = ["Telegram60x60"]`; official Telegram icon is still referenced as main icon.
+- 12 alternate icon IDs remain: `BlueIcon`, `Premium`, `BlackIcon`, `PremiumTurbo`, `WhiteFilledIcon`, `BlackFilledIcon`, `BlueClassicIcon`, `New1`, `New2`, `BlackClassicIcon`, `BlueFilledIcon`, `PremiumBlack`.
+- Six packaged extensions and five `Assets.car` files are present; all icon/brand asset catalogs need visual review before a release.
+- Compressed IPA is about 535 MiB; shipping size should be audited once compilation is stable.
+
+**Release gate FAILED: official primary icon and alternate icon identifiers persist in packaged IPA.** Merely setting app name and bundle ID is not sufficient.
