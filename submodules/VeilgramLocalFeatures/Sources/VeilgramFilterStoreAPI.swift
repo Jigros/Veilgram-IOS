@@ -15,6 +15,10 @@ public final class VeilgramFilterStoreAPI {
         self.persistence = try VeilgramMessageFilterPersistence.accountStore(accountId: accountId)
     }
 
+    init(store: VeilgramProtectedLocalStore) {
+        self.persistence = VeilgramMessageFilterPersistence(store: store)
+    }
+
     public func listRules() throws -> [VeilgramFilterRuleSummary] {
         return try self.persistence.load().rules.map { rule in
             let detail: String
