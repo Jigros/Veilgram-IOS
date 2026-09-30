@@ -83,12 +83,21 @@ jobs:
           PY
           printf '\nbuild --//Telegram:disableProvisioningProfiles\n' >> .bazelrc
 
+      - name: Restore bounded public fixture Bazel cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/veilgram-public-bazel-disk-cache
+          key: veilgram-public-macos26-xcode26.2-bazel8.4.2-${{ github.run_id }}
+          restore-keys: |
+            veilgram-public-macos26-xcode26.2-bazel8.4.2-
+
       - name: Compile branded simulator (not an installable signed build)
         shell: bash
         run: |
           set -uo pipefail
+          mkdir -p "$HOME/veilgram-public-bazel-disk-cache"
           python3 -u build-system/Make/Make.py \
-            --cacheDir="$RUNNER_TEMP/veilgram-bazel-cache" \
+            --cacheDir="$HOME/veilgram-public-bazel-disk-cache" \
             build \
             --configurationPath=build5-configuration.json \
             --xcodeManagedCodesigning \
@@ -127,6 +136,43 @@ jobs:
             ${{ runner.temp }}/build5-exit-code.txt
             ${{ runner.temp }}/build5-identity.json
             ${{ runner.temp }}/build5-ipa.sha256
+
+      - name: Bound public fixture cache before upload
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path.home() / "veilgram-public-bazel-disk-cache"
+          limit = 2500 * 1024 * 1024
+          files = []
+          total = 0
+          if root.exists():
+              for path in root.rglob("*"):
+                  if path.is_file() and not path.is_symlink():
+                      try:
+                          stat = path.stat()
+                      except FileNotFoundError:
+                          continue
+                      total += stat.st_size
+                      files.append((stat.st_mtime, stat.st_size, path))
+          for _, size, path in sorted(files):
+              if total <= limit:
+                  break
+              try:
+                  path.unlink()
+                  total -= size
+              except FileNotFoundError:
+                  pass
+          print(f"Bound public Bazel cache to {total / 1024 / 1024:.1f} MiB")
+          PY
+
+      - name: Save bounded public fixture Bazel cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/veilgram-public-bazel-disk-cache
+          key: veilgram-public-macos26-xcode26.2-bazel8.4.2-${{ github.run_id }}
 
       - name: Upload diagnostic compilation log
         if: always()
