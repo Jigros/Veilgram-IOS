@@ -20,7 +20,11 @@ User signs later on iPhone with their own certificate. Veilgram CI must **not** 
 
 ## Current blocker
 
-At initial attempt GitHub workflow_dispatch returned HTTP 500, so BUILD-2 has **not** been verified. Static Python syntax and synthetic Mach-O iOS/simulator classification tests passed on NixOS; these are not device build evidence.
+Manual GitHub workflow_dispatch returned HTTP 500 initially. The bounded `push` trigger started [run 36713904845](https://github.com/Jigros/Veilgram-IOS/actions/runs/36713904845), which failed at **Bazel analysis** of `WidgetExtension`: device builds require provisioning profiles even if regular signing is disabled. This was NOT an Objective-C/Swift compilation failure.
+
+Fix under evaluation: generate nine **compile-only CMS profiles** from already-public self-signed upstream testing material, rewritten to `org.veilgram.buildtwo`. The generated fixtures are NOT valid Apple provisioning, are NOT for installation and are never real developer credentials. The generator passed a local NixOS CMS parse/identity verification test. It has not established an iPhone build PASS. Current CI attempt [36714922763](https://github.com/Jigros/Veilgram-IOS/actions/runs/36714922763) remains pending/queued when documented.
+
+Device IPA validator now has six passing synthetic unit tests (device/simulator, app/extension ID, corrupted IPA), but an actual iPhone Mach-O IPA is still pending.
 
 ## Subsequent project work
 
