@@ -158,6 +158,8 @@ final class VeilgramLocalArchiveController: ViewController, UITableViewDataSourc
                 cell.textLabel?.text = "Media archive"
                 cell.detailTextLabel?.text = "\(self.mediaItemCount) • \(Self.byteString(self.mediaByteCount))"
             }
+            cell.selectionStyle = .default
+            cell.accessoryType = .disclosureIndicator
         } else if indexPath.section == 2 {
             if indexPath.row == 0 {
                 cell.textLabel?.text = "Refresh"
@@ -179,7 +181,23 @@ final class VeilgramLocalArchiveController: ViewController, UITableViewDataSourc
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
 
-        if indexPath.section == 2, indexPath.row == 0 {
+        if indexPath.section == 1 {
+            let mode: VeilgramLocalArchiveDetailController.Mode
+            switch indexPath.row {
+            case 0:
+                mode = .messages
+            case 1:
+                mode = .edits
+            default:
+                mode = .media
+            }
+            self.push(
+                VeilgramLocalArchiveDetailController(
+                    context: self.accountContext,
+                    mode: mode
+                )
+            )
+        } else if indexPath.section == 2, indexPath.row == 0 {
             self.reloadLocalData()
         } else if indexPath.section == 3 {
             self.confirmClear()
