@@ -150,6 +150,12 @@ enum VeilgramLocalCoreIntegrationTests {
         let archiveStore = VeilgramArchiveStoreAPI(store: store)
         try archiveStore.saveMessages(messages)
         try archiveStore.saveEdits(edits)
+        let rootValues = try base.resourceValues(forKeys: [.isExcludedFromBackupKey])
+        precondition(rootValues.isExcludedFromBackup == true)
+        let messageFile = base.appendingPathComponent("message-archive-v1.json")
+        let fileValues = try messageFile.resourceValues(forKeys: [.isExcludedFromBackupKey])
+        precondition(fileValues.isExcludedFromBackup == true)
+        checks += 2
         let loadedMessages = try archiveStore.loadMessages()
         let loadedEdits = try archiveStore.loadEdits()
         precondition(loadedMessages == messages)
