@@ -12,7 +12,7 @@ Status: **NixOS static source checks passed; branded iOS compilation has NOT run
 
 ## BUILD-1 acceptance checks
 
-- [x] GitHub source inspection: all 19 existing localized InfoPlist.strings each contain exactly one `CFBundleDisplayName = "Veilgram"` entry. The executable checker remains to be run in a checkout.
+- [x] GitHub source inspection: all 19 existing localized InfoPlist.strings each contain exactly one `CFBundleDisplayName = "Veilgram"` entry. Executable checker passed on NixOS; not an iOS compilation.
 - [ ] Independent Veilgram artwork replaces the Telegram logo in every icon variant and size before any release/distribution.
 - [ ] Compile actual branded source commit on macOS 26/Xcode 26.2/Bazel 8.4.2, `debug_sim_arm64`.
 - [ ] Inspect embedded app Info.plist, localized strings, extension names and entitlements in the resulting IPA.
@@ -26,3 +26,17 @@ Public `Jigros/Veilgram-Build` only builds unchanged public upstream. It cannot 
 ## Distribution/API requirements
 
 This is an unshippable branding draft until icon and attribution checks pass. Ghost Mode, suppression of sponsored ads, preserving self-destructing media and other behavioral work is deliberately absent: read `docs/TELEGRAM_API_COMPLIANCE.md` before expanding scope.
+
+## IPA identity gate (introduced after initial static audit)
+
+After building a **real branded simulator IPA** on an authorized macOS runner, copy only that artifact to a trusted location and execute:
+
+```sh
+python3 tools/verify_build1_ipa.py path/to/build1-simulator.ipa \
+  --bundle-id YOUR_ACTUAL_INDEPENDENT_BUNDLE_ID \
+  --report build1-identity-report.json
+```
+
+The verifier uses only the Python standard library and refuses placeholder or Telegram-owned bundle IDs. It checks the single app's `CFBundleIdentifier`, `CFBundleName`, `CFBundleDisplayName`, included localized display names, and embedded extension identifiers and names; outputs an IPA SHA-256 and structured problem list. Keep artifact paths and personal credentials out of public reports.
+
+On NixOS the script passed `py_compile`; a synthetic valid IPA passed and a synthetic app named Telegram failed as expected. **No real BUILD-1 IPA was present**, so the real IPA gate, code signing, extensions' functionality, simulator launch, visual assets, and entitlements are still unverified. Do not count synthetic fixture tests as successful compilation.
