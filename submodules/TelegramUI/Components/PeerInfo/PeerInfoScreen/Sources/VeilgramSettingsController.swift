@@ -57,7 +57,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         self.tableView.verticalScrollIndicatorInsets.top = self.tableView.contentInset.top
     }
 
-    func numberOfSections(in tableView: UITableView) -> Int { return 3 }
+    func numberOfSections(in tableView: UITableView) -> Int { return 4 }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
@@ -65,6 +65,8 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             return 5
         case 1:
             return 3
+        case 2:
+            return 1
         default:
             return showRoadmap ? 1 : 0
         }
@@ -76,6 +78,8 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             return "Veilgram settings"
         case 1:
             return "Local archive"
+        case 2:
+            return "Transfer"
         default:
             return "Planned"
         }
@@ -86,7 +90,9 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         case 0:
             return "Settings and message-filter rules are stored locally and separately for each account. Channel-ad analysis is fully on-device. Official Telegram Sponsored Messages are outside this filter. Collapse remains a preview preference until reveal UI is implemented."
         case 1:
-            return "These screens inspect only Veilgram-owned local archive files for this account. Automatic archive capture is not enabled by this UI."
+            return "These screens inspect only Veilgram-owned local archive files for this account. Archive capture remains explicitly opt-in."
+        case 2:
+            return "Versioned local JSON transfer validates checksum, type and known credential/session markers before replacing Veilgram-owned data."
         default:
             return "More UI will be exposed only after the underlying feature has its own build and safety gate."
         }
@@ -139,9 +145,14 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             cell.detailTextLabel?.text = features[indexPath.row].1
             cell.selectionStyle = .default
             cell.accessoryType = .disclosureIndicator
+        } else if indexPath.section == 2 {
+            cell.textLabel?.text = "Local data transfer"
+            cell.detailTextLabel?.text = "Archive, edit history and media metadata"
+            cell.selectionStyle = .default
+            cell.accessoryType = .disclosureIndicator
         } else {
-            cell.textLabel?.text = "Import / export UI"
-            cell.detailTextLabel?.text = "Core exists • UI not implemented"
+            cell.textLabel?.text = "Additional local tools"
+            cell.detailTextLabel?.text = "Planned"
             cell.textLabel?.textColor = .secondaryLabel
         }
         return cell
@@ -166,12 +177,15 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             }
             self.push(VeilgramLocalArchiveController(context: self.accountContext, focus: focus))
         }
+        if indexPath.section == 2 {
+            self.push(VeilgramLocalTransferController(context: self.accountContext))
+        }
     }
 
     @objc private func roadmapChanged(_ sender: UISwitch) {
         self.showRoadmap = sender.isOn
         UserDefaults.standard.set(sender.isOn, forKey: self.roadmapPreferenceKey)
-        self.tableView.reloadSections(IndexSet(integer: 2), with: .automatic)
+        self.tableView.reloadSections(IndexSet(integer: 3), with: .automatic)
     }
 
     @objc private func adFilterChanged(_ sender: UISwitch) {
