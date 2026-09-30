@@ -1,0 +1,124 @@
+name: BUILD-12 Veilgram app candidate device arm64 compile
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["BUILD-11 Veilgram app candidate simulator compile"]
+    types: [completed]
+permissions:
+  contents: read
+concurrency:
+  group: build12-candidate-device
+  cancel-in-progress: true
+jobs:
+  build12:
+    if: |
+      github.repository == 'Jigros/Veilgram-IOS' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: macos-26
+    timeout-minutes: 360
+    steps:
+      - name: Checkout Veilgram device build source
+        uses: actions/checkout@v4
+        with:
+          ref: integration/veilgram-app-candidate
+          submodules: false
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve pinned official submodules
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config submodule.submodules/rlottie/rlottie.url https://github.com/TelegramMessenger/rlottie.git
+          git config submodule.submodules/TgVoipWebrtc/tgcalls.url https://github.com/TelegramMessenger/tgcalls.git
+          git -c protocol.file.allow=never submodule update --init --recursive
+          git submodule status --recursive > "$RUNNER_TEMP/build12-submodules.txt"
+      - name: Toolchain and source checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          test "$(xcodebuild -version | head -1)" = "Xcode 26.2"
+          python3 tools/check_veilgram_branding.py
+          python3 -m py_compile tools/verify_device_ipa.py
+          git rev-parse HEAD | tee "$RUNNER_TEMP/build12-source-sha.txt"
+          xcodebuild -version
+          sw_vers
+      - name: Generate compile-only device config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path("build-system/template_minimal_development_configuration.json").read_text())
+          c.update(bundle_id="org.veilgram.buildtwelve",api_id="1",api_hash="0"*32,
+                   team_id="C67CF9S4VU",app_specific_url_scheme="veilgram-buildtwelve",
+                   enable_siri=False,enable_icloud=False)
+          Path("build12-configuration.json").write_text(json.dumps(c))
+          PY
+          # Apple's system LibreSSL may lack PKCS#12 -legacy support.
+          # Prefer Homebrew OpenSSL 3, installed on supported macOS runners.
+          openssl_bin="$(brew --prefix openssl@3)/bin"
+          test -x "$openssl_bin/openssl"
+          export PATH="$openssl_bin:$PATH"
+          echo "$openssl_bin" >> "$GITHUB_PATH"
+          # Public self-signed fixtures satisfy device provisioning analysis only.
+          mkdir -p "$RUNNER_TEMP/veilgram-fake-signing/certs" "$RUNNER_TEMP/veilgram-fake-signing/profiles"
+          cp build-system/fake-codesigning/certs/* "$RUNNER_TEMP/veilgram-fake-signing/certs/"
+          python3 tools/generate_compile_only_profiles.py \
+            --bundle-id org.veilgram.buildtwelve \
+            --team-id C67CF9S4VU \
+            --destination "$RUNNER_TEMP/veilgram-fake-signing/profiles"
+          python3 build-system/Make/ImportCertificates.py \
+            --path "$RUNNER_TEMP/veilgram-fake-signing/certs"
+      - name: Compile device arm64 (not an installable signed build)
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 -u build-system/Make/Make.py \
+            --cacheDir="$RUNNER_TEMP/veilgram-device-bazel-cache" \
+            build \
+            --configurationPath=build12-configuration.json \
+            --codesigningInformationPath="$RUNNER_TEMP/veilgram-fake-signing" \
+            --configuration=debug_arm64 \
+            --buildNumber=12 2>&1 | tee "$RUNNER_TEMP/build12-compile.log"
+          result=${PIPESTATUS[0]}
+          echo "$result" > "$RUNNER_TEMP/build12-exit-code.txt"
+          echo "BUILD-12 compile exit: $result"
+          exit "$result"
+      - name: Inspect iPhone architecture and app identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s bazel-bin/Telegram/Telegram.ipa
+          cp bazel-bin/Telegram/Telegram.ipa "$RUNNER_TEMP/veilgram-device-test.ipa"
+          python3 tools/verify_build1_ipa.py "$RUNNER_TEMP/veilgram-device-test.ipa" \
+            --bundle-id org.veilgram.buildtwelve --report "$RUNNER_TEMP/build12-identity.json"
+          python3 tools/verify_device_ipa.py "$RUNNER_TEMP/veilgram-device-test.ipa" \
+            --bundle-id org.veilgram.buildtwelve --report "$RUNNER_TEMP/build12-platform.json"
+          shasum -a 256 "$RUNNER_TEMP/veilgram-device-test.ipa" > "$RUNNER_TEMP/build12-device.sha256"
+      - name: Upload validated unsigned device IPA
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build12-device-test-ipa
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/veilgram-device-test.ipa
+            ${{ runner.temp }}/build12-identity.json
+            ${{ runner.temp }}/build12-platform.json
+            ${{ runner.temp }}/build12-device.sha256
+            ${{ runner.temp }}/build12-source-sha.txt
+      - name: Upload diagnostics even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build12-diagnostics
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/build12-compile.log
+            ${{ runner.temp }}/build12-exit-code.txt
+            ${{ runner.temp }}/build12-submodules.txt
+            ${{ runner.temp }}/build12-source-sha.txt
