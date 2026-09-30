@@ -1,5 +1,6 @@
 name: Veilgram integrated local core tests
 # latest-head integration trigger
+# transfer-ui-head
 # rerun after backup-exclusion privacy hardening
 
 on:
