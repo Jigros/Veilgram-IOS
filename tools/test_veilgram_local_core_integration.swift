@@ -160,10 +160,27 @@ enum VeilgramLocalCoreIntegrationTests {
         let loadedEdits = try archiveStore.loadEdits()
         precondition(loadedMessages == messages)
         precondition(loadedEdits == edits)
+        let messageExport = try archiveStore.exportMessages(createdAt: 100)
+        let editExport = try archiveStore.exportEdits(createdAt: 100)
+        let mediaExport = try archiveStore.exportMediaMetadata(createdAt: 100)
+
         try archiveStore.removeAll()
         let emptiedMessages = try archiveStore.loadMessages()
         precondition(emptiedMessages.messages.isEmpty)
-        checks += 5
+
+        try archiveStore.importMessages(messageExport)
+        try archiveStore.importEdits(editExport)
+        try archiveStore.importMediaMetadata(mediaExport)
+        precondition(try archiveStore.loadMessages() == messages)
+        precondition(try archiveStore.loadEdits() == edits)
+        precondition(try archiveStore.loadMedia() == mediaDocument)
+
+        do {
+            try archiveStore.importEdits(messageExport)
+            preconditionFailure("wrong archive envelope kind was accepted")
+        } catch {
+        }
+        checks += 11
 
         print("PASS: \(checks) shared local archive/edit/media integration checks")
     }
