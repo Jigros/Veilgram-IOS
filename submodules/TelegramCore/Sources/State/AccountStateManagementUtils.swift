@@ -4440,6 +4440,16 @@ func replayFinalState(
                     }
                 }
             case let .DeleteMessagesWithGlobalIds(ids):
+                let veilgramDeleteObservedAt = Int32(Date().timeIntervalSince1970)
+                for id in transaction.messageIdsForGlobalIds(ids) {
+                    if let message = transaction.getMessage(id) {
+                        VeilgramArchiveStateAdapter.enqueueDeletedMessage(
+                            accountPeerId: accountPeerId,
+                            message: message,
+                            observedAt: veilgramDeleteObservedAt
+                        )
+                    }
+                }
                 var resourceIds: [MediaResourceId] = []
                 transaction.deleteMessagesWithGlobalIds(ids, forEachMedia: { media in
                     addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
