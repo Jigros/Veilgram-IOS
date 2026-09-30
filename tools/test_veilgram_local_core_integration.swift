@@ -171,9 +171,12 @@ enum VeilgramLocalCoreIntegrationTests {
         try archiveStore.importMessages(messageExport)
         try archiveStore.importEdits(editExport)
         try archiveStore.importMediaMetadata(mediaExport)
-        precondition(try archiveStore.loadMessages() == messages)
-        precondition(try archiveStore.loadEdits() == edits)
-        precondition(try archiveStore.loadMedia() == mediaDocument)
+        let importedMessages = try archiveStore.loadMessages()
+        let importedEdits = try archiveStore.loadEdits()
+        let importedMedia = try archiveStore.loadMedia()
+        precondition(importedMessages == messages)
+        precondition(importedEdits == edits)
+        precondition(importedMedia == mediaDocument)
 
         do {
             try archiveStore.importEdits(messageExport)
