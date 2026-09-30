@@ -1,4 +1,5 @@
 name: Veilgram native ad filter tests
+# Validates classifier logic plus account-local preference plumbing; no Telegram API credentials.
 
 on:
   workflow_dispatch:
