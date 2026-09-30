@@ -1,4 +1,5 @@
 name: Veilgram app candidate preflight
+# latest candidate head
 
 on:
   workflow_dispatch:
