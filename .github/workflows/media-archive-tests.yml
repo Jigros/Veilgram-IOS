@@ -1,0 +1,41 @@
+name: Veilgram media archive core tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/media-archive-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  media-archive:
+    if: github.repository == 'Jigros/Veilgram-IOS'
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: Checkout media-archive branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/media-archive-core
+          persist-credentials: false
+          submodules: false
+
+      - name: Compile and run media-archive tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          xcrun swiftc -parse-as-library -warnings-as-errors \
+            submodules/TelegramUI/Sources/VeilgramMediaArchive.swift \
+            tools/test_veilgram_media_archive.swift \
+            -o "$RUNNER_TEMP/veilgram-media-archive-test"
+          "$RUNNER_TEMP/veilgram-media-archive-test"
+
+      - name: Enforce local quota-model-only core
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -E -n 'URLSession|NWConnection|API_HASH|API_ID|TelegramEngine|Postbox' submodules/TelegramUI/Sources/VeilgramMediaArchive.swift
