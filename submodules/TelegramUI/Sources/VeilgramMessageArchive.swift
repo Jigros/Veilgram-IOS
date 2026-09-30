@@ -43,7 +43,7 @@ enum VeilgramMessageArchiveError: Error, Equatable {
     case invalidEntity
 }
 
-/// Storage-model core only. No Telegram update interception or Postbox writes.
+/// Storage-model core only. No Telegram update interception or live database writes.
 /// Integration must pass the eligibility gate before adding snapshots.
 enum VeilgramMessageArchiveEngine {
     static let maximumDocumentBytes = 32 * 1024 * 1024
