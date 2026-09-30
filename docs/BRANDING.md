@@ -40,3 +40,9 @@ python3 tools/verify_build1_ipa.py path/to/build1-simulator.ipa \
 The verifier uses only the Python standard library and refuses placeholder or Telegram-owned bundle IDs. It checks the single app's `CFBundleIdentifier`, `CFBundleName`, `CFBundleDisplayName`, included localized display names, and embedded extension identifiers and names; outputs an IPA SHA-256 and structured problem list. Keep artifact paths and personal credentials out of public reports.
 
 On NixOS the script passed `py_compile`; a synthetic valid IPA passed and a synthetic app named Telegram failed as expected. **No real BUILD-1 IPA was present**, so the real IPA gate, code signing, extensions' functionality, simulator launch, visual assets, and entitlements are still unverified. Do not count synthetic fixture tests as successful compilation.
+
+## BUILD-1 CI checkout evidence — 2026-09-30
+
+- [First public BUILD-1 run 36706226051](https://github.com/Jigros/Veilgram-IOS/actions/runs/36706226051) **FAILED before compilation** in checkout: the unchanged upstream `.gitmodules` uses `../tgcalls.git` and `../rlottie.git`; in standalone `Jigros/Veilgram-IOS` these resolve to nonexistent `Jigros/tgcalls` and `Jigros/rlottie`.
+- The remediation keeps tracked `.gitmodules` and the pinned gitlinks unchanged. CI first checks out without submodules, overrides the two URLs locally to `TelegramMessenger/tgcalls` and `TelegramMessenger/rlottie`, then runs `git submodule update --init --recursive` and records status. Both official destinations were independently reachable during remote check.
+- [Second BUILD-1 run 36707107223](https://github.com/Jigros/Veilgram-IOS/actions/runs/36707107223) was dispatched with the fix. **No compilation success can be claimed until this run completes and its IPA is validated.**
