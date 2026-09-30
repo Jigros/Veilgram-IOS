@@ -32,12 +32,12 @@ enum VeilgramTransferEngine {
     static let maximumEnvelopeBytes = 48 * 1024 * 1024
 
     private static let forbiddenMarkers = [
-        ""api_hash"",
-        ""api_id"",
-        ""auth_key"",
-        ""authorization"",
-        ""stel_token"",
-        ""session_token""
+        "api_hash",
+        "api_id",
+        "auth_key",
+        "authorization",
+        "stel_token",
+        "session_token"
     ]
 
     static func makeEnvelope(
