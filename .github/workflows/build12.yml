@@ -71,12 +71,21 @@ jobs:
             --destination "$RUNNER_TEMP/veilgram-fake-signing/profiles"
           python3 build-system/Make/ImportCertificates.py \
             --path "$RUNNER_TEMP/veilgram-fake-signing/certs"
+      - name: Restore bounded public device Bazel cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/veilgram-public-device-bazel-cache
+          key: veilgram-public-device-macos26-xcode26.2-bazel8.4.2-${{ github.run_id }}
+          restore-keys: |
+            veilgram-public-device-macos26-xcode26.2-bazel8.4.2-
+
       - name: Compile device arm64 (not an installable signed build)
         shell: bash
         run: |
           set -uo pipefail
+          mkdir -p "$HOME/veilgram-public-device-bazel-cache"
           python3 -u build-system/Make/Make.py \
-            --cacheDir="$RUNNER_TEMP/veilgram-device-bazel-cache" \
+            --cacheDir="$HOME/veilgram-public-device-bazel-cache" \
             build \
             --configurationPath=build12-configuration.json \
             --codesigningInformationPath="$RUNNER_TEMP/veilgram-fake-signing" \
@@ -110,6 +119,43 @@ jobs:
             ${{ runner.temp }}/build12-platform.json
             ${{ runner.temp }}/build12-device.sha256
             ${{ runner.temp }}/build12-source-sha.txt
+      - name: Bound public device cache before upload
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path.home() / "veilgram-public-device-bazel-cache"
+          limit = 2500 * 1024 * 1024
+          files=[]
+          total=0
+          if root.exists():
+              for p in root.rglob("*"):
+                  if p.is_file() and not p.is_symlink():
+                      try:
+                          st=p.stat()
+                      except FileNotFoundError:
+                          continue
+                      total += st.st_size
+                      files.append((st.st_mtime, st.st_size, p))
+          for _, size, p in sorted(files):
+              if total <= limit:
+                  break
+              try:
+                  p.unlink()
+                  total -= size
+              except FileNotFoundError:
+                  pass
+          print(f"Bound device Bazel cache to {total / 1024 / 1024:.1f} MiB")
+          PY
+
+      - name: Save bounded public device Bazel cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/veilgram-public-device-bazel-cache
+          key: veilgram-public-device-macos26-xcode26.2-bazel8.4.2-${{ github.run_id }}
+
       - name: Upload diagnostics even on failure
         if: always()
         uses: actions/upload-artifact@v4
