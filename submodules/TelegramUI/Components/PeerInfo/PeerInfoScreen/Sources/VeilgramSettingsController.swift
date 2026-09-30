@@ -45,7 +45,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         super.containerLayoutUpdated(layout, transition: transition)
         self.tableView.frame = CGRect(origin: .zero, size: layout.size)
         self.tableView.contentInset.top = self.navigationLayout(layout: layout).navigationFrame.maxY
-        self.tableView.scrollIndicatorInsets.top = self.tableView.contentInset.top
+        self.tableView.verticalScrollIndicatorInsets.top = self.tableView.contentInset.top
     }
 
     func numberOfSections(in tableView: UITableView) -> Int { return 2 }
