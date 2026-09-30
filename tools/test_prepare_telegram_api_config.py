@@ -34,6 +34,12 @@ class CredentialConfigTests(unittest.TestCase):
         self.patch = patch.object(auth, "TEMPLATE", self.template)
         self.patch.start()
         self.addCleanup(self.patch.stop)
+        # Temporary test files must not appear inside the simulated repository.
+        self.project_root = self.dir / "checkout"
+        self.project_root.mkdir()
+        self.root_patch = patch.object(auth, "REPO_ROOT", self.project_root)
+        self.root_patch.start()
+        self.addCleanup(self.root_patch.stop)
 
     def credentials(self, content=None, filename="API_KEYS"):
         file = self.dir / filename
