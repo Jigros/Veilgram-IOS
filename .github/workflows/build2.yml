@@ -55,6 +55,12 @@ jobs:
                    enable_siri=False,enable_icloud=False)
           Path("build2-configuration.json").write_text(json.dumps(c))
           PY
+          # Apple's system LibreSSL may lack PKCS#12 -legacy support.
+          # Prefer Homebrew OpenSSL 3, installed on supported macOS runners.
+          openssl_bin="$(brew --prefix openssl@3)/bin"
+          test -x "$openssl_bin/openssl"
+          export PATH="$openssl_bin:$PATH"
+          echo "$openssl_bin" >> "$GITHUB_PATH"
           # Public self-signed fixtures satisfy device provisioning analysis only.
           mkdir -p "$RUNNER_TEMP/veilgram-fake-signing/certs" "$RUNNER_TEMP/veilgram-fake-signing/profiles"
           cp build-system/fake-codesigning/certs/* "$RUNNER_TEMP/veilgram-fake-signing/certs/"
