@@ -2107,6 +2107,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 break
         }
         
+        // Veilgram local-only heuristic marker. This reuses Telegram's existing
+        // rank-badge layout so the message body/media remain byte-for-byte
+        // untouched. The underlying entry flag is never set for official
+        // Sponsored Messages.
+        if content.firstMessageAttributes.veilgramLikelyChannelAd {
+            authorRank = .member("Possible ad")
+        }
+        
         var guestChatViaFromNameString: String?
         var inlineBotNameString: String?
         var replyMessage: Message?
