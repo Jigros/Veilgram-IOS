@@ -21,8 +21,10 @@ enum VeilgramProtectedLocalStoreTests {
 
         let payload = Data("hello".utf8)
         try store.write(payload, fileName: "archive.json")
-        expect(try store.fileExists(fileName: "archive.json"), "written file missing")
-        expect(try store.read(fileName: "archive.json") == payload, "read payload mismatch")
+        let existsAfterWrite = try store.fileExists(fileName: "archive.json")
+        let readAfterWrite = try store.read(fileName: "archive.json")
+        expect(existsAfterWrite, "written file missing")
+        expect(readAfterWrite == payload, "read payload mismatch")
 
         let rootAttrs = try FileManager.default.attributesOfItem(atPath: base.path)
         let rootMode = (rootAttrs[.posixPermissions] as? NSNumber)?.intValue
@@ -34,11 +36,14 @@ enum VeilgramProtectedLocalStoreTests {
         expect(fileMode == 0o600, "file permissions are not 0600")
 
         try store.write(Data("updated".utf8), fileName: "archive.json")
-        expect(try store.read(fileName: "archive.json") == Data("updated".utf8), "atomic replacement mismatch")
+        let readAfterReplace = try store.read(fileName: "archive.json")
+        expect(readAfterReplace == Data("updated".utf8), "atomic replacement mismatch")
 
         try store.remove(fileName: "archive.json")
-        expect(!(try store.fileExists(fileName: "archive.json")), "remove failed")
-        expect(try store.read(fileName: "archive.json") == nil, "missing read should return nil")
+        let existsAfterRemove = try store.fileExists(fileName: "archive.json")
+        let readAfterRemove = try store.read(fileName: "archive.json")
+        expect(!existsAfterRemove, "remove failed")
+        expect(readAfterRemove == nil, "missing read should return nil")
 
         do {
             try store.write(payload, fileName: "../escape")
