@@ -1,0 +1,46 @@
+name: Veilgram local features module tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/local-features-module-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  local-features:
+    if: github.repository == 'Jigros/Veilgram-IOS'
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: Checkout shared-module refactor branch
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/veilgram-local-features-module
+          persist-credentials: false
+          submodules: false
+
+      - name: Compile shared sources and persistence integration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          xcrun swiftc -parse-as-library -warnings-as-errors             submodules/VeilgramLocalFeatures/Sources/VeilgramMessageFilter.swift             submodules/VeilgramLocalFeatures/Sources/VeilgramProtectedLocalStore.swift             submodules/VeilgramLocalFeatures/Sources/VeilgramTransferEnvelope.swift             submodules/VeilgramLocalFeatures/Sources/VeilgramMessageFilterPersistence.swift             tools/test_veilgram_filter_persistence.swift             -o "$RUNNER_TEMP/veilgram-local-features-test"
+          "$RUNNER_TEMP/veilgram-local-features-test"
+
+      - name: Ensure TelegramUI duplicate cores are gone
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in             VeilgramMessageFilter.swift             VeilgramProtectedLocalStore.swift             VeilgramTransferEnvelope.swift             VeilgramMessageFilterPersistence.swift; do
+            test ! -e "submodules/TelegramUI/Sources/$file"
+          done
+
+      - name: Reject Telegram API and network dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -R -E -n 'URLSession|NWConnection|TelegramEngine|Postbox|API_HASH|API_ID'             submodules/VeilgramLocalFeatures/Sources
