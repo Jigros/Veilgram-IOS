@@ -4449,6 +4449,16 @@ func replayFinalState(
                 }
                 deletedMessageIds.append(contentsOf: ids.map { .global($0) })
             case let .DeleteMessages(ids):
+                let veilgramDeleteObservedAt = Int32(Date().timeIntervalSince1970)
+                for id in ids {
+                    if let message = transaction.getMessage(id) {
+                        VeilgramArchiveStateAdapter.enqueueDeletedMessage(
+                            accountPeerId: accountPeerId,
+                            message: message,
+                            observedAt: veilgramDeleteObservedAt
+                        )
+                    }
+                }
                 _internal_deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids, manualAddMessageThreadStatsDifference: { id, add, remove in
                     addMessageThreadStatsDifference(threadKey: id, remove: remove, addedMessagePeer: nil, addedMessageId: nil, isOutgoing: false)
                 })
@@ -4488,6 +4498,16 @@ func replayFinalState(
             case let .EditMessage(id, message):
                 var generatedEvent: (reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)?
                 transaction.updateMessage(id, update: { previousMessage in
+                    let previousVeilgramEntities = previousMessage.textEntitiesAttribute?.entities ?? []
+                    let updatedVeilgramEntities = (message.attributes.first(where: { $0 is TextEntitiesMessageAttribute }) as? TextEntitiesMessageAttribute)?.entities ?? []
+                    if previousMessage.text != message.text || previousVeilgramEntities != updatedVeilgramEntities {
+                        VeilgramArchiveStateAdapter.enqueuePreviousEditRevision(
+                            accountPeerId: accountPeerId,
+                            message: previousMessage,
+                            observedAt: Int32(Date().timeIntervalSince1970)
+                        )
+                    }
+
                     var updatedFlags = message.flags
                     var updatedLocalTags = message.localTags
                     var updatedAttributes = message.attributes
