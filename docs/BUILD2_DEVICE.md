@@ -1,6 +1,6 @@
 # BUILD-2: physical iPhone arm64 (experimental)
 
-**Status: PREPARED, NOT BUILT.** BUILD-1 success was for `debug_sim_arm64` only.
+**Status: BUILD-2 COMPILE + IPA VERIFIER PASS** in [run 36714922763](https://github.com/Jigros/Veilgram-IOS/actions/runs/36714922763). This establishes a device-platform IPA artifact from fixture inputs, **NOT** installability, Apple-valid signing, Telegram login or runtime behavior. BUILD-1 was simulator-only.
 
 Source branch: `feature/build2-device-ipa`; separate manual workflow `.github/workflows/build2.yml` is on `main`. Workflow uses macOS 26, Xcode 26.2, synthetic compile-only `api_id=1` and all-zero `api_hash`, test bundle ID `org.veilgram.buildtwo`; no user signing certificate is needed or requested at this stage.
 
@@ -22,7 +22,7 @@ User signs later on iPhone with their own certificate. Veilgram CI must **not** 
 
 Manual GitHub workflow_dispatch returned HTTP 500 initially. The bounded `push` trigger started [run 36713904845](https://github.com/Jigros/Veilgram-IOS/actions/runs/36713904845), which failed at **Bazel analysis** of `WidgetExtension`: device builds require provisioning profiles even if regular signing is disabled. This was NOT an Objective-C/Swift compilation failure.
 
-Fix under evaluation: generate nine **compile-only CMS profiles** from already-public self-signed upstream testing material, rewritten to `org.veilgram.buildtwo`. The generated fixtures are NOT valid Apple provisioning, are NOT for installation and are never real developer credentials. The generator passed a local NixOS CMS parse/identity verification test. It has not established an iPhone build PASS. Current CI attempt [36714922763](https://github.com/Jigros/Veilgram-IOS/actions/runs/36714922763) remains pending/queued when documented.
+Fix under evaluation: generate nine **compile-only CMS profiles** from already-public self-signed upstream testing material, rewritten to `org.veilgram.buildtwo`. The generated fixtures are NOT valid Apple provisioning, are NOT for installation and are never real developer credentials. The generator passed a local NixOS CMS parse/identity verification test. The corrected run [36714922763](https://github.com/Jigros/Veilgram-IOS/actions/runs/36714922763) subsequently **PASSED** all steps: device arm64 compile, identity checker, Mach-O iOS platform checker, validated IPA artifact upload and diagnostics. Build-time self-signed fixture materials are not installable Apple provisioning; user-side signing, app extensions and login are separate gates. Do not claim that fixture API ID/hash can authenticate Telegram. Artifact hash has not yet been independently recomputed after download in this documentation.
 
 Device IPA validator now has six passing synthetic unit tests (device/simulator, app/extension ID, corrupted IPA), but an actual iPhone Mach-O IPA is still pending.
 
