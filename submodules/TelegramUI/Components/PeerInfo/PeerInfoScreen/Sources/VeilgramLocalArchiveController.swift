@@ -24,10 +24,20 @@ final class VeilgramLocalArchiveController: ViewController, UITableViewDataSourc
     private var mediaItemCount = 0
     private var mediaByteCount: Int64 = 0
     private var loadError: String?
+    private var messageArchiveEnabled: Bool
+    private var editHistoryEnabled: Bool
 
     init(context: AccountContext, focus: Focus = .overview) {
         self.accountContext = context
         self.focus = focus
+        let accountPeerId = context.account.peerId.toInt64()
+        self.messageArchiveEnabled = VeilgramArchiveRuntimePreferences.messageArchiveEnabled(
+            accountPeerId: accountPeerId
+        )
+        self.editHistoryEnabled = VeilgramArchiveRuntimePreferences.editHistoryEnabled(
+            accountPeerId: accountPeerId
+        )
+
         let presentation = context.sharedContext.currentPresentationData.with { $0 }
         super.init(
             navigationBarPresentationData: NavigationBarPresentationData(
@@ -74,14 +84,16 @@ final class VeilgramLocalArchiveController: ViewController, UITableViewDataSourc
     }
 
     func numberOfSections(in tableView: UITableView) -> Int {
-        return 3
+        return 4
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
         case 0:
-            return 3
+            return 2
         case 1:
+            return 3
+        case 2:
             return self.loadError == nil ? 1 : 2
         default:
             return 1
@@ -91,8 +103,10 @@ final class VeilgramLocalArchiveController: ViewController, UITableViewDataSourc
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         switch section {
         case 0:
-            return "Stored locally for this account"
+            return "Capture"
         case 1:
+            return "Stored locally for this account"
+        case 2:
             return "Status"
         default:
             return "Danger zone"
@@ -100,12 +114,16 @@ final class VeilgramLocalArchiveController: ViewController, UITableViewDataSourc
     }
 
     func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        if section == 0 {
-            return "Only Veilgram-owned local files are shown here. Secret chats, view-once content and self-destruct messages are excluded by the archive core."
-        } else if section == 2 {
+        switch section {
+        case 0:
+            return "Both options are off by default. Only accepted ordinary cloud-message mutations already observed on this device are eligible. Secret chats, view-once and self-destruct content are always excluded."
+        case 1:
+            return "Only Veilgram-owned local files are shown here."
+        case 3:
             return "Clear removes Veilgram local archive/edit/media documents for this account only. It does not delete Telegram chats, messages, media cache or account data."
+        default:
+            return nil
         }
-        return nil
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -113,18 +131,34 @@ final class VeilgramLocalArchiveController: ViewController, UITableViewDataSourc
         cell.selectionStyle = .none
 
         if indexPath.section == 0 {
+            if indexPath.row == 0 {
+                cell.textLabel?.text = "Archive deleted cloud messages"
+                cell.detailTextLabel?.text = "Accepted MessageId delete updates"
+                let control = UISwitch()
+                control.isOn = self.messageArchiveEnabled
+                control.addTarget(self, action: #selector(messageArchiveChanged(_:)), for: .valueChanged)
+                cell.accessoryView = control
+            } else {
+                cell.textLabel?.text = "Keep edit history"
+                cell.detailTextLabel?.text = "Previous revision before accepted edit"
+                let control = UISwitch()
+                control.isOn = self.editHistoryEnabled
+                control.addTarget(self, action: #selector(editHistoryChanged(_:)), for: .valueChanged)
+                cell.accessoryView = control
+            }
+        } else if indexPath.section == 1 {
             switch indexPath.row {
             case 0:
                 cell.textLabel?.text = "Message archive"
-                cell.detailTextLabel?.text = "(self.messageCount)"
+                cell.detailTextLabel?.text = "\(self.messageCount)"
             case 1:
                 cell.textLabel?.text = "Edit history"
-                cell.detailTextLabel?.text = "(self.editRecordCount) messages • (self.revisionCount) revisions"
+                cell.detailTextLabel?.text = "\(self.editRecordCount) messages • \(self.revisionCount) revisions"
             default:
                 cell.textLabel?.text = "Media archive"
-                cell.detailTextLabel?.text = "(self.mediaItemCount) • (Self.byteString(self.mediaByteCount))"
+                cell.detailTextLabel?.text = "\(self.mediaItemCount) • \(Self.byteString(self.mediaByteCount))"
             }
-        } else if indexPath.section == 1 {
+        } else if indexPath.section == 2 {
             if indexPath.row == 0 {
                 cell.textLabel?.text = "Refresh"
                 cell.textLabel?.textColor = .systemBlue
@@ -145,16 +179,34 @@ final class VeilgramLocalArchiveController: ViewController, UITableViewDataSourc
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
 
-        if indexPath.section == 1, indexPath.row == 0 {
+        if indexPath.section == 2, indexPath.row == 0 {
             self.reloadLocalData()
-        } else if indexPath.section == 2 {
+        } else if indexPath.section == 3 {
             self.confirmClear()
         }
     }
 
+    @objc private func messageArchiveChanged(_ sender: UISwitch) {
+        self.messageArchiveEnabled = sender.isOn
+        VeilgramArchiveRuntimePreferences.setMessageArchiveEnabled(
+            sender.isOn,
+            accountPeerId: self.accountContext.account.peerId.toInt64()
+        )
+    }
+
+    @objc private func editHistoryChanged(_ sender: UISwitch) {
+        self.editHistoryEnabled = sender.isOn
+        VeilgramArchiveRuntimePreferences.setEditHistoryEnabled(
+            sender.isOn,
+            accountPeerId: self.accountContext.account.peerId.toInt64()
+        )
+    }
+
     private func reloadLocalData() {
         do {
-            let store = try VeilgramArchiveStoreAPI(accountId: self.accountContext.account.id.int64)
+            let store = try VeilgramArchiveStoreAPI(
+                accountId: self.accountContext.account.peerId.toInt64()
+            )
             let messages = try store.loadMessages()
             let edits = try store.loadEdits()
             let media = try store.loadMedia()
@@ -196,7 +248,7 @@ final class VeilgramLocalArchiveController: ViewController, UITableViewDataSourc
         guard let row else {
             return
         }
-        let path = IndexPath(row: row, section: 0)
+        let path = IndexPath(row: row, section: 1)
         self.tableView.scrollToRow(at: path, at: .middle, animated: false)
     }
 
@@ -215,7 +267,9 @@ final class VeilgramLocalArchiveController: ViewController, UITableViewDataSourc
 
     private func clearLocalData() {
         do {
-            let store = try VeilgramArchiveStoreAPI(accountId: self.accountContext.account.id.int64)
+            let store = try VeilgramArchiveStoreAPI(
+                accountId: self.accountContext.account.peerId.toInt64()
+            )
             try store.removeAll()
             self.reloadLocalData()
         } catch {
