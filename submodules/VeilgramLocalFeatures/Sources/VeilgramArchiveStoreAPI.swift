@@ -11,6 +11,10 @@ public struct VeilgramArchiveStoreAPI {
         self.store = try VeilgramProtectedLocalStore.accountStore(accountId: accountId)
     }
 
+    init(store: VeilgramProtectedLocalStore) {
+        self.store = store
+    }
+
     public func loadMessages() throws -> VeilgramMessageArchiveDocument {
         guard let data = try store.read(fileName: Self.messageFile) else {
             return VeilgramMessageArchiveDocument()
