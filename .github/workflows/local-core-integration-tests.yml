@@ -1,5 +1,5 @@
 name: Veilgram integrated local core tests
-# rerun after runtime hook and archive browser integration
+# rerun after backup-exclusion privacy hardening
 
 on:
   workflow_dispatch:
