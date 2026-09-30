@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: build9-${{ github.ref }}
+  group: build9-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
