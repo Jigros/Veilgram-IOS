@@ -12,7 +12,7 @@ Status: **source patch, not a verified branded compilation**. Branch `feature/br
 
 ## BUILD-1 acceptance checks
 
-- [ ] All present language folders have exactly one `CFBundleDisplayName = "Veilgram"` entry.
+- [x] GitHub source inspection: all 19 existing localized InfoPlist.strings each contain exactly one `CFBundleDisplayName = "Veilgram"` entry. The executable checker remains to be run in a checkout.
 - [ ] Independent Veilgram artwork replaces the Telegram logo in every icon variant and size before any release/distribution.
 - [ ] Compile actual branded source commit on macOS 26/Xcode 26.2/Bazel 8.4.2, `debug_sim_arm64`.
 - [ ] Inspect embedded app Info.plist, localized strings, extension names and entitlements in the resulting IPA.
