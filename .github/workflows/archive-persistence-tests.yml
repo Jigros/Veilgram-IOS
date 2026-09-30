@@ -1,0 +1,47 @@
+name: Veilgram archive persistence integration tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/archive-persistence-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  archive-persistence:
+    if: github.repository == 'Jigros/Veilgram-IOS'
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: Checkout archive persistence branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/archive-persistence-integration
+          persist-credentials: false
+          submodules: false
+
+      - name: Compile and run protected persistence tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          xcrun swiftc -parse-as-library -warnings-as-errors \
+            submodules/TelegramUI/Sources/VeilgramProtectedLocalStore.swift \
+            submodules/TelegramUI/Sources/VeilgramMessageArchive.swift \
+            submodules/TelegramUI/Sources/VeilgramEditHistory.swift \
+            submodules/TelegramUI/Sources/VeilgramMediaArchive.swift \
+            submodules/TelegramUI/Sources/VeilgramArchivePersistence.swift \
+            tools/test_veilgram_archive_persistence.swift \
+            -o "$RUNNER_TEMP/veilgram-archive-persistence-test"
+          "$RUNNER_TEMP/veilgram-archive-persistence-test"
+
+      - name: Reject network and auth dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -E -n 'URLSession|NWConnection|API_HASH|API_ID|TelegramEngine' \
+            submodules/TelegramUI/Sources/VeilgramArchivePersistence.swift \
+            submodules/TelegramUI/Sources/VeilgramProtectedLocalStore.swift
