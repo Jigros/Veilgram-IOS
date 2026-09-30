@@ -171,7 +171,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     @objc private func roadmapChanged(_ sender: UISwitch) {
         self.showRoadmap = sender.isOn
         UserDefaults.standard.set(sender.isOn, forKey: self.roadmapPreferenceKey)
-        self.tableView.reloadSections(IndexSet(integer: 1), with: .automatic)
+        self.tableView.reloadSections(IndexSet(integer: 2), with: .automatic)
     }
 
     @objc private func adFilterChanged(_ sender: UISwitch) {
