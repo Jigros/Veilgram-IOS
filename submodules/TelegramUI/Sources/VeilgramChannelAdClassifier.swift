@@ -36,6 +36,19 @@ struct VeilgramChannelAdDecision {
 }
 
 enum VeilgramChannelAdClassifier {
+    static func options(accountId: Int64, defaults: UserDefaults = .standard) -> VeilgramChannelAdOptions {
+        let prefix = "veilgram.settings.v1.\(accountId)"
+        let enabled = defaults.bool(forKey: "\(prefix).channelAdFilterEnabled")
+        let collapse = enabled && defaults.bool(forKey: "\(prefix).channelAdCollapseEnabled")
+        return VeilgramChannelAdOptions(
+            enabled: enabled,
+            collapseEnabled: collapse,
+            allowedChannelIds: [],
+            suspectedThreshold: 6,
+            collapseThreshold: 9
+        )
+    }
+
     private struct Rule {
         let name: String
         let points: Int
