@@ -1,0 +1,106 @@
+name: BUILD-2 Veilgram device arm64 (experimental)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: build2-device
+  cancel-in-progress: false
+jobs:
+  build2:
+    if: github.repository == 'Jigros/Veilgram-IOS'
+    runs-on: macos-26
+    timeout-minutes: 360
+    steps:
+      - name: Checkout Veilgram device build source
+        uses: actions/checkout@v4
+        with:
+          ref: feature/build2-device-ipa
+          submodules: false
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve pinned official submodules
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config submodule.submodules/rlottie/rlottie.url https://github.com/TelegramMessenger/rlottie.git
+          git config submodule.submodules/TgVoipWebrtc/tgcalls.url https://github.com/TelegramMessenger/tgcalls.git
+          git -c protocol.file.allow=never submodule update --init --recursive
+          git submodule status --recursive > "$RUNNER_TEMP/build2-submodules.txt"
+      - name: Toolchain and source checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          test "$(xcodebuild -version | head -1)" = "Xcode 26.2"
+          python3 tools/check_veilgram_branding.py
+          python3 -m py_compile tools/verify_device_ipa.py
+          git rev-parse HEAD | tee "$RUNNER_TEMP/build2-source-sha.txt"
+          xcodebuild -version
+          sw_vers
+      - name: Generate compile-only device config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path("build-system/template_minimal_development_configuration.json").read_text())
+          c.update(bundle_id="org.veilgram.buildtwo",api_id="1",api_hash="0"*32,
+                   team_id="AAAAAAAAAA",app_specific_url_scheme="veilgram-buildtwo",
+                   enable_siri=False,enable_icloud=False)
+          Path("build2-configuration.json").write_text(json.dumps(c))
+          PY
+          # No real certificates or provisioning profiles enter this build.
+          printf '\nbuild --//Telegram:disableProvisioningProfiles\n' >> .bazelrc
+      - name: Compile device arm64 (not an installable signed build)
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 -u build-system/Make/Make.py \
+            --cacheDir="$RUNNER_TEMP/veilgram-device-bazel-cache" \
+            build \
+            --configurationPath=build2-configuration.json \
+            --xcodeManagedCodesigning \
+            --configuration=debug_arm64 \
+            --buildNumber=2 2>&1 | tee "$RUNNER_TEMP/build2-compile.log"
+          result=${PIPESTATUS[0]}
+          echo "$result" > "$RUNNER_TEMP/build2-exit-code.txt"
+          echo "BUILD-2 compile exit: $result"
+          exit "$result"
+      - name: Inspect iPhone architecture and app identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s bazel-bin/Telegram/Telegram.ipa
+          cp bazel-bin/Telegram/Telegram.ipa "$RUNNER_TEMP/veilgram-device-test.ipa"
+          python3 tools/verify_build1_ipa.py "$RUNNER_TEMP/veilgram-device-test.ipa" \
+            --bundle-id org.veilgram.buildtwo --report "$RUNNER_TEMP/build2-identity.json"
+          python3 tools/verify_device_ipa.py "$RUNNER_TEMP/veilgram-device-test.ipa" \
+            --bundle-id org.veilgram.buildtwo --report "$RUNNER_TEMP/build2-platform.json"
+          shasum -a 256 "$RUNNER_TEMP/veilgram-device-test.ipa" > "$RUNNER_TEMP/build2-device.sha256"
+      - name: Upload validated unsigned device IPA
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build2-device-test-ipa
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/veilgram-device-test.ipa
+            ${{ runner.temp }}/build2-identity.json
+            ${{ runner.temp }}/build2-platform.json
+            ${{ runner.temp }}/build2-device.sha256
+            ${{ runner.temp }}/build2-source-sha.txt
+      - name: Upload diagnostics even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build2-diagnostics
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/build2-compile.log
+            ${{ runner.temp }}/build2-exit-code.txt
+            ${{ runner.temp }}/build2-submodules.txt
+            ${{ runner.temp }}/build2-source-sha.txt
