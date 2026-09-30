@@ -1,4 +1,5 @@
 name: Veilgram integrated local core tests
+# latest-head integration trigger
 # rerun after backup-exclusion privacy hardening
 
 on:
