@@ -3,7 +3,7 @@ name: BUILD-5 Veilgram ad-filter view integration compile
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["BUILD-5 Veilgram ad-filter settings simulator compile"]
+    workflows: ["BUILD-4 Veilgram ad-filter settings simulator compile"]
     types: [completed]
 
 permissions:
