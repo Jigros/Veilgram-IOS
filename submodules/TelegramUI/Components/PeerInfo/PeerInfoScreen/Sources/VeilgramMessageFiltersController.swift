@@ -76,28 +76,48 @@ final class VeilgramMessageFiltersController: ViewController, UITableViewDataSou
     }
 
     func numberOfSections(in tableView: UITableView) -> Int {
-        return 1
+        return 2
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return max(1, self.rules.count)
+        if section == 0 {
+            return max(1, self.rules.count)
+        }
+        return 2
     }
 
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        return "Local rules"
+        return section == 0 ? "Local rules" : "Transfer"
     }
 
     func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        if let loadError = self.loadError {
-            return loadError
+        if section == 0 {
+            if let loadError = self.loadError {
+                return loadError
+            }
+            return "Rules are stored only on this device for the current account. This editor creates case-insensitive “text contains” rules."
         }
-        return "Rules are stored only on this device for the current account. This first editor creates case-insensitive “text contains” rules. Regex, scopes and import/export are supported by the core but will be exposed in a later UI."
+        return "Export creates a versioned JSON envelope with checksum. Import validates the envelope and refuses known credential/session markers before replacing the local rule document."
     }
 
     func tableView(
         _ tableView: UITableView,
         cellForRowAt indexPath: IndexPath
     ) -> UITableViewCell {
+        if indexPath.section == 1 {
+            let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
+            cell.selectionStyle = .default
+            cell.accessoryType = .none
+            if indexPath.row == 0 {
+                cell.textLabel?.text = "Copy export JSON"
+                cell.detailTextLabel?.text = "Copy local filter envelope to clipboard"
+            } else {
+                cell.textLabel?.text = "Import JSON from clipboard"
+                cell.detailTextLabel?.text = "Validate and replace local filter rules"
+            }
+            return cell
+        }
+
         guard !self.rules.isEmpty else {
             let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
             cell.selectionStyle = .none
@@ -113,7 +133,7 @@ final class VeilgramMessageFiltersController: ViewController, UITableViewDataSou
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         cell.selectionStyle = .none
         cell.textLabel?.text = rule.name
-        cell.detailTextLabel?.text = "(rule.detail) • (rule.action)"
+        cell.detailTextLabel?.text = "\(rule.detail) • \(rule.action)"
         let control = VeilgramFilterSwitch()
         control.ruleId = rule.id
         control.isOn = rule.isEnabled
@@ -126,7 +146,7 @@ final class VeilgramMessageFiltersController: ViewController, UITableViewDataSou
         _ tableView: UITableView,
         canEditRowAt indexPath: IndexPath
     ) -> Bool {
-        return !self.rules.isEmpty
+        return indexPath.section == 0 && !self.rules.isEmpty
     }
 
     func tableView(
@@ -145,6 +165,70 @@ final class VeilgramMessageFiltersController: ViewController, UITableViewDataSou
         } catch {
             self.showError("Could not remove this filter.")
         }
+    }
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        guard indexPath.section == 1 else {
+            return
+        }
+        if indexPath.row == 0 {
+            self.copyExport()
+        } else {
+            self.confirmImportFromClipboard()
+        }
+    }
+
+    private func copyExport() {
+        guard let store = self.store else {
+            self.showError("Local filter storage is unavailable.")
+            return
+        }
+        do {
+            let createdAt = Int32(Date().timeIntervalSince1970)
+            let data = try store.exportData(createdAt: createdAt)
+            guard let text = String(data: data, encoding: .utf8) else {
+                self.showError("Could not encode filter export.")
+                return
+            }
+            UIPasteboard.general.string = text
+            let alert = UIAlertController(
+                title: "Export copied",
+                message: "Veilgram filter JSON was copied to the clipboard.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            self.present(alert, animated: true)
+        } catch {
+            self.showError("Could not export local filters.")
+        }
+    }
+
+    private func confirmImportFromClipboard() {
+        guard let text = UIPasteboard.general.string, !text.isEmpty else {
+            self.showError("Clipboard does not contain text.")
+            return
+        }
+        let data = Data(text.utf8)
+        let alert = UIAlertController(
+            title: "Replace local filters?",
+            message: "The clipboard JSON will be validated first. If valid, it replaces this account's current Veilgram filter rules.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Import", style: .destructive, handler: { [weak self] _ in
+            guard let self, let store = self.store else {
+                return
+            }
+            do {
+                try store.importData(data)
+                self.reloadRules()
+                self.tableView.reloadData()
+            } catch {
+                self.showError("Import rejected: invalid, corrupted, incompatible or credential-bearing Veilgram filter data.")
+            }
+        }))
+        self.present(alert, animated: true)
     }
 
     @objc private func addPressed() {
