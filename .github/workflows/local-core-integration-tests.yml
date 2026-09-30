@@ -1,0 +1,36 @@
+name: Veilgram integrated local core tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/local-core-integration-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  local-core:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration/veilgram-local-core
+          persist-credentials: false
+          submodules: false
+      - name: Compile shared local core with strict diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcrun swiftc -parse-as-library -warnings-as-errors \
+            submodules/VeilgramLocalFeatures/Sources/*.swift \
+            tools/test_veilgram_local_core_integration.swift \
+            -o "$RUNNER_TEMP/veilgram-local-core-tests"
+          "$RUNNER_TEMP/veilgram-local-core-tests"
+      - name: Assert local-only dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -R -E -n 'URLSession|NWConnection|Alamofire|HTTPClient|api\.telegram|mtproto'             submodules/VeilgramLocalFeatures/Sources
