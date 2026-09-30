@@ -35,3 +35,8 @@ jobs:
         run: |
           set -euo pipefail
           ! grep -R -E -n 'URLSession|NWConnection|Alamofire|HTTPClient|api\.telegram|mtproto'             submodules/VeilgramLocalFeatures/Sources
+      - name: Verify archive hook privacy scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/check_veilgram_archive_hooks.py
