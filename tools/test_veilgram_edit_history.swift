@@ -22,13 +22,16 @@ enum VeilgramEditHistoryTests {
             text: "hello",
             entities: [VeilgramEditHistoryEntity(offset: 0, length: 5, kind: "bold")]
         )
-        expect(try VeilgramEditHistoryEngine.append(document: &document, key: key, revision: first, eligibility: eligible), "first revision not appended")
+        let appendedFirst = try VeilgramEditHistoryEngine.append(document: &document, key: key, revision: first, eligibility: eligible)
+        expect(appendedFirst, "first revision not appended")
         expect(document.records.count == 1, "record missing")
         expect(document.records[0].revisions.count == 1, "revision missing")
-        expect(!(try VeilgramEditHistoryEngine.append(document: &document, key: key, revision: first, eligibility: eligible)), "duplicate revision appended")
+        let appendedDuplicate = try VeilgramEditHistoryEngine.append(document: &document, key: key, revision: first, eligibility: eligible)
+        expect(!appendedDuplicate, "duplicate revision appended")
 
         let second = VeilgramEditHistoryRevision(timestamp: 2, text: "hello world", entities: [])
-        expect(try VeilgramEditHistoryEngine.append(document: &document, key: key, revision: second, eligibility: eligible), "second revision missing")
+        let appendedSecond = try VeilgramEditHistoryEngine.append(document: &document, key: key, revision: second, eligibility: eligible)
+        expect(appendedSecond, "second revision missing")
         expect(document.records[0].revisions == [first, second], "revision ordering changed")
 
         let encoded = try VeilgramEditHistoryEngine.encode(document)
@@ -46,7 +49,8 @@ enum VeilgramEditHistoryTests {
         expect(!VeilgramEditHistoryEngine.isEligible(nonCloud), "non-cloud accepted")
 
         var blocked = VeilgramEditHistoryDocument()
-        expect(!(try VeilgramEditHistoryEngine.append(document: &blocked, key: key, revision: first, eligibility: secret)), "blocked revision appended")
+        let appendedBlocked = try VeilgramEditHistoryEngine.append(document: &blocked, key: key, revision: first, eligibility: secret)
+        expect(!appendedBlocked, "blocked revision appended")
         expect(blocked.records.isEmpty, "blocked revision mutated document")
 
         do {
