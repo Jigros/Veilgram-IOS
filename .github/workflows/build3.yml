@@ -46,7 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/check_veilgram_branding.py
-          python3 -m py_compile tools/verify_build3_ipa.py
+          python3 -m py_compile tools/verify_build1_ipa.py
           python3 - <<'PY'
           import json
           from pathlib import Path
@@ -107,7 +107,7 @@ jobs:
           set -euo pipefail
           test -f bazel-bin/Telegram/Telegram.ipa
           cp bazel-bin/Telegram/Telegram.ipa "$RUNNER_TEMP/build3-simulator.ipa"
-          python3 tools/verify_build3_ipa.py "$RUNNER_TEMP/build3-simulator.ipa" \
+          python3 tools/verify_build1_ipa.py "$RUNNER_TEMP/build3-simulator.ipa" \
             --bundle-id org.veilgram.buildone \
             --report "$RUNNER_TEMP/build3-identity.json"
           shasum -a 256 "$RUNNER_TEMP/build3-simulator.ipa" > "$RUNNER_TEMP/build3-ipa.sha256"
