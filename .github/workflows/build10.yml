@@ -3,7 +3,7 @@ name: BUILD-10 Veilgram local archive settings integration compile
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["BUILD-10 Veilgram unified local-core integration compile"]
+    workflows: ["BUILD-9 Veilgram unified local-core integration compile"]
     types: [completed]
 
 permissions:
