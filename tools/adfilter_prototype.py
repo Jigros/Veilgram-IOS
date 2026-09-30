@@ -15,7 +15,7 @@ PATTERNS = (
     ("disclosure", 8, re.compile(r"(?iu)(?:#(?:реклам[а-яё]*|интеграци[а-яё]*|спонсор[а-яё]*|партн[её]рск[а-яё]*|ad|sponsored|advertisement|paidpartnership)\b|\b(?:на правах рекламы|рекламная интеграция|партн[её]рский материал|paid partnership|sponsored post)\b)")),
     ("erid", 9, re.compile(r"(?iu)\berid\s*[:=\-]\s*[a-z0-9][a-z0-9_\-]{5,}\b")),
     ("promo", 3, re.compile(r"(?iu)\b(?:промокод(?:ом|а|ы)?|по промокоду|скидка по коду|используй код|use (?:promo|discount) code)\b")),
-    ("offer", 2, re.compile(r"(?iu)\b(?:скидк[ауи]\s+\d{1,2}%|специальное предложение|limited time offer|получи бонус|забирай бонус)\b")),
+    ("offer", 2, re.compile(r"(?iu)\b(?:скидк[ауи]\s+\d{1,2}\s*(?:%|процентов)(?=\W|$)|специальное предложение|limited time offer|получи бонус|забирай бонус)\b")),
     ("call_to_action", 2, re.compile(r"(?iu)\b(?:подписывайтесь|подпишитесь|успейте купить|переходите по ссылке|заказывайте|купите сейчас|жми(?:те)? по ссылке|shop now|sign up now|use my link)\b")),
     ("affiliate", 5, re.compile(r"(?iu)(?:\b(?:партн[её]рская ссылка|реферальная ссылка|мой реф(?:еральный)?(?: код)?)\b|\b(?:ref|aff|affiliate|utm_medium)\s*=)")),
     ("link", 2, re.compile(r"(?iu)(?:https?://|(?:^|\s)t\.me/|(?:^|\s)@[a-z][a-z0-9_]{4,})")),
