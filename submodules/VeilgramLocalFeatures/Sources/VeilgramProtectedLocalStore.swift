@@ -44,6 +44,10 @@ struct VeilgramProtectedLocalStore {
             [.posixPermissions: NSNumber(value: 0o600)],
             ofItemAtPath: fileURL.path
         )
+        var fileResourceValues = URLResourceValues()
+        fileResourceValues.isExcludedFromBackup = true
+        var mutableFileURL = fileURL
+        try mutableFileURL.setResourceValues(fileResourceValues)
 
         #if os(iOS)
         try FileManager.default.setAttributes(
@@ -91,6 +95,10 @@ struct VeilgramProtectedLocalStore {
             [.posixPermissions: NSNumber(value: 0o700)],
             ofItemAtPath: rootURL.path
         )
+        var directoryResourceValues = URLResourceValues()
+        directoryResourceValues.isExcludedFromBackup = true
+        var mutableRootURL = rootURL
+        try mutableRootURL.setResourceValues(directoryResourceValues)
 
         #if os(iOS)
         try FileManager.default.setAttributes(
