@@ -65,7 +65,7 @@ class ChannelAdFilterTests(unittest.TestCase):
 
     def test_obfuscated_markers_and_case(self):
         p = Post("＃РЕКЛАМА • еrіd:abcdef123", True)
-        self.assertEqual("keep", classify(p, self.collapse).action)  # Unicode homoglyphs need ML/extra rules
+        self.assertEqual("label", classify(p, self.collapse).action)  # NFKC handles full-width hashtag, not homoglyph erid
 
 
 if __name__ == "__main__":
