@@ -1,5 +1,5 @@
 name: Veilgram integrated local core tests
-# rerun after harness fix
+# rerun after runtime writer integration
 
 on:
   workflow_dispatch:
