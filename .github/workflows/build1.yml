@@ -19,9 +19,21 @@ jobs:
       - name: Checkout branded product source
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Resolve upstream-relative Git submodule URLs
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Keep upstream .gitmodules and pinned gitlinks intact.
+          # Standalone repo makes ../rlottie.git and ../tgcalls.git resolve
+          # incorrectly to Jigros repos; restore the official upstream owners.
+          git config submodule.submodules/rlottie/rlottie.url https://github.com/TelegramMessenger/rlottie.git
+          git config submodule.submodules/TgVoipWebrtc/tgcalls.url https://github.com/TelegramMessenger/tgcalls.git
+          git -c protocol.file.allow=never submodule update --init --recursive
+          git submodule status --recursive > "$RUNNER_TEMP/build1-submodules.txt"
 
       - name: Validate source and toolchain
         shell: bash
