@@ -47,6 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/check_veilgram_branding.py
+          python3 tools/check_veilgram_archive_hooks.py
           python3 -m py_compile tools/verify_build1_ipa.py
           python3 - <<'PY'
           import json
