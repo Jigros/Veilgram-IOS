@@ -94,3 +94,8 @@ tools/sim-watcher/dist/
 *.p12
 *.pfx
 *.xcconfig.local
+
+# Never commit AyuGram-style local API identity inputs or generated configs
+/API_KEYS
+/*-configuration.local.json
+/veilgram-device-configuration.json
