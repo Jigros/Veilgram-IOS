@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: build9-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build9:
