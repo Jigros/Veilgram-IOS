@@ -1,6 +1,10 @@
 name: BUILD-2 Veilgram device arm64 (experimental)
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build2.yml'
 permissions:
   contents: read
 concurrency:
