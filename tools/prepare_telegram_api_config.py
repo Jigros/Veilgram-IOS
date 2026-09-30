@@ -55,7 +55,12 @@ def _credential_mapping(path: Path) -> dict[str, str]:
             raise ConfigurationError("Credentials JSON must be an object")
         if not all(isinstance(k, str) and isinstance(v, (str, int)) for k, v in data.items()):
             raise ConfigurationError("Credentials fields must be strings or integers")
-        values = {key: str(value).strip() for key, value in data.items()}
+        values = {}
+        for key, value in data.items():
+            upper_key = key.upper()
+            if upper_key in values:
+                raise ConfigurationError(f"Duplicate credential field {upper_key}")
+            values[upper_key] = str(value).strip()
     else:
         values = {}
         for line in path.read_text(encoding="utf-8").splitlines():
