@@ -61,8 +61,8 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
-        case 0: return 4
-        default: return showRoadmap ? 4 : 0
+        case 0: return 5
+        default: return showRoadmap ? 3 : 0
         }
     }
 
@@ -72,8 +72,8 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
 
     func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         return section == 0
-            ? "Settings are stored locally and separately for each account. Channel-ad analysis is fully on-device. Official Telegram Sponsored Messages are outside this filter. Collapse is a preview preference and will not hide posts until the reveal UI is implemented."
-            : "Message archive, edit history, media archive and filters have not been implemented. No functions are silently enabled."
+            ? "Settings and message-filter rules are stored locally and separately for each account. Channel-ad analysis is fully on-device. Official Telegram Sponsored Messages are outside this filter. Collapse remains a preview preference until reveal UI is implemented."
+            : "Message archive, edit history and media archive are still under development. No archive function is silently enabled."
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -96,7 +96,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.isOn = self.adFilterEnabled
                 control.addTarget(self, action: #selector(adFilterChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
-            } else {
+            } else if indexPath.row == 3 {
                 cell.textLabel?.text = "Collapse high-confidence ads"
                 cell.detailTextLabel?.text = self.adFilterEnabled
                     ? "Preview setting • reveal UI not implemented yet"
@@ -107,14 +107,28 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.isOn = self.adCollapseEnabled
                 control.addTarget(self, action: #selector(adCollapseChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
+            } else {
+                cell.textLabel?.text = "Message filters"
+                cell.detailTextLabel?.text = "Local rules • add, enable, disable or delete"
+                cell.selectionStyle = .default
+                cell.accessoryType = .disclosureIndicator
             }
         } else {
-            let features = ["Message archive", "Edit history", "Media archive", "Message filters"]
+            let features = ["Message archive", "Edit history", "Media archive"]
             cell.textLabel?.text = features[indexPath.row]
             cell.detailTextLabel?.text = "Not implemented"
             cell.textLabel?.textColor = .secondaryLabel
         }
         return cell
+    }
+
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        guard indexPath.section == 0, indexPath.row == 4 else {
+            return
+        }
+        self.push(VeilgramMessageFiltersController(context: self.accountContext))
     }
 
     @objc private func roadmapChanged(_ sender: UISwitch) {
