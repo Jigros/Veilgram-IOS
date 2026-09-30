@@ -1,5 +1,5 @@
 name: Veilgram integrated local core tests
-# rerun after runtime writer integration
+# rerun after runtime hook and archive browser integration
 
 on:
   workflow_dispatch:
