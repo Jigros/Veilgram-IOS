@@ -1,3 +1,4 @@
+"CFBundleDisplayName" = "Veilgram";
 /* Localized versions of Info.plist keys */
 
 "NSContactsUsageDescription" = "Актуальная информация о ваших контактах будет храниться зашифрованной в облаке Telegram, чтобы вы могли связаться с друзьями с любого устройства.";
