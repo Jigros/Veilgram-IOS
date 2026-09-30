@@ -55,8 +55,15 @@ jobs:
                    enable_siri=False,enable_icloud=False)
           Path("build2-configuration.json").write_text(json.dumps(c))
           PY
-          # No real certificates or provisioning profiles enter this build.
-          printf '\nbuild --//Telegram:disableProvisioningProfiles\n' >> .bazelrc
+          # Public self-signed fixtures satisfy device provisioning analysis only.
+          mkdir -p "$RUNNER_TEMP/veilgram-fake-signing/certs" "$RUNNER_TEMP/veilgram-fake-signing/profiles"
+          cp build-system/fake-codesigning/certs/* "$RUNNER_TEMP/veilgram-fake-signing/certs/"
+          python3 tools/generate_compile_only_profiles.py \
+            --bundle-id org.veilgram.buildtwo \
+            --team-id C67CF9S4VU \
+            --destination "$RUNNER_TEMP/veilgram-fake-signing/profiles"
+          python3 build-system/Make/ImportCertificates.py \
+            --path "$RUNNER_TEMP/veilgram-fake-signing/certs"
       - name: Compile device arm64 (not an installable signed build)
         shell: bash
         run: |
