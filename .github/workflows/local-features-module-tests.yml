@@ -28,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
-          xcrun swiftc -parse-as-library -warnings-as-errors             submodules/VeilgramLocalFeatures/Sources/VeilgramMessageFilter.swift             submodules/VeilgramLocalFeatures/Sources/VeilgramProtectedLocalStore.swift             submodules/VeilgramLocalFeatures/Sources/VeilgramTransferEnvelope.swift             submodules/VeilgramLocalFeatures/Sources/VeilgramMessageFilterPersistence.swift             tools/test_veilgram_filter_persistence.swift             -o "$RUNNER_TEMP/veilgram-local-features-test"
+          xcrun swiftc -parse-as-library -warnings-as-errors             submodules/VeilgramLocalFeatures/Sources/VeilgramMessageFilter.swift             submodules/VeilgramLocalFeatures/Sources/VeilgramProtectedLocalStore.swift             submodules/VeilgramLocalFeatures/Sources/VeilgramTransferEnvelope.swift             submodules/VeilgramLocalFeatures/Sources/VeilgramMessageFilterPersistence.swift             submodules/VeilgramLocalFeatures/Sources/VeilgramFilterStoreAPI.swift             tools/test_veilgram_filter_persistence.swift             -o "$RUNNER_TEMP/veilgram-local-features-test"
           "$RUNNER_TEMP/veilgram-local-features-test"
 
       - name: Ensure TelegramUI duplicate cores are gone
