@@ -17,7 +17,7 @@ import tempfile
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = REPO_ROOT / "build-system/template_minimal_development_configuration.json"
-BUNDLE_ID = re.compile(r"^(?:[A-Za-z][A-Za-z0-9-]*\\.)+[A-Za-z][A-Za-z0-9-]*$")
+BUNDLE_ID = re.compile(r"^(?:[A-Za-z][A-Za-z0-9-]*\.)+[A-Za-z][A-Za-z0-9-]*$")
 URL_SCHEME = re.compile(r"^[a-z][a-z0-9-]{1,59}$")
 HASH = re.compile(r"^[0-9a-fA-F]{32}$")
 ALLOWED_KEYS = {"APP_ID", "APP_HASH", "API_ID", "API_HASH"}
