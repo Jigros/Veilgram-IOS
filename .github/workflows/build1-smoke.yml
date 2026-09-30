@@ -1,0 +1,93 @@
+name: BUILD-1 simulator launch smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build1-smoke.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  simulator-smoke:
+    if: github.repository == 'Jigros/Veilgram-IOS'
+    runs-on: macos-26
+    timeout-minutes: 50
+    steps:
+      - name: Prepare simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          xcodebuild -version
+          xcrun simctl list devices available
+          python3 - <<'PY'
+          import json, subprocess, os
+          data=json.loads(subprocess.check_output(["xcrun","simctl","list","-j","devices","available"]))
+          choices=[d for runtime,devices in data["devices"].items() if "iOS" in runtime for d in devices if d["state"]=="Shutdown" and d["isAvailable"]]
+          if not choices:
+              raise SystemExit("No available shutdown iOS simulator on runner")
+          name=choices[0]["udid"]
+          with open(os.environ["GITHUB_ENV"],"a") as f: f.write("VEILGRAM_SIMULATOR_UDID="+name+"\n")
+          print("Selected isolated simulator:",choices[0]["name"])
+          PY
+      - name: Retrieve previously validated BUILD-1 IPA
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 36707107223
+          repository: Jigros/Veilgram-IOS
+          name: build1-simulator-evidence
+          path: ${{ runner.temp }}/build1
+          github-token: ${{ github.token }}
+      - name: Independently check immutable IPA digest and app identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          ipa="$RUNNER_TEMP/build1/build1-simulator.ipa"
+          test -s "$ipa"
+          expected="0c8450c0a41c4d159ae92b4564cff1d766ef3de973b706a43f730566474c1f03"
+          actual="$(shasum -a 256 "$ipa" | awk '{print $1}')"
+          test "$actual" = "$expected"
+          echo "BUILD-1 verified SHA256: $actual"
+          /usr/bin/python3 - "$ipa" <<'PY'
+          import sys,zipfile,plistlib
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              app=[p for p in z.namelist() if p.startswith("Payload/") and p.count("/")==2 and p.endswith(".app/Info.plist")]
+              assert len(app)==1,app
+              info=plistlib.loads(z.read(app[0]))
+              assert info["CFBundleIdentifier"]=="org.veilgram.buildone", info
+              assert info["CFBundleDisplayName"]=="Veilgram",info
+              print("Verified simulator app:",info["CFBundleIdentifier"])
+          PY
+      - name: Install and launch on clean iOS Simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          udid="$VEILGRAM_SIMULATOR_UDID"
+          trap 'xcrun simctl shutdown "$udid" || true' EXIT
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+          mkdir -p "$RUNNER_TEMP/veilgram-unpacked"
+          ditto -x -k "$RUNNER_TEMP/build1/build1-simulator.ipa" "$RUNNER_TEMP/veilgram-unpacked"
+          app="$(find "$RUNNER_TEMP/veilgram-unpacked/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)"
+          test -n "$app"
+          xcrun simctl install "$udid" "$app"
+          # Success is only evidence the launch service accepted the process.
+          # It does NOT validate Telegram login, networking or notifications.
+          xcrun simctl launch "$udid" org.veilgram.buildone | tee "$RUNNER_TEMP/veilgram-launch.txt"
+          sleep 8
+          xcrun simctl io "$udid" screenshot "$RUNNER_TEMP/veilgram-launch.png"
+          test -s "$RUNNER_TEMP/veilgram-launch.png"
+      - name: Preserve launch evidence (no account login)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build1-simulator-launch-evidence
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/veilgram-launch.txt
+            ${{ runner.temp }}/veilgram-launch.png
