@@ -57,23 +57,39 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         self.tableView.verticalScrollIndicatorInsets.top = self.tableView.contentInset.top
     }
 
-    func numberOfSections(in tableView: UITableView) -> Int { return 2 }
+    func numberOfSections(in tableView: UITableView) -> Int { return 3 }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
-        case 0: return 5
-        default: return showRoadmap ? 3 : 0
+        case 0:
+            return 5
+        case 1:
+            return 3
+        default:
+            return showRoadmap ? 1 : 0
         }
     }
 
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        return section == 0 ? "Veilgram settings" : "Planned, not yet available"
+        switch section {
+        case 0:
+            return "Veilgram settings"
+        case 1:
+            return "Local archive"
+        default:
+            return "Planned"
+        }
     }
 
     func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        return section == 0
-            ? "Settings and message-filter rules are stored locally and separately for each account. Channel-ad analysis is fully on-device. Official Telegram Sponsored Messages are outside this filter. Collapse remains a preview preference until reveal UI is implemented."
-            : "Message archive, edit history and media archive are still under development. No archive function is silently enabled."
+        switch section {
+        case 0:
+            return "Settings and message-filter rules are stored locally and separately for each account. Channel-ad analysis is fully on-device. Official Telegram Sponsored Messages are outside this filter. Collapse remains a preview preference until reveal UI is implemented."
+        case 1:
+            return "These screens inspect only Veilgram-owned local archive files for this account. Automatic archive capture is not enabled by this UI."
+        default:
+            return "More UI will be exposed only after the underlying feature has its own build and safety gate."
+        }
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -113,10 +129,19 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 cell.selectionStyle = .default
                 cell.accessoryType = .disclosureIndicator
             }
+        } else if indexPath.section == 1 {
+            let features: [(String, String)] = [
+                ("Message archive", "Local snapshot count and storage status"),
+                ("Edit history", "Local revision count and storage status"),
+                ("Media archive", "Local availability metadata and size")
+            ]
+            cell.textLabel?.text = features[indexPath.row].0
+            cell.detailTextLabel?.text = features[indexPath.row].1
+            cell.selectionStyle = .default
+            cell.accessoryType = .disclosureIndicator
         } else {
-            let features = ["Message archive", "Edit history", "Media archive"]
-            cell.textLabel?.text = features[indexPath.row]
-            cell.detailTextLabel?.text = "Not implemented"
+            cell.textLabel?.text = "Import / export UI"
+            cell.detailTextLabel?.text = "Core exists • UI not implemented"
             cell.textLabel?.textColor = .secondaryLabel
         }
         return cell
@@ -125,10 +150,22 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        guard indexPath.section == 0, indexPath.row == 4 else {
+        if indexPath.section == 0, indexPath.row == 4 {
+            self.push(VeilgramMessageFiltersController(context: self.accountContext))
             return
         }
-        self.push(VeilgramMessageFiltersController(context: self.accountContext))
+        if indexPath.section == 1 {
+            let focus: VeilgramLocalArchiveController.Focus
+            switch indexPath.row {
+            case 0:
+                focus = .messages
+            case 1:
+                focus = .edits
+            default:
+                focus = .media
+            }
+            self.push(VeilgramLocalArchiveController(context: self.accountContext, focus: focus))
+        }
     }
 
     @objc private func roadmapChanged(_ sender: UISwitch) {
