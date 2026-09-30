@@ -20,9 +20,22 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: feature/branding
-          submodules: recursive
+          submodules: false
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Resolve upstream-relative Git submodule URLs
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Official upstream uses relative URLs; on a standalone Veilgram
+          # repository they incorrectly resolve to non-existent Jigros repos.
+          # Override only checkout-local config, preserving tracked .gitmodules
+          # and every pinned gitlink SHA.
+          git config submodule.submodules/rlottie/rlottie.url https://github.com/TelegramMessenger/rlottie.git
+          git config submodule.submodules/TgVoipWebrtc/tgcalls.url https://github.com/TelegramMessenger/tgcalls.git
+          git -c protocol.file.allow=never submodule update --init --recursive
+          git submodule status --recursive > "$RUNNER_TEMP/build1-submodules.txt"
 
       - name: Validate source and toolchain
         shell: bash
