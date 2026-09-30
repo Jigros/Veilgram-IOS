@@ -116,6 +116,7 @@ swift_library(
         "//submodules/TelegramUIPreferences",
         "//submodules/TelegramUniversalVideoContent",
         "//submodules/TelegramVoip",
+        "//submodules/VeilgramLocalFeatures:VeilgramLocalFeatures",
         "//submodules/TemporaryCachedPeerDataManager",
         "//submodules/TextFormat",
         "//submodules/TooltipUI",
