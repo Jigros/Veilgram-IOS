@@ -34,37 +34,42 @@ enum VeilgramLocalCoreIntegrationTests {
             hadMedia: false
         )
         var messages = VeilgramMessageArchiveDocument()
-        precondition(try VeilgramMessageArchiveEngine.append(
+        let didAppendMessage = try VeilgramMessageArchiveEngine.append(
             document: &messages,
             message: message,
             eligibility: ordinary
-        ))
-        precondition(try !VeilgramMessageArchiveEngine.append(
+        )
+        precondition(didAppendMessage)
+        let didAppendDuplicateMessage = try VeilgramMessageArchiveEngine.append(
             document: &messages,
             message: message,
             eligibility: ordinary
-        ))
+        )
+        precondition(!didAppendDuplicateMessage)
         let encodedMessages = try VeilgramMessageArchiveEngine.encode(messages)
-        precondition(try VeilgramMessageArchiveEngine.decode(encodedMessages) == messages)
+        let decodedMessages = try VeilgramMessageArchiveEngine.decode(encodedMessages)
+        precondition(decodedMessages == messages)
         checks += 3
 
         var edits = VeilgramEditHistoryDocument()
         let revision = VeilgramEditRevision(timestamp: 21, text: "test", entities: [entity])
-        precondition(try VeilgramEditHistoryEngine.append(
+        let didAppendRevision = try VeilgramEditHistoryEngine.append(
             document: &edits,
             key: key,
             revision: revision,
             eligibility: ordinary
-        ))
-        precondition(try !VeilgramEditHistoryEngine.append(
+        )
+        precondition(didAppendRevision)
+        let didAppendDuplicateRevision = try VeilgramEditHistoryEngine.append(
             document: &edits,
             key: key,
             revision: revision,
             eligibility: ordinary
-        ))
-        precondition(try VeilgramEditHistoryEngine.decode(
-            VeilgramEditHistoryEngine.encode(edits)
-        ) == edits)
+        )
+        precondition(!didAppendDuplicateRevision)
+        let encodedEdits = try VeilgramEditHistoryEngine.encode(edits)
+        let decodedEdits = try VeilgramEditHistoryEngine.decode(encodedEdits)
+        precondition(decodedEdits == edits)
         checks += 3
 
         let mediaKey = VeilgramMediaKey(
@@ -86,11 +91,12 @@ enum VeilgramLocalCoreIntegrationTests {
             archiveEligibility: ordinary,
             bytesAreLocallyAvailable: true
         )
-        precondition(try VeilgramMediaArchiveEngine.appendAvailable(
+        let didAppendMedia = try VeilgramMediaArchiveEngine.appendAvailable(
             document: &mediaDocument,
             item: media,
             eligibility: mediaEligibility
-        ))
+        )
+        precondition(didAppendMedia)
         precondition(VeilgramMediaArchiveEngine.totalAvailableBytes(mediaDocument) == 100)
         let evicted = VeilgramMediaArchiveEngine.enforceQuota(
             document: &mediaDocument,
@@ -108,10 +114,13 @@ enum VeilgramLocalCoreIntegrationTests {
         let archiveStore = VeilgramArchiveStoreAPI(store: store)
         try archiveStore.saveMessages(messages)
         try archiveStore.saveEdits(edits)
-        precondition(try archiveStore.loadMessages() == messages)
-        precondition(try archiveStore.loadEdits() == edits)
+        let loadedMessages = try archiveStore.loadMessages()
+        let loadedEdits = try archiveStore.loadEdits()
+        precondition(loadedMessages == messages)
+        precondition(loadedEdits == edits)
         try archiveStore.removeAll()
-        precondition(try archiveStore.loadMessages().messages.isEmpty)
+        let emptiedMessages = try archiveStore.loadMessages()
+        precondition(emptiedMessages.messages.isEmpty)
         checks += 5
 
         print("PASS: \(checks) shared local archive/edit/media integration checks")
