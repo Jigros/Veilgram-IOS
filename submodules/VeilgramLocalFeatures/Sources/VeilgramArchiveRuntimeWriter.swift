@@ -145,15 +145,18 @@ public struct VeilgramLocalMediaArchiveCandidate: Equatable {
     public var key: VeilgramMediaKey
     public var sourcePath: String?
     public var archivedAt: Int32
+    public var eligibility: VeilgramArchiveEligibility
 
     public init(
         key: VeilgramMediaKey,
         sourcePath: String?,
-        archivedAt: Int32
+        archivedAt: Int32,
+        eligibility: VeilgramArchiveEligibility
     ) {
         self.key = key
         self.sourcePath = sourcePath
         self.archivedAt = archivedAt
+        self.eligibility = eligibility
     }
 }
 
@@ -232,12 +235,11 @@ public enum VeilgramArchiveRuntimeWriter {
     public static func enqueueLocalMediaCandidates(
         accountPeerId: Int64,
         candidates: [VeilgramLocalMediaArchiveCandidate],
-        eligibility: VeilgramArchiveEligibility,
         completion: (() -> Void)? = nil
     ) {
-        guard !candidates.isEmpty,
-              VeilgramArchiveRuntimePreferences.messageArchiveEnabled(accountPeerId: accountPeerId),
-              eligibility.isEligibleForLocalRetention else {
+        let eligibleCandidates = candidates.filter { $0.eligibility.isEligibleForLocalRetention }
+        guard !eligibleCandidates.isEmpty,
+              VeilgramArchiveRuntimePreferences.messageArchiveEnabled(accountPeerId: accountPeerId) else {
             if let completion {
                 queue.async(execute: completion)
             }
@@ -253,7 +255,7 @@ public enum VeilgramArchiveRuntimeWriter {
                 var document = try store.loadMedia()
                 var changed = false
 
-                for candidate in candidates {
+                for candidate in eligibleCandidates {
                     if let existing = document.items.first(where: { $0.key == candidate.key }),
                        existing.availability == .available {
                         continue
@@ -288,7 +290,7 @@ public enum VeilgramArchiveRuntimeWriter {
                             document: &document,
                             item: item,
                             eligibility: VeilgramMediaEligibility(
-                                archiveEligibility: eligibility,
+                                archiveEligibility: candidate.eligibility,
                                 bytesAreLocallyAvailable: true
                             )
                         ) {
