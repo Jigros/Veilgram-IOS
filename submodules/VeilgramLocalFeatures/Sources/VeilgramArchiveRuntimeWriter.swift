@@ -23,75 +23,135 @@ public enum VeilgramArchiveRuntimeDiagnostics {
     }
 }
 
-public enum VeilgramArchiveRuntimeWriter {
-    private struct DeletedMessageEvent {
-        let message: VeilgramArchivedMessage
-        let eligibility: VeilgramArchiveEligibility
+struct VeilgramArchiveRuntimeBatchPolicy {
+    static let flushDelayMilliseconds = 150
+    static let maximumPendingEventsPerAccount = 128
+    static let retryBaseDelayMilliseconds = 250
+    static let retryMaximumDelayMilliseconds = 5_000
+
+    static func retryDelayMilliseconds(attempt: Int) -> Int {
+        let normalizedAttempt = max(1, attempt)
+        let shift = min(normalizedAttempt - 1, 8)
+        let multiplier = 1 << shift
+        return min(
+            retryMaximumDelayMilliseconds,
+            retryBaseDelayMilliseconds * multiplier
+        )
+    }
+}
+
+struct VeilgramArchivePendingDeletedMessageEvent {
+    let message: VeilgramArchivedMessage
+    let eligibility: VeilgramArchiveEligibility
+}
+
+struct VeilgramArchivePendingEditRevisionEvent {
+    let key: VeilgramMessageKey
+    let revision: VeilgramEditRevision
+    let eligibility: VeilgramArchiveEligibility
+}
+
+struct VeilgramArchivePendingBatch {
+    var deletedMessages: [VeilgramMessageKey: VeilgramArchivePendingDeletedMessageEvent] = [:]
+    var deletedMessageOrder: [VeilgramMessageKey] = []
+    var editRevisions: [VeilgramArchivePendingEditRevisionEvent] = []
+    var lastPendingEditRevision: [VeilgramMessageKey: VeilgramEditRevision] = [:]
+    var retryAttempt = 0
+
+    var eventCount: Int {
+        return deletedMessages.count + editRevisions.count
     }
 
-    private struct EditRevisionEvent {
-        let key: VeilgramMessageKey
-        let revision: VeilgramEditRevision
-        let eligibility: VeilgramArchiveEligibility
+    var isEmpty: Bool {
+        return deletedMessages.isEmpty && editRevisions.isEmpty
     }
 
-    private struct PendingAccountBatch {
-        var deletedMessages: [VeilgramMessageKey: DeletedMessageEvent] = [:]
-        var deletedMessageOrder: [VeilgramMessageKey] = []
-        var editRevisions: [EditRevisionEvent] = []
-        var lastPendingEditRevision: [VeilgramMessageKey: VeilgramEditRevision] = [:]
-
-        var eventCount: Int {
-            return deletedMessages.count + editRevisions.count
+    mutating func appendDeletedMessage(
+        _ message: VeilgramArchivedMessage,
+        eligibility: VeilgramArchiveEligibility
+    ) {
+        if deletedMessages[message.key] == nil {
+            deletedMessageOrder.append(message.key)
         }
+        deletedMessages[message.key] = VeilgramArchivePendingDeletedMessageEvent(
+            message: message,
+            eligibility: eligibility
+        )
+    }
 
-        mutating func appendDeletedMessage(
-            _ message: VeilgramArchivedMessage,
-            eligibility: VeilgramArchiveEligibility
-        ) {
-            if deletedMessages[message.key] == nil {
-                deletedMessageOrder.append(message.key)
-            }
-            deletedMessages[message.key] = DeletedMessageEvent(
-                message: message,
+    mutating func appendEditRevision(
+        key: VeilgramMessageKey,
+        revision: VeilgramEditRevision,
+        eligibility: VeilgramArchiveEligibility
+    ) {
+        guard lastPendingEditRevision[key] != revision else {
+            return
+        }
+        lastPendingEditRevision[key] = revision
+        editRevisions.append(
+            VeilgramArchivePendingEditRevisionEvent(
+                key: key,
+                revision: revision,
                 eligibility: eligibility
             )
-        }
-
-        mutating func appendEditRevision(
-            key: VeilgramMessageKey,
-            revision: VeilgramEditRevision,
-            eligibility: VeilgramArchiveEligibility
-        ) {
-            guard lastPendingEditRevision[key] != revision else {
-                return
-            }
-            lastPendingEditRevision[key] = revision
-            editRevisions.append(
-                EditRevisionEvent(
-                    key: key,
-                    revision: revision,
-                    eligibility: eligibility
-                )
-            )
-        }
+        )
     }
 
+    mutating func discardDeletedMessages() {
+        deletedMessages.removeAll(keepingCapacity: false)
+        deletedMessageOrder.removeAll(keepingCapacity: false)
+    }
+
+    mutating func discardEditRevisions() {
+        editRevisions.removeAll(keepingCapacity: false)
+        lastPendingEditRevision.removeAll(keepingCapacity: false)
+    }
+
+    func deletedMessagesOnly(nextRetryAttempt: Int) -> VeilgramArchivePendingBatch {
+        var result = VeilgramArchivePendingBatch()
+        result.deletedMessages = deletedMessages
+        result.deletedMessageOrder = deletedMessageOrder
+        result.retryAttempt = nextRetryAttempt
+        return result
+    }
+
+    func editRevisionsOnly(nextRetryAttempt: Int) -> VeilgramArchivePendingBatch {
+        var result = VeilgramArchivePendingBatch()
+        result.editRevisions = editRevisions
+        result.lastPendingEditRevision = lastPendingEditRevision
+        result.retryAttempt = nextRetryAttempt
+        return result
+    }
+
+    mutating func mergeNewer(_ newer: VeilgramArchivePendingBatch) {
+        for key in newer.deletedMessageOrder {
+            guard let event = newer.deletedMessages[key] else {
+                continue
+            }
+            appendDeletedMessage(event.message, eligibility: event.eligibility)
+        }
+        for event in newer.editRevisions {
+            appendEditRevision(
+                key: event.key,
+                revision: event.revision,
+                eligibility: event.eligibility
+            )
+        }
+        retryAttempt = max(retryAttempt, newer.retryAttempt)
+    }
+}
+
+public enum VeilgramArchiveRuntimeWriter {
     private static let queue = DispatchQueue(
         label: "org.veilgram.local-archive",
         qos: .utility,
         autoreleaseFrequency: .workItem
     )
 
-    // A short debounce coalesces bursts of delete/edit updates into one JSON
-    // read/decode + one atomic write per document. The size cap prevents a
-    // sustained stream from growing the in-memory batch without bound.
-    private static let flushDelay: DispatchTimeInterval = .milliseconds(150)
-    private static let maximumPendingEventsPerAccount = 128
-
     // Queue-confined state. These values are only read or mutated on `queue`.
-    private static var pendingBatches: [Int64: PendingAccountBatch] = [:]
+    private static var pendingBatches: [Int64: VeilgramArchivePendingBatch] = [:]
     private static var flushScheduled = false
+    private static var retryGenerations: [Int64: Int] = [:]
 
     public static func enqueueDeletedMessage(
         accountPeerId: Int64,
@@ -104,11 +164,14 @@ public enum VeilgramArchiveRuntimeWriter {
         }
 
         queue.async {
-            var batch = pendingBatches[accountPeerId] ?? PendingAccountBatch()
+            var batch = pendingBatches[accountPeerId] ?? VeilgramArchivePendingBatch()
             batch.appendDeletedMessage(message, eligibility: eligibility)
             pendingBatches[accountPeerId] = batch
 
-            if batch.eventCount >= maximumPendingEventsPerAccount {
+            if retryGenerations[accountPeerId] != nil {
+                return
+            }
+            if batch.eventCount >= VeilgramArchiveRuntimeBatchPolicy.maximumPendingEventsPerAccount {
                 flush(accountPeerId: accountPeerId)
             } else {
                 scheduleFlushIfNeeded()
@@ -128,7 +191,7 @@ public enum VeilgramArchiveRuntimeWriter {
         }
 
         queue.async {
-            var batch = pendingBatches[accountPeerId] ?? PendingAccountBatch()
+            var batch = pendingBatches[accountPeerId] ?? VeilgramArchivePendingBatch()
             batch.appendEditRevision(
                 key: key,
                 revision: revision,
@@ -136,7 +199,10 @@ public enum VeilgramArchiveRuntimeWriter {
             )
             pendingBatches[accountPeerId] = batch
 
-            if batch.eventCount >= maximumPendingEventsPerAccount {
+            if retryGenerations[accountPeerId] != nil {
+                return
+            }
+            if batch.eventCount >= VeilgramArchiveRuntimeBatchPolicy.maximumPendingEventsPerAccount {
                 flush(accountPeerId: accountPeerId)
             } else {
                 scheduleFlushIfNeeded()
@@ -145,10 +211,105 @@ public enum VeilgramArchiveRuntimeWriter {
     }
 
     /// Requests an asynchronous flush on the same serial writer queue.
-    /// This never blocks the caller, including callers on the UI thread.
-    public static func flushPending() {
+    /// Completion is delivered on the main queue after the immediate persistence
+    /// attempt finishes. Failed persistence remains queued for bounded-backoff retry.
+    public static func flushPending(completion: (() -> Void)? = nil) {
         queue.async {
-            flushAll()
+            flushAll(force: true)
+            completeOnMain(completion)
+        }
+    }
+
+    /// Clears all Veilgram archive documents for one account on the writer queue.
+    /// Pending pre-clear events are discarded so they cannot resurrect cleared data.
+    public static func removeAll(
+        accountPeerId: Int64,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        queue.async {
+            discardAllPending(accountPeerId: accountPeerId)
+            do {
+                let store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
+                try store.removeAll()
+                completeOnMain {
+                    completion(.success(()))
+                }
+            } catch {
+                VeilgramArchiveRuntimeDiagnostics.record(error)
+                completeOnMain {
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    /// Replaces the message archive on the writer queue. Pending message snapshots
+    /// that predate the replacement are discarded by design; later events append
+    /// normally after this mutation.
+    public static func importMessages(
+        accountPeerId: Int64,
+        data: Data,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        queue.async {
+            discardPendingMessages(accountPeerId: accountPeerId)
+            do {
+                let store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
+                try store.importMessages(data)
+                completeOnMain {
+                    completion(.success(()))
+                }
+            } catch {
+                VeilgramArchiveRuntimeDiagnostics.record(error)
+                completeOnMain {
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    /// Replaces edit history on the writer queue. Pending revisions that predate
+    /// the replacement are discarded by design.
+    public static func importEdits(
+        accountPeerId: Int64,
+        data: Data,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        queue.async {
+            discardPendingEdits(accountPeerId: accountPeerId)
+            do {
+                let store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
+                try store.importEdits(data)
+                completeOnMain {
+                    completion(.success(()))
+                }
+            } catch {
+                VeilgramArchiveRuntimeDiagnostics.record(error)
+                completeOnMain {
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    public static func importMediaMetadata(
+        accountPeerId: Int64,
+        data: Data,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        queue.async {
+            do {
+                let store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
+                try store.importMediaMetadata(data)
+                completeOnMain {
+                    completion(.success(()))
+                }
+            } catch {
+                VeilgramArchiveRuntimeDiagnostics.record(error)
+                completeOnMain {
+                    completion(.failure(error))
+                }
+            }
         }
     }
 
@@ -157,16 +318,25 @@ public enum VeilgramArchiveRuntimeWriter {
             return
         }
         flushScheduled = true
-        queue.asyncAfter(deadline: .now() + flushDelay) {
+        queue.asyncAfter(
+            deadline: .now() + .milliseconds(
+                VeilgramArchiveRuntimeBatchPolicy.flushDelayMilliseconds
+            )
+        ) {
             flushScheduled = false
-            flushAll()
+            flushAll(force: false)
         }
     }
 
-    private static func flushAll() {
+    private static func flushAll(force: Bool) {
         let accountPeerIds = Array(pendingBatches.keys)
         for accountPeerId in accountPeerIds {
-            flush(accountPeerId: accountPeerId)
+            if force {
+                invalidateRetry(accountPeerId: accountPeerId)
+                flush(accountPeerId: accountPeerId)
+            } else if retryGenerations[accountPeerId] == nil {
+                flush(accountPeerId: accountPeerId)
+            }
         }
     }
 
@@ -175,24 +345,45 @@ public enum VeilgramArchiveRuntimeWriter {
             return
         }
 
+        let store: VeilgramArchiveStoreAPI
         do {
-            let store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
-
-            if !batch.deletedMessageOrder.isEmpty {
-                flushDeletedMessages(batch, store: store)
-            }
-            if !batch.editRevisions.isEmpty {
-                flushEditRevisions(batch, store: store)
-            }
+            store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
         } catch {
             VeilgramArchiveRuntimeDiagnostics.record(error)
+            requeueForRetry(accountPeerId: accountPeerId, batch: batch)
+            return
+        }
+
+        var retryBatch = VeilgramArchivePendingBatch()
+        let nextRetryAttempt = batch.retryAttempt + 1
+
+        if !batch.deletedMessageOrder.isEmpty {
+            if !flushDeletedMessages(batch, store: store) {
+                retryBatch.mergeNewer(
+                    batch.deletedMessagesOnly(nextRetryAttempt: nextRetryAttempt)
+                )
+            }
+        }
+
+        if !batch.editRevisions.isEmpty {
+            if !flushEditRevisions(batch, store: store) {
+                retryBatch.mergeNewer(
+                    batch.editRevisionsOnly(nextRetryAttempt: nextRetryAttempt)
+                )
+            }
+        }
+
+        if !retryBatch.isEmpty {
+            requeueForRetry(accountPeerId: accountPeerId, batch: retryBatch)
         }
     }
 
+    /// Returns false only for document-level load/save failures that should be retried.
+    /// Invalid individual events are diagnosed and skipped rather than poisoning a batch.
     private static func flushDeletedMessages(
-        _ batch: PendingAccountBatch,
+        _ batch: VeilgramArchivePendingBatch,
         store: VeilgramArchiveStoreAPI
-    ) {
+    ) -> Bool {
         do {
             var document = try store.loadMessages()
             var changed = false
@@ -217,15 +408,18 @@ public enum VeilgramArchiveRuntimeWriter {
             if changed {
                 try store.saveMessages(document)
             }
+            return true
         } catch {
             VeilgramArchiveRuntimeDiagnostics.record(error)
+            return false
         }
     }
 
+    /// Returns false only for document-level load/save failures that should be retried.
     private static func flushEditRevisions(
-        _ batch: PendingAccountBatch,
+        _ batch: VeilgramArchivePendingBatch,
         store: VeilgramArchiveStoreAPI
-    ) {
+    ) -> Bool {
         do {
             var document = try store.loadEdits()
             var changed = false
@@ -248,8 +442,82 @@ public enum VeilgramArchiveRuntimeWriter {
             if changed {
                 try store.saveEdits(document)
             }
+            return true
         } catch {
             VeilgramArchiveRuntimeDiagnostics.record(error)
+            return false
         }
+    }
+
+    private static func requeueForRetry(
+        accountPeerId: Int64,
+        batch: VeilgramArchivePendingBatch
+    ) {
+        var requeuedBatch = batch
+        if let newerBatch = pendingBatches.removeValue(forKey: accountPeerId) {
+            requeuedBatch.mergeNewer(newerBatch)
+        }
+        if requeuedBatch.retryAttempt == 0 {
+            requeuedBatch.retryAttempt = 1
+        }
+        pendingBatches[accountPeerId] = requeuedBatch
+
+        let generation = (retryGenerations[accountPeerId] ?? 0) + 1
+        retryGenerations[accountPeerId] = generation
+
+        let delay = VeilgramArchiveRuntimeBatchPolicy.retryDelayMilliseconds(
+            attempt: requeuedBatch.retryAttempt
+        )
+        queue.asyncAfter(deadline: .now() + .milliseconds(delay)) {
+            guard retryGenerations[accountPeerId] == generation else {
+                return
+            }
+            retryGenerations.removeValue(forKey: accountPeerId)
+            flush(accountPeerId: accountPeerId)
+        }
+    }
+
+    private static func discardPendingMessages(accountPeerId: Int64) {
+        guard var batch = pendingBatches[accountPeerId] else {
+            return
+        }
+        batch.discardDeletedMessages()
+        updatePendingBatchAfterMutation(accountPeerId: accountPeerId, batch: batch)
+    }
+
+    private static func discardPendingEdits(accountPeerId: Int64) {
+        guard var batch = pendingBatches[accountPeerId] else {
+            return
+        }
+        batch.discardEditRevisions()
+        updatePendingBatchAfterMutation(accountPeerId: accountPeerId, batch: batch)
+    }
+
+    private static func discardAllPending(accountPeerId: Int64) {
+        pendingBatches.removeValue(forKey: accountPeerId)
+        invalidateRetry(accountPeerId: accountPeerId)
+    }
+
+    private static func updatePendingBatchAfterMutation(
+        accountPeerId: Int64,
+        batch: VeilgramArchivePendingBatch
+    ) {
+        if batch.isEmpty {
+            pendingBatches.removeValue(forKey: accountPeerId)
+            invalidateRetry(accountPeerId: accountPeerId)
+        } else {
+            pendingBatches[accountPeerId] = batch
+        }
+    }
+
+    private static func invalidateRetry(accountPeerId: Int64) {
+        retryGenerations.removeValue(forKey: accountPeerId)
+    }
+
+    private static func completeOnMain(_ completion: (() -> Void)?) {
+        guard let completion else {
+            return
+        }
+        DispatchQueue.main.async(execute: completion)
     }
 }
