@@ -40,21 +40,7 @@ struct VeilgramProtectedLocalStore {
         try ensureDirectory()
 
         try data.write(to: fileURL, options: [.atomic])
-        try FileManager.default.setAttributes(
-            [.posixPermissions: NSNumber(value: 0o600)],
-            ofItemAtPath: fileURL.path
-        )
-        var fileResourceValues = URLResourceValues()
-        fileResourceValues.isExcludedFromBackup = true
-        var mutableFileURL = fileURL
-        try mutableFileURL.setResourceValues(fileResourceValues)
-
-        #if os(iOS)
-        try FileManager.default.setAttributes(
-            [.protectionKey: FileProtectionType.complete],
-            ofItemAtPath: fileURL.path
-        )
-        #endif
+        try applyProtection(to: fileURL)
     }
 
     func read(fileName: String) throws -> Data? {
@@ -73,6 +59,59 @@ struct VeilgramProtectedLocalStore {
         return data
     }
 
+    func copyFile(
+        from sourceURL: URL,
+        fileName: String,
+        maximumBytes: Int64
+    ) throws -> Int64 {
+        let destinationURL = try url(for: fileName)
+        try ensureDirectory()
+
+        let values = try sourceURL.resourceValues(forKeys: [
+            .isRegularFileKey,
+            .fileSizeKey
+        ])
+        guard values.isRegularFile == true else {
+            throw VeilgramProtectedStoreError.invalidFileName
+        }
+        let byteCount = Int64(values.fileSize ?? 0)
+        guard byteCount >= 0, byteCount <= maximumBytes else {
+            throw VeilgramProtectedStoreError.payloadTooLarge
+        }
+
+        let temporaryName = ".\(fileName).tmp"
+        let temporaryURL = try url(for: temporaryName)
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: temporaryURL.path) {
+            try fileManager.removeItem(at: temporaryURL)
+        }
+        try fileManager.copyItem(at: sourceURL, to: temporaryURL)
+        if fileManager.fileExists(atPath: destinationURL.path) {
+            try fileManager.removeItem(at: destinationURL)
+        }
+        try fileManager.moveItem(at: temporaryURL, to: destinationURL)
+
+        try applyProtection(to: destinationURL)
+        return byteCount
+    }
+
+    func removeFiles(withPrefix prefix: String) throws {
+        guard Self.isSafeFileName(prefix) else {
+            throw VeilgramProtectedStoreError.invalidFileName
+        }
+        guard FileManager.default.fileExists(atPath: rootURL.path) else {
+            return
+        }
+        let contents = try FileManager.default.contentsOfDirectory(
+            at: rootURL,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        )
+        for url in contents where url.lastPathComponent.hasPrefix(prefix) {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
     func remove(fileName: String) throws {
         let fileURL = try url(for: fileName)
         if FileManager.default.fileExists(atPath: fileURL.path) {
@@ -83,6 +122,24 @@ struct VeilgramProtectedLocalStore {
     func fileExists(fileName: String) throws -> Bool {
         let fileURL = try url(for: fileName)
         return FileManager.default.fileExists(atPath: fileURL.path)
+    }
+
+    private func applyProtection(to fileURL: URL) throws {
+        try FileManager.default.setAttributes(
+            [.posixPermissions: NSNumber(value: 0o600)],
+            ofItemAtPath: fileURL.path
+        )
+        var fileResourceValues = URLResourceValues()
+        fileResourceValues.isExcludedFromBackup = true
+        var mutableFileURL = fileURL
+        try mutableFileURL.setResourceValues(fileResourceValues)
+
+        #if os(iOS)
+        try FileManager.default.setAttributes(
+            [.protectionKey: FileProtectionType.complete],
+            ofItemAtPath: fileURL.path
+        )
+        #endif
     }
 
     private func ensureDirectory() throws {
