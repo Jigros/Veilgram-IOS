@@ -7,8 +7,6 @@ app_delegate = Path("submodules/TelegramUI/Sources/AppDelegate.swift").read_text
 
 m = re.search(r"alternate_icon_folders\s*=\s*\[(.*?)\]", build, re.S)
 assert m is not None, "alternate_icon_folders assignment missing"
-assert not m.group(1).strip(), "Telegram alternate icons are still packaged"
-
 start = app_delegate.index("}, getAvailableAlternateIcons: {")
 end = app_delegate.index("}, getAlternateIconName: {", start)
 binding = app_delegate[start:end]
@@ -17,10 +15,12 @@ inherited = [
     "BlueClassicIcon", "BlueFilledIcon", "WhiteFilledIcon", "New1", "New2",
     "Premium", "PremiumBlack", "PremiumTurbo",
 ]
+folders = m.group(1)
 for name in inherited:
+    assert name not in folders, f"inherited icon {name} still packaged"
     assert name not in binding, f"inherited icon {name} still exposed in application bindings"
 
-print("PASS: inherited Telegram alternate app icons are not packaged or exposed; Veilgram-owned variants are allowed")
+print("PASS: inherited Telegram alternate app icons are absent; Veilgram-owned variants are allowed")
 
 assert "Telegram iOS Color Theme File" not in build, "user-visible Telegram theme-file description remains"
 assert "<string>BlueIcon@3x.png</string>" not in build, "Telegram theme-file icon remains"
