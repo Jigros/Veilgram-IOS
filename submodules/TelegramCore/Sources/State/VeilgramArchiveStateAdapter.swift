@@ -19,6 +19,40 @@ enum VeilgramArchiveStateAdapter {
         )
     }
 
+    static func shouldRetainDeletedMessage(
+        accountPeerId: PeerId,
+        message: Message
+    ) -> Bool {
+        return VeilgramArchiveRuntimePreferences.messageArchiveEnabled(
+            accountPeerId: accountPeerId.toInt64()
+        ) && eligibility(for: message).isEligibleForLocalRetention
+    }
+
+    static func retainedDeletedStoreMessage(
+        _ message: Message,
+        deletedAt: Int32
+    ) -> StoreMessage {
+        var attributes = message.attributes.filter { !($0 is VeilgramDeletedMessageAttribute) }
+        attributes.append(VeilgramDeletedMessageAttribute(deletedAt: deletedAt))
+        return StoreMessage(
+            id: message.id,
+            customStableId: nil,
+            globallyUniqueId: message.globallyUniqueId,
+            groupingKey: message.groupingKey,
+            threadId: message.threadId,
+            timestamp: message.timestamp,
+            flags: StoreMessageFlags(message.flags),
+            tags: message.tags,
+            globalTags: message.globalTags,
+            localTags: message.localTags,
+            forwardInfo: message.forwardInfo.flatMap(StoreMessageForwardInfo.init),
+            authorId: message.author?.id,
+            text: message.text,
+            attributes: attributes,
+            media: message.media
+        )
+    }
+
     static func enqueueDeletedMessage(
         accountPeerId: PeerId,
         message: Message,
