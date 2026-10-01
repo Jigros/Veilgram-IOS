@@ -142,7 +142,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 cell.accessoryView = control
             } else if indexPath.row == 4 {
                 cell.textLabel?.text = "Hide typing activity"
-                cell.detailTextLabel?.text = "Suppress typing, recording and upload activity"
+                cell.detailTextLabel?.text = "Suppress typing, recording, upload and group-call speaking activity"
                 cell.textLabel?.textColor = self.ghostModeEnabled ? .label : .secondaryLabel
                 let control = UISwitch()
                 control.isEnabled = self.ghostModeEnabled
