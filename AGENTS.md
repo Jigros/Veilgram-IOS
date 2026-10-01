@@ -7,17 +7,17 @@
 - The current upstream base is Telegram-iOS 12.9.2 at `6ad963e5b62d354da79040f388ae2b9132fb17b8`.
 - Preserve upstream history, submodule gitlinks, copyright notices and file-specific licenses. Do not replace an upstream merge with a flat source snapshot.
 
-## Phase gates
+## Development policy
 
-- BUILD-0 passed only for unchanged official upstream.
-- Keep this foundation PR free of branding and Veilgram features.
-- Implement branding alone on `feature/branding`, then require a real BUILD-1 compilation before feature work.
-- After BUILD-1, the first planned functional research area is VeilArchive and Anti-Delete. Ghost Mode is not first.
-- Read `docs/TELEGRAM_API_COMPLIANCE.md` before any behavior-changing feature. Do not claim or ship behavior prohibited by the Telegram API Terms without an explicit recorded product/legal decision.
+- Veilgram feature development is driven by the project roadmap and current task, not by inherited Telegram contribution policy.
+- Experimental behavior may be implemented and tested in focused branches as long as the implementation is technically explicit, testable and does not expose credentials or private user data.
+- Documentation about Telegram API terms, distribution or store-review risk is informational release context. It is not an implementation gate and must not be used to silently disable, stub out or omit Veilgram functionality.
+- Keep development capability decisions separate from release/distribution decisions.
+- If a feature is intentionally disabled for a particular build, represent that as an explicit build/runtime capability with a documented reason rather than an unconditional hidden guard.
 
 ## Change discipline
 
-- Keep `main` stable. Use `research/*`, `upstream/*`, `feature/*` and `fix/*` branches with focused pull requests.
+- Keep `main` stable. Use `research/*`, `upstream/*`, `feature/*`, `fix/*` and `cleanup/*` branches with focused pull requests.
 - Isolate Veilgram-owned modules and keep patches to Telegram integration points narrow and documented.
 - A passing checkout, project generation, dependency resolution, Bazel query or build start is not a passing compilation.
 - Record exact source SHA, upstream SHA, environment, command, result and artifact/log hashes for build claims.
