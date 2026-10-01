@@ -180,6 +180,24 @@ enum VeilgramLocalCoreIntegrationTests {
             preconditionFailure("missing media file permissions")
         }
         checks += 4
+
+        let storedMediaItem = VeilgramMediaItem(
+            key: mediaKey,
+            relativePath: copiedMedia.relativePath,
+            byteCount: copiedMedia.byteCount,
+            archivedAt: 40,
+            lastAccessedAt: 40,
+            availability: .available
+        )
+        var storedMediaDocument = VeilgramMediaArchiveDocument()
+        precondition(try VeilgramMediaArchiveEngine.appendAvailable(
+            document: &storedMediaDocument,
+            item: storedMediaItem,
+            eligibility: mediaEligibility
+        ))
+        try archiveStore.saveMedia(storedMediaDocument)
+        checks += 1
+
         try archiveStore.saveMessages(messages)
         try archiveStore.saveEdits(edits)
         let rootValues = try base.resourceValues(forKeys: [.isExcludedFromBackupKey])
@@ -210,14 +228,18 @@ enum VeilgramLocalCoreIntegrationTests {
         let importedMedia = try archiveStore.loadMedia()
         precondition(importedMessages == messages)
         precondition(importedEdits == edits)
-        precondition(importedMedia == mediaDocument)
+        precondition(importedMedia.items.count == 1)
+        precondition(importedMedia.items[0].key == mediaKey)
+        precondition(importedMedia.items[0].availability == .unavailable)
+        precondition(importedMedia.items[0].relativePath == nil)
+        precondition(importedMedia.items[0].byteCount == 0)
 
         do {
             try archiveStore.importEdits(messageExport)
             preconditionFailure("wrong archive envelope kind was accepted")
         } catch {
         }
-        checks += 11
+        checks += 15
 
         print("PASS: \(checks) shared local archive/edit/media integration checks")
     }
