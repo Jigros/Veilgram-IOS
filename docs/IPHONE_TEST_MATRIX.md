@@ -40,4 +40,4 @@ Public CI stays fixture-only. For a private login-capable build, use `.veilgram-
 | Storage/privacy | No user data in CI or reports, clean removal on logout | NOT TESTED |
 | Update | Install next signed build with matching identifier; check no data loss | NOT TESTED |
 
-Do not mark a gate PASS based only on successful compilation, IPA extraction or fake-profile validation. Record reproducible bugs without exposing account data. Never use self-destructing, secret or restricted media as test material for an archive feature.
+Do not mark a gate PASS based only on successful compilation, IPA extraction or fake-profile validation. Record reproducible bugs without exposing account data. For ephemeral, secret or otherwise sensitive-media behavior, use controlled test accounts/fixtures and record the exact capability being exercised without publishing private content.
