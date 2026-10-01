@@ -83,38 +83,55 @@ enum VeilgramArchiveStateAdapter {
         )
 
         if let mediaBox {
-            var candidates: [VeilgramLocalMediaArchiveCandidate] = []
-            for (mediaIndex, media) in message.effectiveMedia.enumerated() {
-                let resource: MediaResource?
-                if let image = media as? TelegramMediaImage {
-                    resource = image.representations.last?.resource
-                } else if let file = media as? TelegramMediaFile {
-                    resource = file.resource
-                } else {
-                    resource = nil
-                }
-                guard let resource else {
-                    continue
-                }
-                candidates.append(
-                    VeilgramLocalMediaArchiveCandidate(
-                        key: VeilgramMediaKey(
-                            peerId: message.id.peerId.toInt64(),
-                            messageNamespace: message.id.namespace,
-                            messageId: message.id.id,
-                            mediaIndex: mediaIndex
-                        ),
-                        sourcePath: mediaBox.completedResourcePath(resource),
-                        archivedAt: observedAt
-                    )
-                )
-            }
             VeilgramArchiveRuntimeWriter.enqueueLocalMediaCandidates(
                 accountPeerId: accountPeerId.toInt64(),
-                candidates: candidates,
-                eligibility: eligibility
+                candidates: localMediaCandidates(
+                    message: message,
+                    observedAt: observedAt,
+                    mediaBox: mediaBox
+                )
             )
         }
+    }
+
+    static func localMediaCandidates(
+        message: Message,
+        observedAt: Int32,
+        mediaBox: MediaBox
+    ) -> [VeilgramLocalMediaArchiveCandidate] {
+        let eligibility = eligibility(for: message)
+        guard eligibility.isEligibleForLocalRetention else {
+            return []
+        }
+
+        var candidates: [VeilgramLocalMediaArchiveCandidate] = []
+        for (mediaIndex, media) in message.effectiveMedia.enumerated() {
+            let resource: MediaResource?
+            if let image = media as? TelegramMediaImage {
+                resource = image.representations.last?.resource
+            } else if let file = media as? TelegramMediaFile {
+                resource = file.resource
+            } else {
+                resource = nil
+            }
+            guard let resource else {
+                continue
+            }
+            candidates.append(
+                VeilgramLocalMediaArchiveCandidate(
+                    key: VeilgramMediaKey(
+                        peerId: message.id.peerId.toInt64(),
+                        messageNamespace: message.id.namespace,
+                        messageId: message.id.id,
+                        mediaIndex: mediaIndex
+                    ),
+                    sourcePath: mediaBox.completedResourcePath(resource),
+                    archivedAt: observedAt,
+                    eligibility: eligibility
+                )
+            )
+        }
+        return candidates
     }
 
     static func enqueuePreviousEditRevision(
