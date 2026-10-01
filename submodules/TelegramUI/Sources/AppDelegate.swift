@@ -46,6 +46,7 @@ import NavigationBarImpl
 import ContextUI
 import ContextControllerImpl
 import ProxyServerPreviewScreen
+import VeilgramLocalFeatures
 
 #if canImport(AppCenter)
 import AppCenter
@@ -1931,6 +1932,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
+        // The archive writer stays asynchronous and uses its own utility serial
+        // queue. The existing background-task window below gives this flush a
+        // chance to persist the current coalesced batch before suspension.
+        VeilgramArchiveRuntimeWriter.flushPending()
+
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
@@ -2039,6 +2045,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     func applicationWillTerminate(_ application: UIApplication) {
+        VeilgramArchiveRuntimeWriter.flushPending()
         Logger.shared.log("App \(self.episodeId)", "terminating")
     }
     
