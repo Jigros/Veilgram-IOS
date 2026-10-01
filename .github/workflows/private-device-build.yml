@@ -75,6 +75,14 @@ jobs:
           export USE_BAZEL_VERSION=8.4.2
           test "$(bazel --version | awk '{print $2}')" = "8.4.2"
 
+      - name: Restore safe public device Bazel cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/veilgram-public-device-bazel-cache
+          key: veilgram-public-device-macos26-xcode26.2-bazel8.4.2-private-${{ github.run_id }}
+          restore-keys: |
+            veilgram-public-device-macos26-xcode26.2-bazel8.4.2-
+
       - name: Create private API input
         shell: bash
         env:
@@ -103,7 +111,9 @@ jobs:
           VEILGRAM_ARTIFACT_PASSWORD: ${{ secrets.VEILGRAM_ARTIFACT_PASSWORD }}
         run: |
           set -euo pipefail
-          python3 tools/private_device_build.py --build-number "${{ inputs.build_number }}"
+          python3 tools/private_device_build.py \
+            --build-number "${{ inputs.build_number }}" \
+            --cache-dir "$HOME/veilgram-public-device-bazel-cache"
           ipa="$(find .veilgram-private/artifacts -maxdepth 1 -type f -name '*.ipa' -print -quit)"
           test -n "$ipa"
           mkdir -p "$RUNNER_TEMP/private-output"
