@@ -147,9 +147,23 @@ public final class Transaction {
         self.postbox?.deleteMessages(messageIds, forEachMedia: forEachMedia)
     }
     
-    public func deleteMessagesInRange(peerId: PeerId, namespace: MessageId.Namespace, minId: MessageId.Id, maxId: MessageId.Id, forEachMedia: ((Media) -> Void)?) {
+    public func deleteMessagesInRange(
+        peerId: PeerId,
+        namespace: MessageId.Namespace,
+        minId: MessageId.Id,
+        maxId: MessageId.Id,
+        forEachMedia: ((Media) -> Void)?,
+        forEachMessage: ((Message) -> Void)? = nil
+    ) {
         assert(!self.disposed)
-        self.postbox?.deleteMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId, forEachMedia: forEachMedia)
+        self.postbox?.deleteMessagesInRange(
+            peerId: peerId,
+            namespace: namespace,
+            minId: minId,
+            maxId: maxId,
+            forEachMedia: forEachMedia,
+            forEachMessage: forEachMessage
+        )
     }
     
     public func withAllMessages(peerId: PeerId, namespace: MessageId.Namespace? = nil, _ f: (Message) -> Bool) {
@@ -2287,8 +2301,41 @@ final class PostboxImpl {
         self.messageHistoryTable.removeMessages(messageIds, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, forEachMedia: forEachMedia)
     }
     
-    fileprivate func deleteMessagesInRange(peerId: PeerId, namespace: MessageId.Namespace, minId: MessageId.Id, maxId: MessageId.Id, forEachMedia: ((Media) -> Void)?) {
-        self.messageHistoryTable.removeMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, forEachMedia: forEachMedia)
+    fileprivate func deleteMessagesInRange(
+        peerId: PeerId,
+        namespace: MessageId.Namespace,
+        minId: MessageId.Id,
+        maxId: MessageId.Id,
+        forEachMedia: ((Media) -> Void)?,
+        forEachMessage: ((Message) -> Void)?
+    ) {
+        let intermediateMessageCallback: ((IntermediateMessage) -> Void)?
+        if let forEachMessage {
+            intermediateMessageCallback = { [unowned self] message in
+                forEachMessage(self.renderIntermediateMessage(message))
+            }
+        } else {
+            intermediateMessageCallback = nil
+        }
+        self.messageHistoryTable.removeMessagesInRange(
+            peerId: peerId,
+            namespace: namespace,
+            minId: minId,
+            maxId: maxId,
+            operationsByPeerId: &self.currentOperationsByPeerId,
+            updatedMedia: &self.currentUpdatedMedia,
+            unsentMessageOperations: &currentUnsentOperations,
+            updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations,
+            globalTagsOperations: &self.currentGlobalTagsOperations,
+            pendingActionsOperations: &self.currentPendingMessageActionsOperations,
+            updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries,
+            updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries,
+            invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries,
+            localTagsOperations: &self.currentLocalTagsOperations,
+            timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations,
+            forEachMedia: forEachMedia,
+            forEachMessage: intermediateMessageCallback
+        )
     }
     
     fileprivate func withAllMessages(peerId: PeerId, namespace: MessageId.Namespace?, _ f: (Message) -> Bool) {
