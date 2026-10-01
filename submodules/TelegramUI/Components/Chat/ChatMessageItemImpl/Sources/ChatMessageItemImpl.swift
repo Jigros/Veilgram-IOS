@@ -316,7 +316,8 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             hasLink: hasLink,
             isForwarded: message.forwardInfo != nil,
             isBroadcastChannel: isBroadcastChannel,
-            isOfficialSponsored: isOfficialSponsored
+            isOfficialSponsored: isOfficialSponsored,
+            isServiceMessage: message.media.contains(where: { $0 is TelegramMediaAction })
         )
     }
     
