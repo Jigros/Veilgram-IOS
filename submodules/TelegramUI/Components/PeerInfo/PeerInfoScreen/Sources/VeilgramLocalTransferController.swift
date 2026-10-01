@@ -164,23 +164,42 @@ final class VeilgramLocalTransferController: ViewController, UITableViewDataSour
     }
 
     private func importData(_ data: Data, kind: Kind) {
-        do {
-            let store = try self.store()
-            switch kind {
-            case .messages:
-                try store.importMessages(data)
-            case .edits:
-                try store.importEdits(data)
-            case .media:
-                try store.importMediaMetadata(data)
+        let accountPeerId = self.context.account.peerId.toInt64()
+        let completion: (Result<Void, Error>) -> Void = { [weak self] result in
+            guard let self else {
+                return
             }
-            self.showInfo(
-                title: "Import complete",
-                message: "\(kind.title) was replaced for this Veilgram account."
+            switch result {
+            case .success:
+                self.showInfo(
+                    title: "Import complete",
+                    message: "\(kind.title) was replaced for this Veilgram account."
+                )
+            case .failure:
+                self.showError(
+                    "Import rejected: invalid, corrupted, incompatible or wrong-type Veilgram data."
+                )
+            }
+        }
+
+        switch kind {
+        case .messages:
+            VeilgramArchiveRuntimeWriter.importMessages(
+                accountPeerId: accountPeerId,
+                data: data,
+                completion: completion
             )
-        } catch {
-            self.showError(
-                "Import rejected: invalid, corrupted, incompatible or wrong-type Veilgram data."
+        case .edits:
+            VeilgramArchiveRuntimeWriter.importEdits(
+                accountPeerId: accountPeerId,
+                data: data,
+                completion: completion
+            )
+        case .media:
+            VeilgramArchiveRuntimeWriter.importMediaMetadata(
+                accountPeerId: accountPeerId,
+                data: data,
+                completion: completion
             )
         }
     }
