@@ -232,15 +232,22 @@ public enum VeilgramArchiveRuntimeWriter {
     public static func enqueueLocalMediaCandidates(
         accountPeerId: Int64,
         candidates: [VeilgramLocalMediaArchiveCandidate],
-        eligibility: VeilgramArchiveEligibility
+        eligibility: VeilgramArchiveEligibility,
+        completion: (() -> Void)? = nil
     ) {
         guard !candidates.isEmpty,
               VeilgramArchiveRuntimePreferences.messageArchiveEnabled(accountPeerId: accountPeerId),
               eligibility.isEligibleForLocalRetention else {
+            if let completion {
+                queue.async(execute: completion)
+            }
             return
         }
 
         queue.async {
+            defer {
+                completion?()
+            }
             do {
                 let store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
                 var document = try store.loadMedia()
