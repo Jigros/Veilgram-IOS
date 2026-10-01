@@ -1,0 +1,90 @@
+name: BUILD-13 icon-pruned release-blocker audit
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["BUILD-13 Veilgram icon-pruned candidate simulator compile"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  audit:
+    if: |
+      github.repository == 'Jigros/Veilgram-IOS' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/veilgram-icon-prune
+          persist-credentials: false
+          submodules: false
+
+      - name: Select candidate simulator source run
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SOURCE_RUN: ${{ github.event.workflow_run.id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            run_id="$SOURCE_RUN"
+          else
+            run_id="$(gh run list -R Jigros/Veilgram-IOS --workflow build13.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+          fi
+          test -n "$run_id" && test "$run_id" != "null"
+          echo "VEILGRAM_SOURCE_RUN=$run_id" >> "$GITHUB_ENV"
+
+      - name: Download validated candidate simulator IPA
+        uses: actions/download-artifact@v4
+        with:
+          name: build13-settings-evidence
+          run-id: ${{ env.VEILGRAM_SOURCE_RUN }}
+          repository: Jigros/Veilgram-IOS
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/candidate
+
+      - name: Verify artifact hash
+        shell: bash
+        run: |
+          set -euo pipefail
+          ipa="$RUNNER_TEMP/candidate/build13-simulator.ipa"
+          expected="$(awk '{print $1}' "$RUNNER_TEMP/candidate/build13-ipa.sha256")"
+          actual="$(shasum -a 256 "$ipa" | awk '{print $1}')"
+          test "$actual" = "$expected"
+
+      - name: Record release icon blockers without conflating them with compile status
+        shell: bash
+        run: |
+          set -euo pipefail
+          ipa="$RUNNER_TEMP/candidate/build13-simulator.ipa"
+          set +e
+          python3 tools/verify_release_icon_identity.py "$ipa"             --json-report "$RUNNER_TEMP/candidate-release-icon-report.json"
+          guard_exit=$?
+          set -e
+          test -s "$RUNNER_TEMP/candidate-release-icon-report.json"
+          python3 - "$RUNNER_TEMP/candidate-release-icon-report.json" "$guard_exit" <<'PY'
+          import json,sys
+          report=json.load(open(sys.argv[1]))
+          exit_code=int(sys.argv[2])
+          assert report["status"] in ("PASS","FAIL")
+          assert exit_code == (0 if report["status"]=="PASS" else 1)
+          print("Release icon status:", report["status"])
+          for item in report["release_blockers"]:
+              print("BLOCKER:", item)
+          PY
+
+      - name: Upload release audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build13-release-audit
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/candidate-release-icon-report.json
