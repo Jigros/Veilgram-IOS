@@ -964,9 +964,19 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }, dismissNativeController: {
             self.window?.rootViewController?.dismiss(animated: true, completion: nil)
         }, getAvailableAlternateIcons: {
-            // Veilgram does not expose Telegram's inherited alternate icons.
-            // Keep this empty until original Veilgram variants are packaged.
-            return []
+            guard #available(iOS 10.3, *) else {
+                return []
+            }
+            guard let icons = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
+                  let alternateIcons = icons["CFBundleAlternateIcons"] as? [String: Any] else {
+                return []
+            }
+            return alternateIcons.keys
+                .filter { $0.hasPrefix("Veilgram") }
+                .sorted()
+                .map { name in
+                    PresentationAppIcon(name: name, imageName: name)
+                }
         }, getAlternateIconName: {
             if #available(iOS 10.3, *) {
                 return application.alternateIconName
