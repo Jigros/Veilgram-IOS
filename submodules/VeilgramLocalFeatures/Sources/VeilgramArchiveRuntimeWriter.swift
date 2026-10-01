@@ -151,7 +151,8 @@ public enum VeilgramArchiveRuntimeWriter {
     // Queue-confined state. These values are only read or mutated on `queue`.
     private static var pendingBatches: [Int64: VeilgramArchivePendingBatch] = [:]
     private static var flushScheduled = false
-    private static var retryGenerations: [Int64: Int] = [:]
+    private static var retryGenerationCounters: [Int64: Int] = [:]
+    private static var activeRetryGenerations: [Int64: Int] = [:]
 
     public static func enqueueDeletedMessage(
         accountPeerId: Int64,
@@ -168,7 +169,7 @@ public enum VeilgramArchiveRuntimeWriter {
             batch.appendDeletedMessage(message, eligibility: eligibility)
             pendingBatches[accountPeerId] = batch
 
-            if retryGenerations[accountPeerId] != nil {
+            if activeRetryGenerations[accountPeerId] != nil {
                 return
             }
             if batch.eventCount >= VeilgramArchiveRuntimeBatchPolicy.maximumPendingEventsPerAccount {
@@ -199,7 +200,7 @@ public enum VeilgramArchiveRuntimeWriter {
             )
             pendingBatches[accountPeerId] = batch
 
-            if retryGenerations[accountPeerId] != nil {
+            if activeRetryGenerations[accountPeerId] != nil {
                 return
             }
             if batch.eventCount >= VeilgramArchiveRuntimeBatchPolicy.maximumPendingEventsPerAccount {
@@ -334,7 +335,7 @@ public enum VeilgramArchiveRuntimeWriter {
             if force {
                 invalidateRetry(accountPeerId: accountPeerId)
                 flush(accountPeerId: accountPeerId)
-            } else if retryGenerations[accountPeerId] == nil {
+            } else if activeRetryGenerations[accountPeerId] == nil {
                 flush(accountPeerId: accountPeerId)
             }
         }
@@ -464,17 +465,18 @@ public enum VeilgramArchiveRuntimeWriter {
         }
         pendingBatches[accountPeerId] = requeuedBatch
 
-        let generation = (retryGenerations[accountPeerId] ?? 0) + 1
-        retryGenerations[accountPeerId] = generation
+        let generation = (retryGenerationCounters[accountPeerId] ?? 0) + 1
+        retryGenerationCounters[accountPeerId] = generation
+        activeRetryGenerations[accountPeerId] = generation
 
         let delay = VeilgramArchiveRuntimeBatchPolicy.retryDelayMilliseconds(
             attempt: requeuedBatch.retryAttempt
         )
         queue.asyncAfter(deadline: .now() + .milliseconds(delay)) {
-            guard retryGenerations[accountPeerId] == generation else {
+            guard activeRetryGenerations[accountPeerId] == generation else {
                 return
             }
-            retryGenerations.removeValue(forKey: accountPeerId)
+            activeRetryGenerations.removeValue(forKey: accountPeerId)
             flush(accountPeerId: accountPeerId)
         }
     }
@@ -513,7 +515,8 @@ public enum VeilgramArchiveRuntimeWriter {
     }
 
     private static func invalidateRetry(accountPeerId: Int64) {
-        retryGenerations.removeValue(forKey: accountPeerId)
+        retryGenerationCounters[accountPeerId] = (retryGenerationCounters[accountPeerId] ?? 0) + 1
+        activeRetryGenerations.removeValue(forKey: accountPeerId)
     }
 
     private static func completeOnMain(_ completion: (() -> Void)?) {
