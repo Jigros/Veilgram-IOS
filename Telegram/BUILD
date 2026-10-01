@@ -316,20 +316,9 @@ filegroup(
     ]),
 )
 
-alternate_icon_folders = [
-    "BlackIcon",
-    "BlackClassicIcon",
-    "BlackFilledIcon",
-    "BlueIcon",
-    "BlueClassicIcon",
-    "BlueFilledIcon",
-    "WhiteFilledIcon",
-    "New1",
-    "New2",
-    "Premium",
-    "PremiumBlack",
-    "PremiumTurbo",
-]
+# Veilgram intentionally ships no inherited Telegram alternate app icons.
+# Re-enable only after original Veilgram artwork exists for every advertised variant.
+alternate_icon_folders = []
 
 composer_icon_folders = ["Telegram"]
 
