@@ -22,6 +22,9 @@ DEFAULT_CREDENTIALS = PRIVATE_ROOT / "API_KEYS"
 DEFAULT_CONFIG = PRIVATE_ROOT / "veilgram-device-configuration.json"
 DEFAULT_ARTIFACTS = PRIVATE_ROOT / "artifacts"
 FAKE_TEAM_ID = "C67CF9S4VU"
+REQUIRED_XCODE = "Xcode 26.2"
+REQUIRED_BAZEL = "8.4.2"
+REQUIRED_MACOS_MAJOR = "26"
 
 
 def run(args: list[str], *, env: dict[str, str] | None = None) -> None:
@@ -76,12 +79,21 @@ def prepare_config(credentials: Path, config: Path, bundle_id: str, url_scheme: 
 def validate_macos_toolchain() -> None:
     if platform.system() != "Darwin":
         raise SystemExit("Private iPhone compilation requires macOS; use --preflight-only elsewhere")
+
+    macos = output(["sw_vers", "-productVersion"])
+    if macos.split(".", 1)[0] != REQUIRED_MACOS_MAJOR:
+        raise SystemExit(f"Expected macOS {REQUIRED_MACOS_MAJOR}.x, got {macos}")
+
     xcode = output(["xcodebuild", "-version"]).splitlines()
-    if not xcode or xcode[0] != "Xcode 26.2":
-        raise SystemExit(f"Expected Xcode 26.2, got: {xcode[0] if xcode else 'unknown'}")
+    if not xcode or xcode[0] != REQUIRED_XCODE:
+        raise SystemExit(f"Expected {REQUIRED_XCODE}, got: {xcode[0] if xcode else 'unknown'}")
+
     bazel = shutil.which("bazel")
     if bazel is None:
         raise SystemExit("bazel is not available in PATH")
+    bazel_version = output([bazel, "--version"]).split()[-1]
+    if bazel_version != REQUIRED_BAZEL:
+        raise SystemExit(f"Expected Bazel {REQUIRED_BAZEL}, got {bazel_version}")
 
 
 def find_openssl3() -> Path:
