@@ -15,6 +15,7 @@ swift_library(
         "//submodules/Display",
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/TelegramCore",
+        "//submodules/VeilgramLocalFeatures:VeilgramLocalFeatures",
         "//submodules/TelegramPresentationData",
         "//submodules/TelegramUIPreferences",
         "//submodules/AccountContext",
