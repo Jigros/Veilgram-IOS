@@ -664,6 +664,8 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     private var fetchEffectDisposable: Disposable?
     private var veilgramDeletedBadgeNode: ASTextNode?
     private var veilgramEditHistoryButtonNode: ASButtonNode?
+    private var veilgramRenderLabelNode: ASTextNode?
+    private var veilgramCollapseButtonNode: ASButtonNode?
     
     public var playedEffectAnimation: Bool = false
     public var effectAnimationNodes: [ChatMessageTransitionNode.DecorationItemNode] = []
@@ -693,6 +695,10 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         self.veilgramDeletedBadgeNode = nil
         self.veilgramEditHistoryButtonNode?.removeFromSupernode()
         self.veilgramEditHistoryButtonNode = nil
+        self.veilgramRenderLabelNode?.removeFromSupernode()
+        self.veilgramRenderLabelNode = nil
+        self.veilgramCollapseButtonNode?.removeFromSupernode()
+        self.veilgramCollapseButtonNode = nil
     }
     
     open func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
@@ -755,6 +761,68 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
             self.veilgramEditHistoryButtonNode?.removeFromSupernode()
             self.veilgramEditHistoryButtonNode = nil
         }
+
+        var isBroadcastChannel = false
+        if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel {
+            if case .broadcast = channel.info {
+                isBroadcastChannel = true
+            }
+        }
+        let normalizedText = item.message.text.lowercased()
+        let hasLink = item.message.media.contains(where: { $0 is TelegramMediaWebpage })
+            || normalizedText.contains("http://")
+            || normalizedText.contains("https://")
+            || normalizedText.contains("t.me/")
+        let renderDecision = VeilgramMessageRenderRuntime.evaluate(
+            accountId: item.context.account.id.int64,
+            message: editKey,
+            text: item.message.text,
+            peerId: item.message.id.peerId.toInt64(),
+            hasLink: hasLink,
+            isForwarded: item.message.forwardInfo != nil,
+            isBroadcastChannel: isBroadcastChannel,
+            isOfficialSponsored: item.message.attributes.contains(where: { $0 is AdMessageAttribute })
+        )
+
+        self.veilgramRenderLabelNode?.removeFromSupernode()
+        self.veilgramRenderLabelNode = nil
+        self.veilgramCollapseButtonNode?.removeFromSupernode()
+        self.veilgramCollapseButtonNode = nil
+
+        if let renderDecision {
+            if renderDecision.shouldCollapse {
+                let buttonNode = ASButtonNode()
+                buttonNode.backgroundColor = UIColor.secondarySystemBackground.withAlphaComponent(0.98)
+                buttonNode.cornerRadius = 10.0
+                buttonNode.layer.zPosition = 1000.0
+                buttonNode.setTitle(
+                    "Hidden: \(renderDecision.label)  •  Reveal",
+                    with: UIFont.systemFont(ofSize: 13.0, weight: .semibold),
+                    with: UIColor.label,
+                    for: []
+                )
+                buttonNode.addTarget(
+                    self,
+                    action: #selector(self.veilgramRevealFilteredMessagePressed),
+                    forControlEvents: .touchUpInside
+                )
+                self.veilgramCollapseButtonNode = buttonNode
+                self.addSubnode(buttonNode)
+            } else {
+                let labelNode = ASTextNode()
+                labelNode.isUserInteractionEnabled = false
+                labelNode.attributedText = NSAttributedString(
+                    string: renderDecision.isAdvertisement ? "Likely ad" : "Filter: \(renderDecision.label)",
+                    attributes: [
+                        .font: UIFont.systemFont(ofSize: 10.0, weight: .semibold),
+                        .foregroundColor: renderDecision.isAdvertisement ? UIColor.systemOrange : UIColor.systemPurple
+                    ]
+                )
+                labelNode.layer.zPosition = 900.0
+                self.veilgramRenderLabelNode = labelNode
+                self.addSubnode(labelNode)
+            }
+        }
         self.setNeedsLayout()
     }
     
@@ -780,6 +848,40 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                 height: max(22.0, size.height)
             )
         }
+        if let labelNode = self.veilgramRenderLabelNode {
+            let maxWidth = max(0.0, self.bounds.width - 24.0)
+            let size = labelNode.measure(CGSize(width: maxWidth, height: 18.0))
+            labelNode.frame = CGRect(
+                x: 12.0,
+                y: 22.0,
+                width: size.width,
+                height: size.height
+            )
+        }
+        if let buttonNode = self.veilgramCollapseButtonNode {
+            buttonNode.frame = CGRect(
+                x: 10.0,
+                y: 2.0,
+                width: max(0.0, self.bounds.width - 20.0),
+                height: 38.0
+            )
+        }
+    }
+
+    @objc private func veilgramRevealFilteredMessagePressed() {
+        guard let item = self.item else {
+            return
+        }
+        let key = VeilgramMessageKey(
+            peerId: item.message.id.peerId.toInt64(),
+            namespace: item.message.id.namespace,
+            id: item.message.id.id
+        )
+        VeilgramMessageRenderRuntime.reveal(
+            accountId: item.context.account.id.int64,
+            message: key
+        )
+        item.controllerInteraction.requestMessageUpdate(item.message.id, true, nil)
     }
 
     @objc private func veilgramEditHistoryPressed() {
