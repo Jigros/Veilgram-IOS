@@ -21,6 +21,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     private var ghostReadReceiptsEnabled: Bool
     private var ghostTypingEnabled: Bool
     private var ghostOnlinePresenceEnabled: Bool
+    private var localPremiumUIEnabled: Bool
 
     init(context: AccountContext) {
         self.accountContext = context
@@ -37,6 +38,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         self.ghostReadReceiptsEnabled = VeilgramGhostModeRuntimePreferences.suppressReadReceipts(accountPeerId: accountPeerId)
         self.ghostTypingEnabled = VeilgramGhostModeRuntimePreferences.suppressTyping(accountPeerId: accountPeerId)
         self.ghostOnlinePresenceEnabled = VeilgramGhostModeRuntimePreferences.suppressOnlinePresence(accountPeerId: accountPeerId)
+        self.localPremiumUIEnabled = VeilgramLocalPremiumRuntimePreferences.isEnabled(accountPeerId: accountPeerId)
         let presentation = context.sharedContext.currentPresentationData.with { $0 }
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentation, style: .glass))
         self.title = "Veilgram"
@@ -73,7 +75,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
         case 0:
-            return 9
+            return 10
         case 1:
             return 3
         case 2:
@@ -103,9 +105,9 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         case 1:
             return "These screens inspect only Veilgram-owned local archive files for this account. Archive capture remains explicitly opt-in."
         case 2:
-            return "Versioned local JSON transfer validates checksum, type and known credential/session markers before replacing Veilgram-owned data."
+            return "Versioned local JSON transfer validates checksum and typed document structure before replacing Veilgram-owned data."
         default:
-            return "More UI will be exposed only after the underlying feature has its own build and safety gate."
+            return "Additional Veilgram tools appear here as their runtime integrations are added."
         }
     }
 
@@ -174,6 +176,13 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.isOn = self.adCollapseEnabled
                 control.addTarget(self, action: #selector(adCollapseChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
+            } else if indexPath.row == 8 {
+                cell.textLabel?.text = "Local Premium UI"
+                cell.detailTextLabel?.text = "Enable Veilgram-owned premium-style presentation"
+                let control = UISwitch()
+                control.isOn = self.localPremiumUIEnabled
+                control.addTarget(self, action: #selector(localPremiumChanged(_:)), for: .valueChanged)
+                cell.accessoryView = control
             } else {
                 cell.textLabel?.text = "Message filters"
                 cell.detailTextLabel?.text = "Local rules • add, enable, disable or delete"
@@ -206,7 +215,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        if indexPath.section == 0, indexPath.row == 8 {
+        if indexPath.section == 0, indexPath.row == 9 {
             self.push(VeilgramMessageFiltersController(context: self.accountContext))
             return
         }
@@ -262,6 +271,15 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         let accountPeerId = self.accountContext.account.peerId.toInt64()
         VeilgramGhostModeRuntimePreferences.setSuppressOnlinePresence(sender.isOn, accountPeerId: accountPeerId)
         self.ghostOnlinePresenceEnabled = sender.isOn
+    }
+
+    @objc private func localPremiumChanged(_ sender: UISwitch) {
+        let accountPeerId = self.accountContext.account.peerId.toInt64()
+        self.localPremiumUIEnabled = sender.isOn
+        VeilgramLocalPremiumRuntimePreferences.setEnabled(
+            sender.isOn,
+            accountPeerId: accountPeerId
+        )
     }
 
     @objc private func adFilterChanged(_ sender: UISwitch) {
