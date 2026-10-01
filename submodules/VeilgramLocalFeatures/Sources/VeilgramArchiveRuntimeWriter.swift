@@ -40,6 +40,12 @@ public enum VeilgramArchiveRuntimeWriter {
             return
         }
 
+        VeilgramArchiveRuntimeIndex.appendEditRevision(
+            accountId: accountPeerId,
+            key: key,
+            revision: revision
+        )
+
         queue.async {
             do {
                 let store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
