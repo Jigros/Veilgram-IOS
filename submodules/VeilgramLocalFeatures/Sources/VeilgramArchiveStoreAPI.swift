@@ -116,7 +116,28 @@ public struct VeilgramArchiveStoreAPI {
 
     public func importMediaMetadata(_ data: Data) throws {
         let payload = try Self.importPayload(data, expectedKind: .mediaArchiveMetadata)
-        try saveMedia(VeilgramMediaArchiveEngine.decode(payload))
+        let imported = try VeilgramMediaArchiveEngine.decode(payload)
+        let metadataOnlyItems = imported.items.map { item -> VeilgramMediaItem in
+            guard item.availability == .available else {
+                return item
+            }
+            return VeilgramMediaItem(
+                key: item.key,
+                relativePath: nil,
+                byteCount: 0,
+                archivedAt: item.archivedAt,
+                lastAccessedAt: item.lastAccessedAt,
+                availability: .unavailable
+            )
+        }
+        let metadataOnlyDocument = VeilgramMediaArchiveDocument(
+            version: imported.version,
+            items: metadataOnlyItems
+        )
+        _ = try VeilgramMediaArchiveEngine.encode(metadataOnlyDocument)
+
+        try store.removeFiles(withPrefix: Self.mediaBinaryPrefix)
+        try saveMedia(metadataOnlyDocument)
     }
 
     public func removeAll() throws {
