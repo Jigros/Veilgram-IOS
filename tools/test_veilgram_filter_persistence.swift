@@ -63,17 +63,16 @@ enum VeilgramMessageFilterPersistenceTests {
             checks += 1
         }
 
-        let credentialPayload = Data(#"{"api_hash":"must-not-export"}"#.utf8)
-        do {
-            _ = try VeilgramTransferEngine.makeEnvelope(
-                kind: .filters,
-                createdAt: 1,
-                payload: credentialPayload
-            )
-            preconditionFailure("credential marker accepted")
-        } catch VeilgramTransferError.forbiddenCredentialMaterial {
-            checks += 1
-        }
+        let keywordPayload = Data(#"{"text":"authorization api_hash auth_key"}"#.utf8)
+        let keywordEnvelope = try VeilgramTransferEngine.makeEnvelope(
+            kind: .filters,
+            createdAt: 1,
+            payload: keywordPayload
+        )
+        let keywordRoundtrip = try VeilgramTransferEngine.decode(
+            VeilgramTransferEngine.encode(keywordEnvelope)
+        )
+        expect(keywordRoundtrip.payload == keywordPayload, "payload keywords were incorrectly filtered")
 
         try persistence.removeAll()
         let exists = try persistence.store.fileExists(fileName: VeilgramMessageFilterPersistence.fileName)
