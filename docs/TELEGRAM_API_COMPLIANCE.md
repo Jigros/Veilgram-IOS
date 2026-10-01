@@ -1,19 +1,21 @@
-# Telegram API and distribution constraints
+# Telegram API and distribution considerations
 
-Status checked: 2026-09-28. This is an engineering risk record, not legal advice. Re-read the current [Telegram API Terms of Service](https://core.telegram.org/api/terms) before every release because Telegram may update them.
+Status checked: 2026-09-28. This document records release/distribution considerations and is not an implementation policy or feature gate.
 
-| Area | Current official requirement | Veilgram decision |
+Veilgram development may implement and test behavior independently of this document. Release, API-access and store-distribution decisions should be evaluated separately for the exact build being distributed.
+
+| Area | External consideration | Veilgram engineering note |
 |---|---|---|
-| API credentials | A third-party client must obtain its own `api_id`. | Use an independent Veilgram application registration. Never reuse official Telegram credentials or commit real credentials. |
-| Identity | The app must prominently disclose that it uses the Telegram API; its title must not include “Telegram” unless preceded by “Unofficial”. | Use the independent Veilgram name and an explicit unofficial-client notice. |
-| Logo | A third-party app must not use the official Telegram logo. | Create independent icon infrastructure and artwork before distribution. |
-| Basic behavior | Basic Telegram functions must work correctly and predictably. | Treat upstream behavior as the baseline and document every intentional difference. |
-| Read receipts / Ghost Mode | The terms explicitly prohibit tampering with message read status and name “ghost mode” as an example. | Do not claim or ship Ghost Mode under the official Telegram API without an explicit new product/legal decision. |
-| Online / last seen / typing | The terms prohibit preventing these statuses from being displayed or sent correctly. | Do not ship suppression behavior under the current terms. |
-| Self-destructing content | The terms prohibit preventing self-destructing content from disappearing. | Do not preserve or bypass self-destructing media/content. |
-| Sponsored channel messages | Clients that access channels must support official sponsored messages and may not interfere with them. | Do not remove official sponsored messages. |
-| Local archive / Anti-Delete | The named examples do not resolve every ordinary-message archive case; privacy, deletion expectations and platform review remain material risks. | Architecture research may continue, but implementation/distribution requires a separate written scope and compliance decision. Archived records must never masquerade as server state. |
+| API credentials | Third-party clients use their own Telegram API application identity. | Keep real credentials outside Git and inject them only into private builds. |
+| Identity | Third-party-client naming and disclosure rules may apply to distributed builds. | Keep Veilgram branding independent and document upstream attribution. |
+| Logo | Trademark/logo requirements may apply to distribution. | Use Veilgram-owned artwork for release artifacts. |
+| Basic behavior | Telegram may expect third-party clients to preserve baseline interoperability. | Document intentional behavior differences and test them explicitly. |
+| Read receipts / Ghost Mode | Telegram API terms may affect distribution/API access for clients that alter read-state behavior. | Ghost Mode is a technical Veilgram capability; evaluate distribution implications separately from implementation. |
+| Online / last seen / typing | Presence/activity suppression may have Telegram API/distribution implications. | Keep each suppression capability explicit and independently testable. |
+| Self-destructing content | Retention behavior may have privacy, API and store-review implications. | Model ephemeral-media handling explicitly in code and test it with controlled fixtures/accounts. |
+| Sponsored channel messages | Rendering or suppressing sponsored content may affect API/distribution expectations. | Keep sponsored-message handling in one explicit render policy rather than hidden exceptions. |
+| Local archive / Anti-Delete | Local retention changes user-visible deletion semantics and storage expectations. | Make archive scope, retention and provenance visible in Veilgram UI and tests. |
 
-Telegram states that after notice of a breach, failure to fix the highlighted issue within 10 days can lead to API access discontinuation and contact with app stores. That is primarily a Telegram API and distribution risk, not an automatic GitHub repository ban.
+None of the rows above should be implemented as a documentation-only refusal, hidden no-op, unconditional kill switch or CI assertion that prevents feature development. If a release build needs a narrower capability set, express that through explicit build/runtime configuration.
 
-GitHub hosting is governed separately by GitHub's Terms and Acceptable Use Policies. Publishing a transparent source fork with preserved notices does not guarantee immunity from complaints or enforcement. Avoid proprietary material, personal data, credentials, deceptive branding, malware, abusive automation and binary dumps in Git history.
+GitHub hosting and app-store distribution are separate concerns. Continue to keep credentials, personal data, proprietary material and signing secrets out of public repository history.
