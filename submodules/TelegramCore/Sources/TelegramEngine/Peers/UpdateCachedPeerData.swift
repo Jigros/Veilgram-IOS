@@ -960,10 +960,24 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {
+                                                let veilgramDeleteObservedAt = Int32(Date().timeIntervalSince1970)
                                                 var resourceIds: [MediaResourceId] = []
-                                                transaction.deleteMessagesInRange(peerId: peerId, namespace: minAvailableMessageId.namespace, minId: 1, maxId: minAvailableMessageId.id, forEachMedia: { media in
-                                                    addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
-                                                })
+                                                transaction.deleteMessagesInRange(
+                                                    peerId: peerId,
+                                                    namespace: minAvailableMessageId.namespace,
+                                                    minId: 1,
+                                                    maxId: minAvailableMessageId.id,
+                                                    forEachMedia: { media in
+                                                        addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
+                                                    },
+                                                    forEachMessage: { message in
+                                                        VeilgramArchiveStateAdapter.enqueueDeletedMessage(
+                                                            accountPeerId: accountPeerId,
+                                                            message: message,
+                                                            observedAt: veilgramDeleteObservedAt
+                                                        )
+                                                    }
+                                                )
                                                 if !resourceIds.isEmpty {
                                                     let _ = postbox.mediaBox.removeCachedResources(Array(Set(resourceIds))).start()
                                                 }
