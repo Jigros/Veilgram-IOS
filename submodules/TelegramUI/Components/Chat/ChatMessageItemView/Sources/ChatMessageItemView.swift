@@ -781,7 +781,8 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
             hasLink: hasLink,
             isForwarded: item.message.forwardInfo != nil,
             isBroadcastChannel: isBroadcastChannel,
-            isOfficialSponsored: item.message.attributes.contains(where: { $0 is AdMessageAttribute })
+            isOfficialSponsored: item.message.attributes.contains(where: { $0 is AdMessageAttribute }),
+            isServiceMessage: item.message.media.contains(where: { $0 is TelegramMediaAction })
         )
 
         self.veilgramRenderLabelNode?.removeFromSupernode()
