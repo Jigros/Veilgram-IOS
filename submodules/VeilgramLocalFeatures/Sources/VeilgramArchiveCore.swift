@@ -42,8 +42,14 @@ public struct VeilgramArchiveEligibility: Equatable {
         self.hasSelfDestructTimeout = hasSelfDestructTimeout
     }
 
+    /// Retention eligibility is no longer hard-coded from Telegram message semantics.
+    ///
+    /// The flags above are descriptive metadata for callers and UI. Build/runtime
+    /// policy may still choose not to archive a particular source path, but this
+    /// shared model does not silently reject view-once, self-destruct or secret
+    /// content on its own.
     public var isEligibleForLocalRetention: Bool {
-        return isCloudMessage && !isSecretChat && !isViewOnce && !hasSelfDestructTimeout
+        return true
     }
 }
 
