@@ -145,17 +145,20 @@ public struct VeilgramLocalMediaArchiveCandidate: Equatable {
     public var key: VeilgramMediaKey
     public var sourcePath: String?
     public var archivedAt: Int32
+    public var fileExtension: String?
     public var eligibility: VeilgramArchiveEligibility
 
     public init(
         key: VeilgramMediaKey,
         sourcePath: String?,
         archivedAt: Int32,
+        fileExtension: String? = nil,
         eligibility: VeilgramArchiveEligibility
     ) {
         self.key = key
         self.sourcePath = sourcePath
         self.archivedAt = archivedAt
+        self.fileExtension = fileExtension
         self.eligibility = eligibility
     }
 }
@@ -276,6 +279,7 @@ public enum VeilgramArchiveRuntimeWriter {
                         let copied = try store.copyMediaFile(
                             sourcePath: sourcePath,
                             key: candidate.key,
+                            preferredExtension: candidate.fileExtension,
                             maximumBytes: maximumMediaItemBytes
                         )
                         let item = VeilgramMediaItem(
