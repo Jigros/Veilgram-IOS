@@ -241,7 +241,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         self.ghostTypingEnabled = VeilgramGhostModeRuntimePreferences.suppressTyping(accountPeerId: accountPeerId)
         self.ghostOnlinePresenceEnabled = VeilgramGhostModeRuntimePreferences.suppressOnlinePresence(accountPeerId: accountPeerId)
         self.tableView.reloadRows(
-            at: [IndexPath(row: 7, section: 0), IndexPath(row: 4, section: 0), IndexPath(row: 5, section: 0)],
+            at: [IndexPath(row: 3, section: 0), IndexPath(row: 4, section: 0), IndexPath(row: 5, section: 0)],
             with: .none
         )
     }
@@ -271,7 +271,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             self.adCollapseEnabled = false
             UserDefaults.standard.set(false, forKey: self.adCollapsePreferenceKey)
         }
-        self.tableView.reloadRows(at: [IndexPath(row: 3, section: 0)], with: .none)
+        self.tableView.reloadRows(at: [IndexPath(row: 7, section: 0)], with: .none)
     }
 
     @objc private func adCollapseChanged(_ sender: UISwitch) {
