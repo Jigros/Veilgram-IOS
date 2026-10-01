@@ -1,0 +1,28 @@
+name: Veilgram alternate icon pruning tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/alternate-icon-prune-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  prune:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/veilgram-icon-prune
+          persist-credentials: false
+          submodules: false
+      - name: Verify inherited Telegram alternate icons are absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/check_veilgram_alternate_icons.py
+          python3 -m py_compile tools/verify_release_icon_identity.py
