@@ -24,7 +24,11 @@ public enum VeilgramArchiveRuntimeDiagnostics {
 }
 
 public enum VeilgramArchiveRuntimeWriter {
-    private static let queue = DispatchQueue(label: "org.veilgram.local-archive")
+    private static let queue = DispatchQueue(
+        label: "org.veilgram.local-archive",
+        qos: .utility,
+        autoreleaseFrequency: .workItem
+    )
 
     public static func enqueueDeletedMessage(
         accountPeerId: Int64,
@@ -64,12 +68,6 @@ public enum VeilgramArchiveRuntimeWriter {
             return
         }
 
-        VeilgramArchiveRuntimeIndex.appendEditRevision(
-            accountId: accountPeerId,
-            key: key,
-            revision: revision
-        )
-
         queue.async {
             do {
                 let store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
@@ -81,10 +79,6 @@ public enum VeilgramArchiveRuntimeWriter {
                     eligibility: eligibility
                 ) {
                     try store.saveEdits(document)
-                    VeilgramArchiveRuntimeIndex.replaceEditDocument(
-                        accountId: accountPeerId,
-                        document: document
-                    )
                 }
             } catch {
                 VeilgramArchiveRuntimeDiagnostics.record(error)
