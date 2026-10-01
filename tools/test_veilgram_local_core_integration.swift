@@ -185,6 +185,29 @@ enum VeilgramLocalCoreIntegrationTests {
         }
         checks += 11
 
+        let lifecycleRoot = base.appendingPathComponent("logout-account", isDirectory: true)
+        let lifecycleStore = VeilgramProtectedLocalStore(rootURL: lifecycleRoot)
+        try lifecycleStore.write(Data("local".utf8), fileName: "message-filters-v1.json")
+        let lifecycleSuite = "veilgram-lifecycle-\(UUID().uuidString)"
+        let lifecycleDefaults = UserDefaults(suiteName: lifecycleSuite)!
+        defer { lifecycleDefaults.removePersistentDomain(forName: lifecycleSuite) }
+        let lifecycleAccountId: Int64 = 424242
+        lifecycleDefaults.set(true, forKey: "veilgram.archive.runtime.v1.\(lifecycleAccountId).editHistory")
+        lifecycleDefaults.set(Data([1, 2, 3]), forKey: "veilgram.filters.runtime.v1.\(lifecycleAccountId)")
+        lifecycleDefaults.set(true, forKey: "veilgram.settings.v1.\(lifecycleAccountId).channelAdFilterEnabled")
+        lifecycleDefaults.set(true, forKey: "unrelated.setting")
+        try VeilgramLocalDataLifecycle.remove(
+            store: lifecycleStore,
+            accountPeerId: lifecycleAccountId,
+            defaults: lifecycleDefaults
+        )
+        precondition(!FileManager.default.fileExists(atPath: lifecycleRoot.path))
+        precondition(lifecycleDefaults.object(forKey: "veilgram.archive.runtime.v1.\(lifecycleAccountId).editHistory") == nil)
+        precondition(lifecycleDefaults.object(forKey: "veilgram.filters.runtime.v1.\(lifecycleAccountId)") == nil)
+        precondition(lifecycleDefaults.object(forKey: "veilgram.settings.v1.\(lifecycleAccountId).channelAdFilterEnabled") == nil)
+        precondition(lifecycleDefaults.bool(forKey: "unrelated.setting"))
+        checks += 5
+
         print("PASS: \(checks) shared local archive/edit/media integration checks")
     }
 }
