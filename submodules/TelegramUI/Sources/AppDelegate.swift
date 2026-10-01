@@ -648,7 +648,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             let fallbackBaseUrl = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             let fallbackUrl = fallbackBaseUrl.appendingPathComponent("Veilgram", isDirectory: true)
             do {
-                try FileManager.default.createDirectory(at: fallbackUrl, withIntermediateDirectories: true)
+                try FileManager.default.createDirectory(at: fallbackUrl, withIntermediateDirectories: true, attributes: nil)
                 appGroupUrl = fallbackUrl
                 UserDefaults.standard.set(true, forKey: "VeilgramSideloadAppGroupFallback")
             } catch {
