@@ -1,0 +1,131 @@
+name: Private Veilgram iPhone build
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Git ref to build
+        required: true
+        default: feature/private-device-auth-handoff
+      build_number:
+        description: Local build number
+        required: true
+        default: "100"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: private-veilgram-device-build
+  cancel-in-progress: false
+
+jobs:
+  private-device:
+    runs-on: macos-26
+    timeout-minutes: 360
+    steps:
+      - name: Checkout requested source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          submodules: false
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve pinned submodules
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config submodule.submodules/rlottie/rlottie.url https://github.com/TelegramMessenger/rlottie.git
+          git config submodule.submodules/TgVoipWebrtc/tgcalls.url https://github.com/TelegramMessenger/tgcalls.git
+          git -c protocol.file.allow=never submodule update --init --recursive
+
+      - name: Verify required secrets exist
+        shell: bash
+        env:
+          VEILGRAM_API_ID: ${{ secrets.VEILGRAM_API_ID }}
+          VEILGRAM_API_HASH: ${{ secrets.VEILGRAM_API_HASH }}
+          VEILGRAM_ARTIFACT_PASSWORD: ${{ secrets.VEILGRAM_ARTIFACT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$VEILGRAM_API_ID"
+          test -n "$VEILGRAM_API_HASH"
+          test -n "$VEILGRAM_ARTIFACT_PASSWORD"
+          echo "::add-mask::$VEILGRAM_API_ID"
+          echo "::add-mask::$VEILGRAM_API_HASH"
+          echo "::add-mask::$VEILGRAM_ARTIFACT_PASSWORD"
+          test "${#VEILGRAM_API_HASH}" -eq 32
+          case "$VEILGRAM_API_ID" in (*[!0-9]*|'') exit 1;; esac
+
+      - name: Select pinned toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          test "$(xcodebuild -version | head -1)" = "Xcode 26.2"
+          test "$(sw_vers -productVersion | cut -d. -f1)" = "26"
+
+      - name: Create private API input
+        shell: bash
+        env:
+          VEILGRAM_API_ID: ${{ secrets.VEILGRAM_API_ID }}
+          VEILGRAM_API_HASH: ${{ secrets.VEILGRAM_API_HASH }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p .veilgram-private
+          {
+            printf 'APP_ID=%s\n' "$VEILGRAM_API_ID"
+            printf 'APP_HASH=%s\n' "$VEILGRAM_API_HASH"
+          } > .veilgram-private/API_KEYS
+          chmod 600 .veilgram-private/API_KEYS
+
+      - name: Run secret-safe preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest -v tools/test_private_device_build.py
+          python3 tools/private_device_build.py --preflight-only
+
+      - name: Build private ARM64 iPhone IPA
+        shell: bash
+        env:
+          VEILGRAM_ARTIFACT_PASSWORD: ${{ secrets.VEILGRAM_ARTIFACT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          python3 tools/private_device_build.py --build-number "${{ inputs.build_number }}"
+          ipa="$(find .veilgram-private/artifacts -maxdepth 1 -type f -name '*.ipa' -print -quit)"
+          test -n "$ipa"
+          mkdir -p "$RUNNER_TEMP/private-output"
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 250000 \
+            -in "$ipa" \
+            -out "$RUNNER_TEMP/private-output/Veilgram-private.ipa.enc" \
+            -pass env:VEILGRAM_ARTIFACT_PASSWORD
+          shasum -a 256 "$RUNNER_TEMP/private-output/Veilgram-private.ipa.enc" \
+            > "$RUNNER_TEMP/private-output/Veilgram-private.ipa.enc.sha256"
+          find .veilgram-private/artifacts -maxdepth 1 -type f \( \
+            -name '*.manifest.json' -o -name '*.platform.json' -o \
+            -name '*.identity.json' -o -name '*.branding.json' \
+          \) -exec cp {} "$RUNNER_TEMP/private-output/" \;
+          rm -f "$ipa"
+
+      - name: Ensure plaintext IPA is not uploaded
+        shell: bash
+        run: |
+          set -euo pipefail
+          if find "$RUNNER_TEMP/private-output" -type f -name '*.ipa' | grep -q .; then
+            echo "Plaintext IPA found in upload directory" >&2
+            exit 1
+          fi
+          test -s "$RUNNER_TEMP/private-output/Veilgram-private.ipa.enc"
+
+      - name: Upload encrypted private build
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilgram-private-device-encrypted
+          retention-days: 1
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/private-output/Veilgram-private.ipa.enc
+            ${{ runner.temp }}/private-output/Veilgram-private.ipa.enc.sha256
+            ${{ runner.temp }}/private-output/*.json
