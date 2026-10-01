@@ -106,7 +106,7 @@ func chatHistoryEntriesForView(
         }
     }
     
-    let veilgramAdOptions = VeilgramChannelAdClassifier.options(accountId: context.account.id.int64)
+    let veilgramAdOptions = VeilgramChannelAdClassifier.options(accountId: context.account.peerId.toInt64())
     let veilgramIsBroadcastChannel: Bool
     if let channel = chatPeer as? TelegramChannel, case .broadcast = channel.info {
         veilgramIsBroadcastChannel = true
