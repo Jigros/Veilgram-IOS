@@ -41,7 +41,7 @@ final class VeilgramMessageFiltersController: ViewController, UITableViewDataSou
         )
 
         do {
-            self.store = try VeilgramFilterStoreAPI(accountId: context.account.id.int64)
+            self.store = try VeilgramFilterStoreAPI(accountId: context.account.peerId.toInt64())
             self.reloadRules()
         } catch {
             self.loadError = "Local filter storage is unavailable."
