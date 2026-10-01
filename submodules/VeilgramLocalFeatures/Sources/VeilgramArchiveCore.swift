@@ -412,6 +412,45 @@ public enum VeilgramMediaArchiveEngine {
     }
 
     @discardableResult
+    @discardableResult
+    public static func upsertUnavailable(
+        document: inout VeilgramMediaArchiveDocument,
+        key: VeilgramMediaKey,
+        archivedAt: Int32
+    ) throws -> Bool {
+        let item = VeilgramMediaItem(
+            key: key,
+            relativePath: nil,
+            byteCount: 0,
+            archivedAt: archivedAt,
+            lastAccessedAt: archivedAt,
+            availability: .unavailable
+        )
+        try validate(item)
+        if let index = document.items.firstIndex(where: { $0.key == key }) {
+            guard document.items[index] != item else {
+                return false
+            }
+            document.items[index] = item
+            return true
+        }
+        if document.items.count >= maximumItems {
+            let oldestIndex = document.items.indices.min { lhs, rhs in
+                let left = document.items[lhs]
+                let right = document.items[rhs]
+                if left.lastAccessedAt != right.lastAccessedAt {
+                    return left.lastAccessedAt < right.lastAccessedAt
+                }
+                return left.archivedAt < right.archivedAt
+            }
+            if let oldestIndex {
+                document.items.remove(at: oldestIndex)
+            }
+        }
+        document.items.append(item)
+        return true
+    }
+
     public static func appendAvailable(
         document: inout VeilgramMediaArchiveDocument,
         item: VeilgramMediaItem,
