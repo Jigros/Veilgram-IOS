@@ -4441,25 +4441,49 @@ func replayFinalState(
                 }
             case let .DeleteMessagesWithGlobalIds(ids):
                 let veilgramDeleteObservedAt = Int32(Date().timeIntervalSince1970)
-                for id in transaction.messageIdsForGlobalIds(ids) {
-                    if let message = transaction.getMessage(id) {
-                        VeilgramArchiveStateAdapter.enqueueDeletedMessage(
-                            accountPeerId: accountPeerId,
-                            message: message,
-                            observedAt: veilgramDeleteObservedAt
-                        )
+                var veilgramGlobalIdsToDelete: [Int32] = []
+                for globalId in ids {
+                    let mappedIds = transaction.messageIdsForGlobalIds([globalId])
+                    var retainedAnyMessage = false
+                    for id in mappedIds {
+                        if let message = transaction.getMessage(id) {
+                            VeilgramArchiveStateAdapter.enqueueDeletedMessage(
+                                accountPeerId: accountPeerId,
+                                message: message,
+                                observedAt: veilgramDeleteObservedAt
+                            )
+                            if VeilgramArchiveStateAdapter.shouldRetainDeletedMessage(
+                                accountPeerId: accountPeerId,
+                                message: message
+                            ) {
+                                let retainedMessage = VeilgramArchiveStateAdapter.retainedDeletedStoreMessage(
+                                    message,
+                                    deletedAt: veilgramDeleteObservedAt
+                                )
+                                transaction.updateMessage(id) { _ -> PostboxUpdateMessage in
+                                    return .update(retainedMessage)
+                                }
+                                retainedAnyMessage = true
+                            }
+                        }
+                    }
+                    if !retainedAnyMessage {
+                        veilgramGlobalIdsToDelete.append(globalId)
                     }
                 }
-                var resourceIds: [MediaResourceId] = []
-                transaction.deleteMessagesWithGlobalIds(ids, forEachMedia: { media in
-                    addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
-                })
-                if !resourceIds.isEmpty {
-                    let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
+                if !veilgramGlobalIdsToDelete.isEmpty {
+                    var resourceIds: [MediaResourceId] = []
+                    transaction.deleteMessagesWithGlobalIds(veilgramGlobalIdsToDelete, forEachMedia: { media in
+                        addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
+                    })
+                    if !resourceIds.isEmpty {
+                        let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
+                    }
+                    deletedMessageIds.append(contentsOf: veilgramGlobalIdsToDelete.map { .global($0) })
                 }
-                deletedMessageIds.append(contentsOf: ids.map { .global($0) })
             case let .DeleteMessages(ids):
                 let veilgramDeleteObservedAt = Int32(Date().timeIntervalSince1970)
+                var veilgramIdsToDelete: [MessageId] = []
                 for id in ids {
                     if let message = transaction.getMessage(id) {
                         VeilgramArchiveStateAdapter.enqueueDeletedMessage(
@@ -4467,12 +4491,28 @@ func replayFinalState(
                             message: message,
                             observedAt: veilgramDeleteObservedAt
                         )
+                        if VeilgramArchiveStateAdapter.shouldRetainDeletedMessage(
+                            accountPeerId: accountPeerId,
+                            message: message
+                        ) {
+                            let retainedMessage = VeilgramArchiveStateAdapter.retainedDeletedStoreMessage(
+                                message,
+                                deletedAt: veilgramDeleteObservedAt
+                            )
+                            transaction.updateMessage(id) { _ -> PostboxUpdateMessage in
+                                return .update(retainedMessage)
+                            }
+                            continue
+                        }
                     }
+                    veilgramIdsToDelete.append(id)
                 }
-                _internal_deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids, manualAddMessageThreadStatsDifference: { id, add, remove in
-                    addMessageThreadStatsDifference(threadKey: id, remove: remove, addedMessagePeer: nil, addedMessageId: nil, isOutgoing: false)
-                })
-                deletedMessageIds.append(contentsOf: ids.map { .messageId($0) })
+                if !veilgramIdsToDelete.isEmpty {
+                    _internal_deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: veilgramIdsToDelete, manualAddMessageThreadStatsDifference: { id, add, remove in
+                        addMessageThreadStatsDifference(threadKey: id, remove: remove, addedMessagePeer: nil, addedMessageId: nil, isOutgoing: false)
+                    })
+                    deletedMessageIds.append(contentsOf: veilgramIdsToDelete.map { .messageId($0) })
+                }
             case let .UpdateMinAvailableMessage(id):
                 if let message = transaction.getMessage(id) {
                     updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: id.peerId, minTimestamp: message.timestamp, forceRootGroupIfNotExists: false)
