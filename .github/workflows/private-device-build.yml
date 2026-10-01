@@ -23,7 +23,6 @@ jobs:
   private-device:
     runs-on: macos-26
     timeout-minutes: 360
-    environment: private-device-build
     steps:
       - name: Checkout requested source
         uses: actions/checkout@v4
