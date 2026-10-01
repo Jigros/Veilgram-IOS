@@ -1,34 +1,43 @@
-# AyuGram parity inventory and Veilgram implementation status (2026-09-30)
+# AyuGram parity inventory and Veilgram implementation status
 
-All AyuGram-equivalent runtime features below remain **NOT_STARTED** or **RESEARCHING**; the separate basic Veilgram settings screen in draft PR #20 only displays roadmap/status and has an account-scoped UI-only preference. This is an evidence-based initial inventory, not a claim of complete parity. Code paths, changelogs and current forks still need a full audit before implementation. Android documentation may describe a different branch/release than the `rewrite` branch currently selected by GitHub.
+This table tracks technical implementation state in the Veilgram runtime branch. Release/distribution policy is intentionally tracked separately and does not change whether a feature is implemented.
 
-| Feature | AyuGram Android | AyuGram Desktop | Existing iOS implementation | Veilgram status | Source |
-|---|---|---|---|---|---|
-| Suppress message read receipts | documented | documented | Lead and TGExtra tweak claims; unverified on current source | NOT_STARTED | [Ghost](https://github.com/AyuGram/AyuGramDocs/blob/main/shared/ghost.md), [Lead](https://github.com/w3ltyyy/lead) |
-| Suppress story views | documented, reaction/reply can reveal view | documented | Lead/TGExtra tweak claims | NOT_STARTED | [Ghost](https://github.com/AyuGram/AyuGramDocs/blob/main/shared/ghost.md) |
-| Suppress online, force offline | documented; sending can reveal online | documented | tweak claims | NOT_STARTED | [Ghost](https://github.com/AyuGram/AyuGramDocs/blob/main/shared/ghost.md) |
-| Suppress typing/send actions | documented | documented | no verified current implementation | NOT_STARTED | [Ghost](https://github.com/AyuGram/AyuGramDocs/blob/main/shared/ghost.md) |
-| Read on interaction/manual read | documented | documented | no verified current implementation | NOT_STARTED | [Ghost](https://github.com/AyuGram/AyuGramDocs/blob/main/shared/ghost.md) |
-| Delayed scheduled send to reduce online exposure | documented, with timing/network caveats | unclear | no verified current implementation | NOT_STARTED | [Ghost](https://github.com/AyuGram/AyuGramDocs/blob/main/shared/ghost.md) |
-| Warn before opening story | documented | unclear | no verified current implementation | NOT_STARTED | [Ghost](https://github.com/AyuGram/AyuGramDocs/blob/main/shared/ghost.md) |
-| Persistent deleted message archive | separate Room database; media attempt | database stores history, chat display may reset after restart | Ghostgram has AntiDeleteManager and DeletedMessageAttribute; implementation stores summary data in UserDefaults and modifies Postbox behavior, so it is a reference, not a drop-in archive | NOT_STARTED | [Android saving](https://github.com/AyuGram/AyuGramDocs/blob/main/android/saving.md), [Desktop saving](https://github.com/AyuGram/AyuGramDocs/blob/main/desktop/saving.md), [Ghostgram code](https://github.com/ichmagmaus111/ghostgram/blob/main/submodules/TelegramCore/Sources/AntiDelete/AntiDeleteManager.swift) |
-| Edit history | documented on Desktop | database persisted, text only | Lead says beta; unverified | NOT_STARTED | [Desktop saving](https://github.com/AyuGram/AyuGramDocs/blob/main/desktop/saving.md), [Lead](https://github.com/w3ltyyy/lead) |
-| Media preservation and prefetch | documented on Android | explicitly not supported in Desktop saving | Lead self-destruct tweak claim; unverified | NOT_STARTED | [Android saving](https://github.com/AyuGram/AyuGramDocs/blob/main/android/saving.md), [Desktop saving](https://github.com/AyuGram/AyuGramDocs/blob/main/desktop/saving.md) |
-| View deleted/search | per-chat View Deleted and search | View Deleted | no verified current equivalent | NOT_STARTED | [Android saving](https://github.com/AyuGram/AyuGramDocs/blob/main/android/saving.md), [Desktop saving](https://github.com/AyuGram/AyuGramDocs/blob/main/desktop/saving.md) |
-| Filters: regex, per-chat/global, reverse, exclusions, metadata tags | documented, Java regex | unclear | no verified iOS equivalent | NOT_STARTED | [Filters](https://github.com/AyuGram/AyuGramDocs/blob/main/android/filters/index.md), [v2 format](https://github.com/AyuGram/AyuGramDocs/blob/main/android/filters/dev.md) |
-| Hide blocked users/reactions/typing/member list | documented | unclear | no verified iOS equivalent | NOT_STARTED | [Filters](https://github.com/AyuGram/AyuGramDocs/blob/main/android/filters/index.md) |
-| AyuForward restricted and deleted messages | documented, downloads media/re-sends without author | unclear | Lead/TGExtra protected-content tweak claims, version limited | NOT_STARTED | [AyuForward](https://github.com/AyuGram/AyuGramDocs/blob/main/android/forward.md), [TGExtra](https://github.com/waruhachi/TGExtra) |
-| Remove ads/proxy sponsor | documented | unclear | Lead/TGExtra claims, Lead calls ads beta | NOT_STARTED | [Android](https://github.com/AyuGram/AyuGramDocs/blob/main/android/index.md), [Lead](https://github.com/w3ltyyy/lead) |
-| Local Premium UI | documented; server limits remain | documented | no verified parity | NOT_STARTED | [Ghost](https://github.com/AyuGram/AyuGramDocs/blob/main/shared/ghost.md) |
-| Peek Online | documented via privacy exceptions/multiple accounts | unclear | no verified parity; privacy mutations require careful UX | NOT_STARTED | [Peek](https://github.com/AyuGram/AyuGramDocs/blob/main/android/peek.md) |
-| Banned/kicked chat cache | documented | unclear | no verified parity | NOT_STARTED | [Android](https://github.com/AyuGram/AyuGramDocs/blob/main/android/index.md) |
-| Expire button, secret screenshots | documented | unclear | Lead/TGExtra tweak claims; unverified on current version | NOT_STARTED | [Android](https://github.com/AyuGram/AyuGramDocs/blob/main/android/index.md), [TGExtra](https://github.com/waruhachi/TGExtra) |
-| Import/export archive and filters; deep links | documented Android link and filter format | unclear | no verified parity | NOT_STARTED | [Links](https://github.com/AyuGram/AyuGramDocs/blob/main/android/various.md), [v2 format](https://github.com/AyuGram/AyuGramDocs/blob/main/android/filters/dev.md) |
-| Message Shot | unclear | documented | no verified equivalent | NOT_STARTED | [Desktop features](https://github.com/AyuGram/AyuGramDocs/blob/main/desktop/features.md) |
-| Similar-channel controls, folder counters, confirmation before send | unclear | documented | unverified in Swiftgram | NOT_STARTED | [Desktop features](https://github.com/AyuGram/AyuGramDocs/blob/main/desktop/features.md) |
-| Icon picker, mono font, context menu controls | Android/exteraGram variants | documented | native iOS equivalents need design audit | NOT_STARTED | [Desktop features](https://github.com/AyuGram/AyuGramDocs/blob/main/desktop/features.md) |
-| Streamer/capture privacy mode | unclear | hides Desktop windows from capture | iOS platform behavior needs investigation | RESEARCHING | [Desktop features](https://github.com/AyuGram/AyuGramDocs/blob/main/desktop/features.md) |
-| Android persistent background push service | documented | not Android equivalent | iOS APNs/background model needs research; no equivalence claimed | RESEARCHING | [Notifications](https://github.com/AyuGram/AyuGramDocs/blob/main/android/notifications.md) |
-| Translator / Swiftgram extras | exteraGram/Swiftgram comparison outstanding | unclear | Swiftgram has SG translation modules in source tree | RESEARCHING | [Swiftgram tree](https://github.com/Swiftgram/Telegram-iOS/tree/master/Swiftgram) |
+| Feature | Veilgram status | Current Veilgram implementation |
+|---|---|---|
+| Suppress message read receipts | IMPLEMENTED | `SynchronizePeerReadState.swift` consults `VeilgramGhostModeRuntimePreferences` for ordinary cloud chats. |
+| Suppress story views | NOT_STARTED | No Veilgram runtime hook identified yet. |
+| Suppress online / force offline | IMPLEMENTED | `ManagedAccountPresence.swift` maps the effective presence to offline while the setting is enabled. |
+| Suppress typing/send activities | IMPLEMENTED_PARTIAL | `ManagedLocalInputActivities.swift` suppresses normal input activities; group-call speaking remains a separate path. |
+| Manual/read-on-interaction mode | NOT_STARTED | No separate manual-read controller yet. |
+| Delayed scheduled send | NOT_STARTED | No Veilgram-specific runtime integration yet. |
+| Warn before opening story | NOT_STARTED | No Veilgram-specific story-open warning yet. |
+| Persistent deleted message archive | IMPLEMENTED_PARTIAL | Ordinary cloud-message delete paths snapshot into Veilgram local storage and retained rows can remain visible. Range/min-available coverage is incomplete. |
+| Edit history | IMPLEMENTED | Previous text/entity revisions are captured on edit and exposed in Veilgram UI. |
+| Media preservation and prefetch | CORE_ONLY | Media archive models/store metadata exist, but a complete runtime MediaBox-byte copy pipeline is still missing. |
+| View deleted/search | IMPLEMENTED_PARTIAL | Veilgram local archive screens expose retained records; richer per-chat search/navigation remains incomplete. |
+| Filters: regex, per-chat/global, reverse, exclusions | IMPLEMENTED | Local filter engine, persistence and chat rendering integration are present. |
+| Hide blocked users/reactions/typing/member list | NOT_STARTED | No unified Veilgram implementation yet. |
+| Restricted/deleted forwarding helpers | NOT_STARTED | No Veilgram-specific forwarding implementation yet. |
+| Remove/collapse ads and sponsored posts | IMPLEMENTED_PARTIAL | Ordinary channel-ad heuristics and sponsored-message collapse/reveal exist; render paths still need consolidation. |
+| Local Premium UI | SEPARATE_BRANCH | `feature/local-premium-ui` contains a preference core, but it is not integrated into this runtime branch. |
+| Peek Online | NOT_STARTED | No Veilgram implementation yet. |
+| Banned/kicked chat cache | NOT_STARTED | No Veilgram implementation yet. |
+| Expire button / capture controls | RESEARCHING | Platform-specific behavior still needs integration work. |
+| Import/export archive and filters | IMPLEMENTED | Versioned local transfer envelopes and Veilgram UI exist. |
+| Message Shot | NOT_STARTED | No Veilgram implementation yet. |
+| Similar-channel controls / folder counters / send confirmations | NOT_STARTED | No Veilgram-specific integration yet. |
+| Alternate icon picker | BLOCKED_BY_MISSING_ARTWORK | Application binding currently exposes no alternate icons; Veilgram-owned variants need packaging and UI exposure. |
+| Streamer/capture privacy mode | RESEARCHING | iOS-specific implementation remains open. |
+| Translator / Swiftgram extras | RESEARCHING | Not yet integrated into Veilgram runtime. |
 
-Build status: official Telegram upstream BUILD-0 PASS, branded simulator BUILD-1 PASS; device arm64 BUILD-2 and settings BUILD-3 are not yet PASS. These compilation gates do not establish runtime feature parity. Ghost/read/status suppression, hiding official sponsored channel messages, and self-destruct content preservation conflict with current Telegram API terms and are not approved shipping features.\n\nOutstanding inventory: inspect current Android settings/source and release history, Desktop changelog/source, exteraGram variants, Swiftgram feature behavior, and every iOS tweak's license and active code path. Split rows into testable subfeatures before implementation. No unverified claim above is a working Veilgram feature.
+## Status meanings
+
+- **IMPLEMENTED** — runtime code is integrated in this branch.
+- **IMPLEMENTED_PARTIAL** — usable runtime code exists but known paths or UX are incomplete.
+- **CORE_ONLY** — data model/engine exists without complete runtime integration.
+- **SEPARATE_BRANCH** — implementation exists elsewhere but is not part of this branch.
+- **NOT_STARTED** — no Veilgram runtime implementation identified.
+- **RESEARCHING** — design/source investigation is active.
+- **BLOCKED_BY_MISSING_ARTWORK** — technical binding exists but required Veilgram-owned assets are absent.
+
+Compilation status and device-test status are tracked separately from feature status.
