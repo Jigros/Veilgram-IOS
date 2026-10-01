@@ -52,6 +52,7 @@ public enum VeilgramMessageRenderRuntime {
         isForwarded: Bool,
         isBroadcastChannel: Bool,
         isOfficialSponsored: Bool,
+        isServiceMessage: Bool,
         defaults: UserDefaults = .standard
     ) -> VeilgramMessageRenderDecision? {
         if let filterDecision = VeilgramFilterRuntime.evaluate(
@@ -71,18 +72,14 @@ public enum VeilgramMessageRenderRuntime {
             )
         }
 
-        let prefix = settingsPrefix(accountId: accountId)
-        let detectionEnabled = defaults.bool(
-            forKey: "\(prefix).channelAdFilterEnabled"
+        let adOptions = VeilgramChannelAdClassifier.options(
+            accountId: accountId,
+            defaults: defaults
         )
-        guard detectionEnabled && (isBroadcastChannel || isOfficialSponsored) else {
-            return nil
-        }
 
-        if isOfficialSponsored {
-            let collapse = defaults.bool(
-                forKey: "\(prefix).channelAdCollapseEnabled"
-            ) && !isRevealed(accountId: accountId, message: message)
+        if adOptions.enabled && isOfficialSponsored {
+            let collapse = adOptions.collapseEnabled
+                && !isRevealed(accountId: accountId, message: message)
             return VeilgramMessageRenderDecision(
                 label: "Sponsored message",
                 shouldCollapse: collapse,
@@ -90,73 +87,32 @@ public enum VeilgramMessageRenderRuntime {
             )
         }
 
-        let normalized = text.lowercased()
-        var score = 0
-
-        let explicitMarkers = [
-            "#реклама",
-            "рекламный пост",
-            "на правах рекламы",
-            "партнерский материал",
-            "партнёрский материал",
-            "advertisement",
-            "sponsored post",
-            "paid partnership"
-        ]
-        if explicitMarkers.contains(where: { normalized.contains($0) }) {
-            score += 3
-        }
-
-        let promoMarkers = [
-            "промокод",
-            "по промокоду",
-            "скидка",
-            "скидку",
-            "купи",
-            "купить",
-            "заказать",
-            "promo code",
-            "discount",
-            "use code",
-            "special offer"
-        ]
-        if promoMarkers.contains(where: { normalized.contains($0) }) {
-            score += 2
-        }
-
-        let callToActionMarkers = [
-            "переходи",
-            "переходите",
-            "подписывайся",
-            "подписывайтесь",
-            "успей",
-            "забирай",
-            "жми",
-            "order now",
-            "buy now",
-            "sign up",
-            "shop now"
-        ]
-        if callToActionMarkers.contains(where: { normalized.contains($0) }) {
-            score += 1
-        }
-
-        if hasLink {
-            score += 1
-        }
-
-        guard score >= 3 else {
-            return nil
-        }
-
-        let collapse = defaults.bool(
-            forKey: "\(prefix).channelAdCollapseEnabled"
-        ) && !isRevealed(accountId: accountId, message: message)
-
-        return VeilgramMessageRenderDecision(
-            label: "Likely channel ad",
-            shouldCollapse: collapse,
-            isAdvertisement: true
+        let adDecision = VeilgramChannelAdClassifier.classify(
+            VeilgramChannelAdInput(
+                text: text,
+                isBroadcastChannel: isBroadcastChannel,
+                isOfficialSponsoredMessage: isOfficialSponsored,
+                isServiceMessage: isServiceMessage,
+                channelId: peerId
+            ),
+            options: adOptions
         )
+
+        switch adDecision.action {
+        case .keep:
+            return nil
+        case .label:
+            return VeilgramMessageRenderDecision(
+                label: "Likely channel ad",
+                shouldCollapse: false,
+                isAdvertisement: true
+            )
+        case .collapse:
+            return VeilgramMessageRenderDecision(
+                label: "Likely channel ad",
+                shouldCollapse: !isRevealed(accountId: accountId, message: message),
+                isAdvertisement: true
+            )
+        }
     }
 }
