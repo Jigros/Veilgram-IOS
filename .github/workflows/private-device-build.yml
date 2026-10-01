@@ -29,7 +29,7 @@ jobs:
         with:
           ref: ${{ inputs.source_ref }}
           submodules: false
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
 
       - name: Resolve pinned submodules
@@ -38,7 +38,11 @@ jobs:
           set -euo pipefail
           git config submodule.submodules/rlottie/rlottie.url https://github.com/TelegramMessenger/rlottie.git
           git config submodule.submodules/TgVoipWebrtc/tgcalls.url https://github.com/TelegramMessenger/tgcalls.git
-          git -c protocol.file.allow=never submodule update --init --recursive
+          if ! git -c protocol.file.allow=never submodule update --init --recursive --depth 1; then
+            echo "Shallow submodule update failed; retrying full pinned checkout."
+            git submodule sync --recursive
+            git -c protocol.file.allow=never submodule update --init --recursive
+          fi
 
       - name: Verify required secrets exist
         shell: bash
