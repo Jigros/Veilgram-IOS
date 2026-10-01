@@ -4450,7 +4450,8 @@ func replayFinalState(
                             VeilgramArchiveStateAdapter.enqueueDeletedMessage(
                                 accountPeerId: accountPeerId,
                                 message: message,
-                                observedAt: veilgramDeleteObservedAt
+                                observedAt: veilgramDeleteObservedAt,
+                                mediaBox: mediaBox
                             )
                             if VeilgramArchiveStateAdapter.shouldRetainDeletedMessage(
                                 accountPeerId: accountPeerId,
