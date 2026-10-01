@@ -12,8 +12,6 @@ assert not m.group(1).strip(), "Telegram alternate icons are still packaged"
 start = app_delegate.index("}, getAvailableAlternateIcons: {")
 end = app_delegate.index("}, getAlternateIconName: {", start)
 binding = app_delegate[start:end]
-assert "return []" in binding, "alternate icon UI binding is not disabled"
-
 inherited = [
     "BlackIcon", "BlackClassicIcon", "BlackFilledIcon", "BlueIcon",
     "BlueClassicIcon", "BlueFilledIcon", "WhiteFilledIcon", "New1", "New2",
@@ -22,7 +20,7 @@ inherited = [
 for name in inherited:
     assert name not in binding, f"inherited icon {name} still exposed in application bindings"
 
-print("PASS: inherited Telegram alternate app icons are neither packaged nor exposed in Settings")
+print("PASS: inherited Telegram alternate app icons are not packaged or exposed; Veilgram-owned variants are allowed")
 
 assert "Telegram iOS Color Theme File" not in build, "user-visible Telegram theme-file description remains"
 assert "<string>BlueIcon@3x.png</string>" not in build, "Telegram theme-file icon remains"
