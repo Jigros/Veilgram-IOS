@@ -4,6 +4,7 @@ public struct VeilgramArchiveStoreAPI {
     private static let messageFile = "message-archive-v1.json"
     private static let editFile = "edit-history-v1.json"
     private static let mediaFile = "media-archive-v1.json"
+    private static let mediaBinaryPrefix = "media-"
 
     private let store: VeilgramProtectedLocalStore
     private let accountId: Int64?
@@ -57,6 +58,28 @@ public struct VeilgramArchiveStoreAPI {
         try store.write(try VeilgramMediaArchiveEngine.encode(document), fileName: Self.mediaFile)
     }
 
+    func copyMediaFile(
+        sourcePath: String,
+        key: VeilgramMediaKey,
+        maximumBytes: Int64
+    ) throws -> (relativePath: String, byteCount: Int64) {
+        let fileName = Self.mediaFileName(key)
+        let byteCount = try store.copyFile(
+            from: URL(fileURLWithPath: sourcePath),
+            fileName: fileName,
+            maximumBytes: maximumBytes
+        )
+        return (fileName, byteCount)
+    }
+
+    func removeMediaFile(relativePath: String) throws {
+        try store.remove(fileName: relativePath)
+    }
+
+    private static func mediaFileName(_ key: VeilgramMediaKey) -> String {
+        return "\(mediaBinaryPrefix)\(key.peerId)-\(key.messageNamespace)-\(key.messageId)-\(key.mediaIndex).bin"
+    }
+
     public func exportMessages(createdAt: Int32) throws -> Data {
         return try Self.exportEnvelope(
             kind: .messageArchive,
@@ -100,6 +123,7 @@ public struct VeilgramArchiveStoreAPI {
         try store.remove(fileName: Self.messageFile)
         try store.remove(fileName: Self.editFile)
         try store.remove(fileName: Self.mediaFile)
+        try store.removeFiles(withPrefix: Self.mediaBinaryPrefix)
         if let accountId = self.accountId {
             VeilgramArchiveRuntimeIndex.invalidateEdits(accountId: accountId)
         }
