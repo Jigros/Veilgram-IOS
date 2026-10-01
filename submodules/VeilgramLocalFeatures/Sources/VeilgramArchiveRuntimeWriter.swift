@@ -227,10 +227,10 @@ public enum VeilgramArchiveRuntimeWriter {
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
         queue.async {
-            discardAllPending(accountPeerId: accountPeerId)
             do {
                 let store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
                 try store.removeAll()
+                discardAllPending(accountPeerId: accountPeerId)
                 completeOnMain {
                     completion(.success(()))
                 }
@@ -252,10 +252,10 @@ public enum VeilgramArchiveRuntimeWriter {
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
         queue.async {
-            discardPendingMessages(accountPeerId: accountPeerId)
             do {
                 let store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
                 try store.importMessages(data)
+                discardPendingMessages(accountPeerId: accountPeerId)
                 completeOnMain {
                     completion(.success(()))
                 }
@@ -276,10 +276,10 @@ public enum VeilgramArchiveRuntimeWriter {
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
         queue.async {
-            discardPendingEdits(accountPeerId: accountPeerId)
             do {
                 let store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
                 try store.importEdits(data)
+                discardPendingEdits(accountPeerId: accountPeerId)
                 completeOnMain {
                     completion(.success(()))
                 }
@@ -350,7 +350,9 @@ public enum VeilgramArchiveRuntimeWriter {
             store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
         } catch {
             VeilgramArchiveRuntimeDiagnostics.record(error)
-            requeueForRetry(accountPeerId: accountPeerId, batch: batch)
+            var retryBatch = batch
+            retryBatch.retryAttempt += 1
+            requeueForRetry(accountPeerId: accountPeerId, batch: retryBatch)
             return
         }
 
