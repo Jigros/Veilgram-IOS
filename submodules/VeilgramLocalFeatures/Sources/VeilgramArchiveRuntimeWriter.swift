@@ -141,6 +141,22 @@ struct VeilgramArchivePendingBatch {
     }
 }
 
+public struct VeilgramLocalMediaArchiveCandidate: Equatable {
+    public var key: VeilgramMediaKey
+    public var sourcePath: String?
+    public var archivedAt: Int32
+
+    public init(
+        key: VeilgramMediaKey,
+        sourcePath: String?,
+        archivedAt: Int32
+    ) {
+        self.key = key
+        self.sourcePath = sourcePath
+        self.archivedAt = archivedAt
+    }
+}
+
 public enum VeilgramArchiveRuntimeWriter {
     private static let queue = DispatchQueue(
         label: "org.veilgram.local-archive",
@@ -153,6 +169,8 @@ public enum VeilgramArchiveRuntimeWriter {
     private static var flushScheduled = false
     private static var retryGenerationCounters: [Int64: Int] = [:]
     private static var activeRetryGenerations: [Int64: Int] = [:]
+    private static let maximumMediaItemBytes: Int64 = 256 * 1024 * 1024
+    private static let maximumMediaArchiveBytes: Int64 = 512 * 1024 * 1024
 
     public static func enqueueDeletedMessage(
         accountPeerId: Int64,
@@ -207,6 +225,98 @@ public enum VeilgramArchiveRuntimeWriter {
                 flush(accountPeerId: accountPeerId)
             } else {
                 scheduleFlushIfNeeded()
+            }
+        }
+    }
+
+    public static func enqueueLocalMediaCandidates(
+        accountPeerId: Int64,
+        candidates: [VeilgramLocalMediaArchiveCandidate],
+        eligibility: VeilgramArchiveEligibility
+    ) {
+        guard !candidates.isEmpty,
+              VeilgramArchiveRuntimePreferences.messageArchiveEnabled(accountPeerId: accountPeerId),
+              eligibility.isEligibleForLocalRetention else {
+            return
+        }
+
+        queue.async {
+            do {
+                let store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
+                var document = try store.loadMedia()
+                var changed = false
+
+                for candidate in candidates {
+                    if let existing = document.items.first(where: { $0.key == candidate.key }),
+                       existing.availability == .available {
+                        continue
+                    }
+
+                    guard let sourcePath = candidate.sourcePath else {
+                        if try VeilgramMediaArchiveEngine.upsertUnavailable(
+                            document: &document,
+                            key: candidate.key,
+                            archivedAt: candidate.archivedAt
+                        ) {
+                            changed = true
+                        }
+                        continue
+                    }
+
+                    do {
+                        let copied = try store.copyMediaFile(
+                            sourcePath: sourcePath,
+                            key: candidate.key,
+                            maximumBytes: maximumMediaItemBytes
+                        )
+                        let item = VeilgramMediaItem(
+                            key: candidate.key,
+                            relativePath: copied.relativePath,
+                            byteCount: copied.byteCount,
+                            archivedAt: candidate.archivedAt,
+                            lastAccessedAt: candidate.archivedAt,
+                            availability: .available
+                        )
+                        if try VeilgramMediaArchiveEngine.appendAvailable(
+                            document: &document,
+                            item: item,
+                            eligibility: VeilgramMediaEligibility(
+                                archiveEligibility: eligibility,
+                                bytesAreLocallyAvailable: true
+                            )
+                        ) {
+                            changed = true
+                        }
+                    } catch {
+                        VeilgramArchiveRuntimeDiagnostics.record(error)
+                        if try VeilgramMediaArchiveEngine.upsertUnavailable(
+                            document: &document,
+                            key: candidate.key,
+                            archivedAt: candidate.archivedAt
+                        ) {
+                            changed = true
+                        }
+                    }
+                }
+
+                if changed {
+                    let evicted = VeilgramMediaArchiveEngine.enforceQuota(
+                        document: &document,
+                        maximumBytes: maximumMediaArchiveBytes
+                    )
+                    for item in evicted {
+                        if let relativePath = item.relativePath {
+                            do {
+                                try store.removeMediaFile(relativePath: relativePath)
+                            } catch {
+                                VeilgramArchiveRuntimeDiagnostics.record(error)
+                            }
+                        }
+                    }
+                    try store.saveMedia(document)
+                }
+            } catch {
+                VeilgramArchiveRuntimeDiagnostics.record(error)
             }
         }
     }
