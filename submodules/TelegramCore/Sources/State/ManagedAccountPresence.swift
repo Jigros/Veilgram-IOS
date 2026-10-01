@@ -3,6 +3,7 @@ import TelegramApi
 import Postbox
 import SwiftSignalKit
 import MtProtoKit
+import VeilgramLocalFeatures
 
 private typealias SignalKitTimer = SwiftSignalKit.Timer
 
@@ -10,6 +11,7 @@ private typealias SignalKitTimer = SwiftSignalKit.Timer
 private final class AccountPresenceManagerImpl {
     private let queue: Queue
     private let network: Network
+    private let accountPeerId: PeerId
     let isPerformingUpdate = ValuePromise<Bool>(false, ignoreRepeated: true)
     
     private var shouldKeepOnlinePresenceDisposable: Disposable?
@@ -18,9 +20,10 @@ private final class AccountPresenceManagerImpl {
     
     private var wasOnline: Bool = false
     
-    init(queue: Queue, shouldKeepOnlinePresence: Signal<Bool, NoError>, network: Network) {
+    init(queue: Queue, shouldKeepOnlinePresence: Signal<Bool, NoError>, network: Network, accountPeerId: PeerId) {
         self.queue = queue
         self.network = network
+        self.accountPeerId = accountPeerId
         
         self.shouldKeepOnlinePresenceDisposable = (shouldKeepOnlinePresence
         |> distinctUntilChanged
@@ -43,8 +46,11 @@ private final class AccountPresenceManagerImpl {
     }
     
     private func updatePresence(_ isOnline: Bool) {
+        let effectiveIsOnline = isOnline && !VeilgramGhostModeRuntimePreferences.suppressOnlinePresence(
+            accountPeerId: self.accountPeerId.toInt64()
+        )
         let request: Signal<Api.Bool, MTRpcError>
-        if isOnline {
+        if effectiveIsOnline {
             let timer = SignalKitTimer(timeout: 30.0, repeat: false, completion: { [weak self] in
                 guard let strongSelf = self else {
                     return
@@ -77,10 +83,10 @@ final class AccountPresenceManager {
     private let queue = Queue()
     private let impl: QueueLocalObject<AccountPresenceManagerImpl>
     
-    init(shouldKeepOnlinePresence: Signal<Bool, NoError>, network: Network) {
+    init(shouldKeepOnlinePresence: Signal<Bool, NoError>, network: Network, accountPeerId: PeerId) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: self.queue, generate: {
-            return AccountPresenceManagerImpl(queue: queue, shouldKeepOnlinePresence: shouldKeepOnlinePresence, network: network)
+            return AccountPresenceManagerImpl(queue: queue, shouldKeepOnlinePresence: shouldKeepOnlinePresence, network: network, accountPeerId: accountPeerId)
         })
     }
     
