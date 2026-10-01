@@ -61,6 +61,20 @@ class ReleaseIconTests(unittest.TestCase):
         self.good["CFBundleIcons"]["CFBundlePrimaryIcon"]["CFBundleIconFiles"] = ["Telegram60x60"]
         self.assertTrue(self.evaluate(self.good))
 
+    def test_rejects_user_visible_telegram_theme_description(self):
+        self.good["UTImportedTypeDeclarations"] = [{
+            "UTTypeDescription": "Telegram iOS Color Theme File",
+            "UTTypeIdentifier": "org.telegram.Telegram-iOS.theme",
+        }]
+        self.assertTrue(self.evaluate(self.good))
+
+    def test_legacy_theme_identifier_is_allowed_with_veilgram_presentation(self):
+        self.good["UTImportedTypeDeclarations"] = [{
+            "UTTypeDescription": "Veilgram Theme File",
+            "UTTypeIdentifier": "org.telegram.Telegram-iOS.theme",
+        }]
+        self.assertEqual([], self.evaluate(self.good))
+
 
 if __name__ == "__main__":
     unittest.main()
