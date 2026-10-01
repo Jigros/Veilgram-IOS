@@ -23,3 +23,7 @@ for name in inherited:
     assert name not in binding, f"inherited icon {name} still exposed in application bindings"
 
 print("PASS: inherited Telegram alternate app icons are neither packaged nor exposed in Settings")
+
+assert "Telegram iOS Color Theme File" not in build, "user-visible Telegram theme-file description remains"
+assert "<string>BlueIcon@3x.png</string>" not in build, "Telegram theme-file icon remains"
+assert "<string>Veilgram Theme File</string>" in build, "Veilgram theme-file description missing"
