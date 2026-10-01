@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramCore
+import VeilgramLocalFeatures
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
@@ -286,6 +287,37 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             case let .group(messages):
                 return messages[0].0.flags.contains(.Sending)
         }
+    }
+    
+    public var veilgramRenderDecision: VeilgramMessageRenderDecision? {
+        let message = self.message
+        var isBroadcastChannel = false
+        if let channel = message.peers[message.id.peerId] as? TelegramChannel {
+            if case .broadcast = channel.info {
+                isBroadcastChannel = true
+            }
+        }
+        let isOfficialSponsored = message.attributes.contains(where: { $0 is AdMessageAttribute })
+        let normalizedText = message.text.lowercased()
+        let hasLink = message.media.contains(where: { $0 is TelegramMediaWebpage })
+            || normalizedText.contains("http://")
+            || normalizedText.contains("https://")
+            || normalizedText.contains("t.me/")
+        let key = VeilgramMessageKey(
+            peerId: message.id.peerId.toInt64(),
+            namespace: message.id.namespace,
+            id: message.id.id
+        )
+        return VeilgramMessageRenderRuntime.evaluate(
+            accountId: self.context.account.id.int64,
+            message: key,
+            text: message.text,
+            peerId: message.id.peerId.toInt64(),
+            hasLink: hasLink,
+            isForwarded: message.forwardInfo != nil,
+            isBroadcastChannel: isBroadcastChannel,
+            isOfficialSponsored: isOfficialSponsored
+        )
     }
     
     public var failed: Bool {
@@ -582,9 +614,20 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             }
             
             let (layout, apply) = nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false) : dateAtBottom)
+            let effectiveLayout: ListViewItemNodeLayout
+            if self.veilgramRenderDecision?.shouldCollapse == true {
+                effectiveLayout = ListViewItemNodeLayout(
+                    contentSize: CGSize(width: layout.contentSize.width, height: 42.0),
+                    insets: UIEdgeInsets()
+                )
+                node.clipsToBounds = true
+            } else {
+                effectiveLayout = layout
+                node.clipsToBounds = false
+            }
             
-            node.contentSize = layout.contentSize
-            node.insets = layout.insets
+            node.contentSize = effectiveLayout.contentSize
+            node.insets = effectiveLayout.insets
             node.safeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset)
             
             node.updateSelectionState(animated: false)
@@ -687,10 +730,20 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                     }
                     
                     let (layout, apply) = nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false) : dateAtBottom)
+                    let effectiveLayout: ListViewItemNodeLayout
+                    if self.veilgramRenderDecision?.shouldCollapse == true {
+                        effectiveLayout = ListViewItemNodeLayout(
+                            contentSize: CGSize(width: layout.contentSize.width, height: 42.0),
+                            insets: UIEdgeInsets()
+                        )
+                    } else {
+                        effectiveLayout = layout
+                    }
                     Queue.mainQueue().async {
-                        completion(layout, { info in
+                        completion(effectiveLayout, { info in
                             apply(animation, info, false)
                             if let nodeValue = node() as? ChatMessageItemView {
+                                nodeValue.clipsToBounds = self.veilgramRenderDecision?.shouldCollapse == true
                                 nodeValue.safeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset)
                                 nodeValue.updateSelectionState(animated: false)
                                 nodeValue.updateHighlightedState(animated: false)
