@@ -81,7 +81,7 @@ final class VeilgramLocalTransferController: ViewController, UITableViewDataSour
 
     func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         if section == 0 {
-            return "Exports use a versioned Veilgram JSON envelope with checksum. Known API/session credential markers are rejected before export."
+            return "Exports use a versioned Veilgram JSON envelope with checksum. Veilgram transfer schemas do not contain Telegram session/auth fields; ordinary message text is not keyword-filtered."
         }
         return "Import validates version, checksum, document type and payload before replacing only the selected Veilgram local document for this account."
     }
@@ -180,7 +180,7 @@ final class VeilgramLocalTransferController: ViewController, UITableViewDataSour
             )
         } catch {
             self.showError(
-                "Import rejected: invalid, corrupted, incompatible, wrong-type or credential-bearing Veilgram data."
+                "Import rejected: invalid, corrupted, incompatible or wrong-type Veilgram data."
             )
         }
     }
