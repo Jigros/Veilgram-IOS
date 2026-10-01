@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import TelegramApi
 import SwiftSignalKit
+import VeilgramLocalFeatures
 
 
 private enum PeerReadStateMarker: Equatable {
@@ -227,6 +228,11 @@ private func validatePeerReadState(network: Network, postbox: Postbox, stateMana
 }
 
 private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, readState: PeerReadState) -> Signal<PeerReadState, PeerReadStateValidationError> {
+    if peerId.namespace != Namespaces.Peer.SecretChat && VeilgramGhostModeRuntimePreferences.suppressReadReceipts(
+        accountPeerId: stateManager.accountPeerId.toInt64()
+    ) {
+        return .single(readState)
+    }
     if peerId.namespace == Namespaces.Peer.SecretChat {
         return inputSecretChat(postbox: postbox, peerId: peerId)
         |> mapToSignal { inputPeer -> Signal<PeerReadState, PeerReadStateValidationError> in
