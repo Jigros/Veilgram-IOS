@@ -46,6 +46,7 @@ import NavigationBarImpl
 import ContextUI
 import ContextControllerImpl
 import ProxyServerPreviewScreen
+import VeilgramLocalFeatures
 
 #if canImport(AppCenter)
 import AppCenter
@@ -1454,6 +1455,23 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
 
         self.logoutDisposable.set(logoutDataSignal.start(next: { accountManager, loggedOutAccountPeerIds in
+            if !loggedOutAccountPeerIds.isEmpty {
+                let cleanupPeerIds = loggedOutAccountPeerIds
+                Queue.concurrentDefaultQueue().async {
+                    for peerId in cleanupPeerIds {
+                        do {
+                            try VeilgramLocalDataLifecycle.removeLoggedOutAccountData(
+                                accountPeerId: peerId.toInt64()
+                            )
+                        } catch {
+                            Logger.shared.log(
+                                "Veilgram",
+                                "failed to remove local data for logged-out account"
+                            )
+                        }
+                    }
+                }
+            }
             let _ = (updateIntentsSettingsInteractively(accountManager: accountManager) { current in
                 var updated = current
                 for peerId in loggedOutAccountPeerIds {
