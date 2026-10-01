@@ -412,7 +412,6 @@ public enum VeilgramMediaArchiveEngine {
     }
 
     @discardableResult
-    @discardableResult
     public static func upsertUnavailable(
         document: inout VeilgramMediaArchiveDocument,
         key: VeilgramMediaKey,
