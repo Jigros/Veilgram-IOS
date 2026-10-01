@@ -6,13 +6,16 @@ public struct VeilgramArchiveStoreAPI {
     private static let mediaFile = "media-archive-v1.json"
 
     private let store: VeilgramProtectedLocalStore
+    private let accountId: Int64?
 
     public init(accountId: Int64) throws {
         self.store = try VeilgramProtectedLocalStore.accountStore(accountId: accountId)
+        self.accountId = accountId
     }
 
     init(store: VeilgramProtectedLocalStore) {
         self.store = store
+        self.accountId = nil
     }
 
     public func loadMessages() throws -> VeilgramMessageArchiveDocument {
@@ -35,6 +38,12 @@ public struct VeilgramArchiveStoreAPI {
 
     public func saveEdits(_ document: VeilgramEditHistoryDocument) throws {
         try store.write(try VeilgramEditHistoryEngine.encode(document), fileName: Self.editFile)
+        if let accountId = self.accountId {
+            VeilgramArchiveRuntimeIndex.replaceEditDocument(
+                accountId: accountId,
+                document: document
+            )
+        }
     }
 
     public func loadMedia() throws -> VeilgramMediaArchiveDocument {
@@ -91,6 +100,9 @@ public struct VeilgramArchiveStoreAPI {
         try store.remove(fileName: Self.messageFile)
         try store.remove(fileName: Self.editFile)
         try store.remove(fileName: Self.mediaFile)
+        if let accountId = self.accountId {
+            VeilgramArchiveRuntimeIndex.invalidateEdits(accountId: accountId)
+        }
     }
 
     private static func exportEnvelope(
