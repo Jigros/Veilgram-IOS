@@ -83,15 +83,34 @@ enum VeilgramArchiveStateAdapter {
         )
 
         if let mediaBox {
-            VeilgramArchiveRuntimeWriter.enqueueLocalMediaCandidates(
-                accountPeerId: accountPeerId.toInt64(),
-                candidates: localMediaCandidates(
-                    message: message,
-                    observedAt: observedAt,
-                    mediaBox: mediaBox
-                )
+            enqueueDeletedMedia(
+                accountPeerId: accountPeerId,
+                messages: [message],
+                observedAt: observedAt,
+                mediaBox: mediaBox
             )
         }
+    }
+
+    static func enqueueDeletedMedia(
+        accountPeerId: PeerId,
+        messages: [Message],
+        observedAt: Int32,
+        mediaBox: MediaBox,
+        completion: (() -> Void)? = nil
+    ) {
+        let candidates = messages.flatMap { message in
+            localMediaCandidates(
+                message: message,
+                observedAt: observedAt,
+                mediaBox: mediaBox
+            )
+        }
+        VeilgramArchiveRuntimeWriter.enqueueLocalMediaCandidates(
+            accountPeerId: accountPeerId.toInt64(),
+            candidates: candidates,
+            completion: completion
+        )
     }
 
     static func localMediaCandidates(
