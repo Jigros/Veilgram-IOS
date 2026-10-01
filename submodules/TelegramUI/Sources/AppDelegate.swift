@@ -641,9 +641,26 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             isICloudEnabled: buildConfig.isICloudEnabled
         )
         
-        guard let appGroupUrl = maybeAppGroupUrl else {
-            self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
-            return true
+        let appGroupUrl: URL
+        if let maybeAppGroupUrl {
+            appGroupUrl = maybeAppGroupUrl
+        } else {
+            let fallbackBaseUrl = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            let fallbackUrl = fallbackBaseUrl.appendingPathComponent("Veilgram", isDirectory: true)
+            do {
+                try FileManager.default.createDirectory(at: fallbackUrl, withIntermediateDirectories: true)
+                appGroupUrl = fallbackUrl
+                UserDefaults.standard.set(true, forKey: "VeilgramSideloadAppGroupFallback")
+            } catch {
+                let alertController = UIAlertController(
+                    title: "Veilgram",
+                    message: "Unable to initialize local storage.",
+                    preferredStyle: .alert
+                )
+                alertController.addAction(UIAlertAction(title: "OK", style: .default))
+                self.mainWindow?.presentNative(alertController)
+                return true
+            }
         }
         
         var isDebugConfiguration = false
