@@ -1,4 +1,5 @@
 name: Veilgram alternate icon pruning tests
+# theme-file branding cleanup
 
 on:
   workflow_dispatch:
