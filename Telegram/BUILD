@@ -1697,11 +1697,7 @@ plist_fragment(
                 <string>public.data</string>
             </array>
             <key>UTTypeDescription</key>
-            <string>Telegram iOS Color Theme File</string>
-            <key>UTTypeIconFiles</key>
-            <array>
-                <string>BlueIcon@3x.png</string>
-            </array>
+            <string>Veilgram Theme File</string>
             <key>UTTypeIdentifier</key>
             <string>org.telegram.Telegram-iOS.theme</string>
             <key>UTTypeTagSpecification</key>
