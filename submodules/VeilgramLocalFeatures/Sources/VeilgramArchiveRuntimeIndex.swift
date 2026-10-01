@@ -58,6 +58,27 @@ public enum VeilgramArchiveRuntimeIndex {
         return editRevisions(accountId: accountId, key: key).count
     }
 
+    static func appendEditRevision(
+        accountId: Int64,
+        key: VeilgramMessageKey,
+        revision: VeilgramEditRevision
+    ) {
+        ensureEditsLoaded(accountId: accountId)
+        lock.lock()
+        var accountEdits = editsByAccount[accountId] ?? [:]
+        var revisions = accountEdits[key] ?? []
+        if revisions.last != revision {
+            revisions.append(revision)
+            if revisions.count > VeilgramEditHistoryEngine.maximumRevisionsPerMessage {
+                revisions.removeFirst(revisions.count - VeilgramEditHistoryEngine.maximumRevisionsPerMessage)
+            }
+            accountEdits[key] = revisions
+            editsByAccount[accountId] = accountEdits
+        }
+        loadedEditAccounts.insert(accountId)
+        lock.unlock()
+    }
+
     static func replaceEditDocument(
         accountId: Int64,
         document: VeilgramEditHistoryDocument
