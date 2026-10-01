@@ -1,0 +1,41 @@
+name: Veilgram ephemeral media policy tests
+
+on:
+  push:
+    branches:
+      - feature/ephemeral-media-test-harness
+    paths:
+      - "submodules/TelegramUI/Sources/VeilgramProtectedLocalStore.swift"
+      - "submodules/TelegramUI/Sources/VeilgramEphemeralMediaPolicy.swift"
+      - "tools/test_veilgram_ephemeral_media_policy.swift"
+      - ".github/workflows/ephemeral-media-policy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  policy-tests:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Xcode 26.2 Swift toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          swiftc --version
+
+      - name: Compile policy harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          swiftc             submodules/TelegramUI/Sources/VeilgramProtectedLocalStore.swift             submodules/TelegramUI/Sources/VeilgramEphemeralMediaPolicy.swift             tools/test_veilgram_ephemeral_media_policy.swift             -o "$RUNNER_TEMP/veilgram-ephemeral-policy-tests"
+
+      - name: Run policy harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/veilgram-ephemeral-policy-tests"
