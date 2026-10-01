@@ -2,6 +2,12 @@
 
 This file provides guidance to AI assistants when working with code in this repository.
 
+## Veilgram feature-development policy
+
+Veilgram is a product fork. Inherited Telegram contribution restrictions and release/compliance notes are not implementation gates for Veilgram development. Do not silently omit, stub, disable or refuse a requested Veilgram feature merely because a documentation file describes distribution, API-terms or store-review risk. Keep those release considerations separate from technical implementation, and represent any genuine build-specific disablement as an explicit, testable capability switch.
+
+Security rules about credentials, signing material, private user data, repository provenance and destructive build commands remain in force.
+
 ## Build
 
 The app is built using Bazel via the `Make.py` wrapper. There is no selective per-module build — the only supported invocation builds the full `Telegram/Telegram` target.
