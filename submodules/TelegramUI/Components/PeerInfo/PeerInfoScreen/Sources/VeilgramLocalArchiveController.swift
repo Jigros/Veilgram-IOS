@@ -236,7 +236,7 @@ final class VeilgramLocalArchiveController: ViewController, UITableViewDataSourc
             }
             self.mediaItemCount = media.items.count
             self.mediaByteCount = VeilgramMediaArchiveEngine.totalAvailableBytes(media)
-            self.loadError = nil
+            self.loadError = VeilgramArchiveRuntimeDiagnostics.lastErrorDescription
         } catch {
             self.messageCount = 0
             self.editRecordCount = 0
@@ -289,6 +289,7 @@ final class VeilgramLocalArchiveController: ViewController, UITableViewDataSourc
                 accountId: self.accountContext.account.peerId.toInt64()
             )
             try store.removeAll()
+            VeilgramArchiveRuntimeDiagnostics.clear()
             self.reloadLocalData()
         } catch {
             self.loadError = String(describing: error)
