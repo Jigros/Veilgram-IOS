@@ -66,7 +66,6 @@ enum VeilgramMessageFilterEngine {
     static let maximumRules = 256
     static let maximumMatchersPerRule = 16
     static let maximumPatternCharacters = 512
-    static let maximumInputCharacters = 16_000
 
     static func decode(_ data: Data) throws -> VeilgramMessageFilterDocument {
         guard data.count <= maximumDocumentBytes else {
@@ -144,7 +143,6 @@ enum VeilgramMessageFilterEngine {
         _ input: VeilgramMessageFilterInput,
         document: VeilgramMessageFilterDocument
     ) -> [VeilgramMessageFilterMatch] {
-        let boundedText = String(input.text.prefix(maximumInputCharacters))
         var result: [VeilgramMessageFilterMatch] = []
 
         for rule in document.rules where rule.enabled {
@@ -157,7 +155,7 @@ enum VeilgramMessageFilterEngine {
 
             var matched = true
             for matcher in rule.matchers {
-                if !matcherMatches(matcher, input: input, text: boundedText) {
+                if !matcherMatches(matcher, input: input, text: input.text) {
                     matched = false
                     break
                 }
