@@ -6,10 +6,16 @@ on:
       - cleanup/remove-project-policy-guards
     paths:
       - "submodules/VeilgramLocalFeatures/**"
+      - "submodules/Postbox/Sources/Postbox.swift"
+      - "submodules/Postbox/Sources/MessageHistoryTable.swift"
+      - "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift"
+      - "submodules/TelegramCore/Sources/State/HistoryViewStateValidation.swift"
+      - "submodules/TelegramCore/Sources/TelegramEngine/Peers/UpdateCachedPeerData.swift"
       - "submodules/TelegramUI/Sources/AppDelegate.swift"
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalArchiveController.swift"
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalTransferController.swift"
       - "tools/test_veilgram_archive_runtime_batch.swift"
+      - "tools/check_veilgram_archive_delete_coverage.py"
       - ".github/workflows/archive-runtime-reliability.yml"
   workflow_dispatch:
 
@@ -59,6 +65,18 @@ jobs:
             tools/test_veilgram_local_core_integration.swift \
             -o "$RUNNER_TEMP/test-local-core"
           "$RUNNER_TEMP/test-local-core"
+
+      - name: Check remote-delete archive coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/check_veilgram_archive_delete_coverage.py
+          xcrun swiftc -parse \
+            submodules/Postbox/Sources/Postbox.swift \
+            submodules/Postbox/Sources/MessageHistoryTable.swift \
+            submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift \
+            submodules/TelegramCore/Sources/State/HistoryViewStateValidation.swift \
+            submodules/TelegramCore/Sources/TelegramEngine/Peers/UpdateCachedPeerData.swift
 
   ios-build:
     needs: swift-tests
