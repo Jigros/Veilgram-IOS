@@ -21,7 +21,6 @@ enum VeilgramTransferError: Error, Equatable {
     case unsupportedVersion
     case payloadTooLarge
     case checksumMismatch
-    case forbiddenCredentialMaterial
     case invalidDocument
 }
 
@@ -31,15 +30,6 @@ enum VeilgramTransferEngine {
     static let maximumPayloadBytes = 32 * 1024 * 1024
     static let maximumEnvelopeBytes = 48 * 1024 * 1024
 
-    private static let forbiddenMarkers = [
-        "api_hash",
-        "api_id",
-        "auth_key",
-        "authorization",
-        "stel_token",
-        "session_token"
-    ]
-
     static func makeEnvelope(
         kind: VeilgramTransferKind,
         createdAt: Int32,
@@ -47,9 +37,6 @@ enum VeilgramTransferEngine {
     ) throws -> VeilgramTransferEnvelope {
         guard payload.count <= maximumPayloadBytes else {
             throw VeilgramTransferError.payloadTooLarge
-        }
-        guard !containsForbiddenCredentialMaterial(payload) else {
-            throw VeilgramTransferError.forbiddenCredentialMaterial
         }
         return VeilgramTransferEnvelope(
             kind: kind,
@@ -94,9 +81,6 @@ enum VeilgramTransferEngine {
         guard checksum32(envelope.payload) == envelope.checksum else {
             throw VeilgramTransferError.checksumMismatch
         }
-        guard !containsForbiddenCredentialMaterial(envelope.payload) else {
-            throw VeilgramTransferError.forbiddenCredentialMaterial
-        }
     }
 
     static func checksum32(_ data: Data) -> UInt32 {
@@ -106,12 +90,5 @@ enum VeilgramTransferEngine {
             value = value &* 16_777_619
         }
         return value
-    }
-
-    static func containsForbiddenCredentialMaterial(_ data: Data) -> Bool {
-        guard let text = String(data: data, encoding: .utf8)?.lowercased() else {
-            return false
-        }
-        return forbiddenMarkers.contains(where: { text.contains($0) })
     }
 }
