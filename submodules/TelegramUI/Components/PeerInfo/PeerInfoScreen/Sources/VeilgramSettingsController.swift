@@ -19,7 +19,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
 
     init(context: AccountContext) {
         self.accountContext = context
-        let accountPrefix = "veilgram.settings.v1.\(context.account.id.int64)"
+        let accountPrefix = "veilgram.settings.v1.\(context.account.peerId.toInt64())"
         self.roadmapPreferenceKey = "\(accountPrefix).showRoadmap"
         self.adFilterPreferenceKey = "\(accountPrefix).channelAdFilterEnabled"
         self.adCollapsePreferenceKey = "\(accountPrefix).channelAdCollapseEnabled"
