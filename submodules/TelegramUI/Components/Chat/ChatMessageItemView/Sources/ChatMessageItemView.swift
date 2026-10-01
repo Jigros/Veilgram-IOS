@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import VeilgramLocalFeatures
 import AccountContext
 import LocalizedPeerData
 import ContextUI
@@ -662,6 +663,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     
     private var fetchEffectDisposable: Disposable?
     private var veilgramDeletedBadgeNode: ASTextNode?
+    private var veilgramEditHistoryButtonNode: ASButtonNode?
     
     public var playedEffectAnimation: Bool = false
     public var effectAnimationNodes: [ChatMessageTransitionNode.DecorationItemNode] = []
@@ -689,6 +691,8 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         self.alpha = 1.0
         self.veilgramDeletedBadgeNode?.removeFromSupernode()
         self.veilgramDeletedBadgeNode = nil
+        self.veilgramEditHistoryButtonNode?.removeFromSupernode()
+        self.veilgramEditHistoryButtonNode = nil
     }
     
     open func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
@@ -717,6 +721,40 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
             self.veilgramDeletedBadgeNode?.removeFromSupernode()
             self.veilgramDeletedBadgeNode = nil
         }
+
+        let editKey = VeilgramMessageKey(
+            peerId: item.message.id.peerId.toInt64(),
+            namespace: item.message.id.namespace,
+            id: item.message.id.id
+        )
+        let editCount = VeilgramArchiveRuntimeIndex.editRevisionCount(
+            accountId: item.context.account.peerId.toInt64(),
+            key: editKey
+        )
+        if editCount > 0 {
+            let buttonNode: ASButtonNode
+            if let current = self.veilgramEditHistoryButtonNode {
+                buttonNode = current
+            } else {
+                buttonNode = ASButtonNode()
+                buttonNode.addTarget(
+                    self,
+                    action: #selector(self.veilgramEditHistoryPressed),
+                    forControlEvents: .touchUpInside
+                )
+                self.veilgramEditHistoryButtonNode = buttonNode
+                self.addSubnode(buttonNode)
+            }
+            buttonNode.setTitle(
+                editCount == 1 ? "1 previous edit" : "\(editCount) previous edits",
+                with: UIFont.systemFont(ofSize: 11.0, weight: .semibold),
+                with: UIColor.systemBlue,
+                for: []
+            )
+        } else {
+            self.veilgramEditHistoryButtonNode?.removeFromSupernode()
+            self.veilgramEditHistoryButtonNode = nil
+        }
         self.setNeedsLayout()
     }
     
@@ -731,6 +769,37 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                 width: size.width,
                 height: size.height
             )
+        }
+        if let buttonNode = self.veilgramEditHistoryButtonNode {
+            let maxWidth = max(0.0, self.bounds.width - 24.0)
+            let size = buttonNode.measure(CGSize(width: maxWidth, height: 22.0))
+            buttonNode.frame = CGRect(
+                x: 12.0,
+                y: 2.0,
+                width: size.width,
+                height: max(22.0, size.height)
+            )
+        }
+    }
+
+    @objc private func veilgramEditHistoryPressed() {
+        guard let item = self.item else {
+            return
+        }
+        let key = VeilgramMessageKey(
+            peerId: item.message.id.peerId.toInt64(),
+            namespace: item.message.id.namespace,
+            id: item.message.id.id
+        )
+        let controller = VeilgramMessageEditHistoryController(
+            context: item.context,
+            key: key,
+            currentText: item.message.text
+        )
+        if let navigationController = item.controllerInteraction.navigationController() {
+            navigationController.pushViewController(controller)
+        } else {
+            item.controllerInteraction.presentController(controller, nil)
         }
     }
     
