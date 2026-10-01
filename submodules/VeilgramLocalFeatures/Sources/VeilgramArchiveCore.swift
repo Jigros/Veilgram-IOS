@@ -424,7 +424,19 @@ public enum VeilgramMediaArchiveEngine {
             document.items[index] = item
             return true
         }
-        guard document.items.count < maximumItems else { throw VeilgramMediaArchiveError.tooManyItems }
+        if document.items.count >= maximumItems {
+            let oldestIndex = document.items.indices.min { lhs, rhs in
+                let left = document.items[lhs]
+                let right = document.items[rhs]
+                if left.lastAccessedAt != right.lastAccessedAt {
+                    return left.lastAccessedAt < right.lastAccessedAt
+                }
+                return left.archivedAt < right.archivedAt
+            }
+            if let oldestIndex {
+                document.items.remove(at: oldestIndex)
+            }
+        }
         document.items.append(item)
         return true
     }
