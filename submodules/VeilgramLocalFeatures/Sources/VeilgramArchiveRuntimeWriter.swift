@@ -51,6 +51,10 @@ public enum VeilgramArchiveRuntimeWriter {
                     eligibility: eligibility
                 ) {
                     try store.saveEdits(document)
+                    VeilgramArchiveRuntimeIndex.replaceEditDocument(
+                        accountId: accountPeerId,
+                        document: document
+                    )
                 }
             } catch {
             }
