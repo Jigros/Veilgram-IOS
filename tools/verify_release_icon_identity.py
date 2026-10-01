@@ -36,6 +36,27 @@ def release_icon_findings(ipa: Path) -> list[str]:
         ]
         if not icon_tables:
             findings.append("No CFBundleIcons metadata available to inspect")
+        imported_types = info.get("UTImportedTypeDeclarations", [])
+        if isinstance(imported_types, list):
+            for index, declaration in enumerate(imported_types):
+                if not isinstance(declaration, dict):
+                    continue
+                description = declaration.get("UTTypeDescription", "")
+                if isinstance(description, str) and "telegram" in description.lower():
+                    findings.append(
+                        f"UTImportedTypeDeclarations[{index}]: user-visible Telegram description {description!r}"
+                    )
+                icon_files = declaration.get("UTTypeIconFiles", [])
+                if isinstance(icon_files, list):
+                    for icon_file in icon_files:
+                        if isinstance(icon_file, str) and (
+                            "telegram" in icon_file.lower()
+                            or icon_file in {"BlueIcon@3x.png", "BlueIcon.png"}
+                        ):
+                            findings.append(
+                                f"UTImportedTypeDeclarations[{index}]: inherited Telegram file icon {icon_file!r}"
+                            )
+
         for name, group in icon_tables:
             primary = group.get("CFBundlePrimaryIcon", {})
             alternate = group.get("CFBundleAlternateIcons", {})
@@ -79,7 +100,7 @@ def main() -> int:
     report = {
         "status": "FAIL" if findings else "PASS",
         "release_blockers": findings,
-        "scope": "Info.plist primary and alternate icon identifiers only; does not visually scan Assets.car or screenshots",
+        "scope": "Info.plist app icon identifiers plus user-visible imported-type description/icon metadata; does not visually scan Assets.car or screenshots",
     }
     if args.json_report:
         args.json_report.write_text(json.dumps(report, ensure_ascii=False, indent=2))
