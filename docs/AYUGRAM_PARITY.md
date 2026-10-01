@@ -7,7 +7,7 @@ This table tracks technical implementation state in the Veilgram runtime branch.
 | Suppress message read receipts | IMPLEMENTED | `SynchronizePeerReadState.swift` consults `VeilgramGhostModeRuntimePreferences` for ordinary cloud chats. |
 | Suppress story views | NOT_STARTED | No Veilgram runtime hook identified yet. |
 | Suppress online / force offline | IMPLEMENTED | `ManagedAccountPresence.swift` maps the effective presence to offline while the setting is enabled. |
-| Suppress typing/send activities | IMPLEMENTED_PARTIAL | `ManagedLocalInputActivities.swift` suppresses normal input activities; group-call speaking remains a separate path. |
+| Suppress typing/send activities | IMPLEMENTED | `ManagedLocalInputActivities.swift` suppresses typing, recording, upload and group-call speaking activity while Ghost Mode activity suppression is enabled. |
 | Manual/read-on-interaction mode | NOT_STARTED | No separate manual-read controller yet. |
 | Delayed scheduled send | NOT_STARTED | No Veilgram-specific runtime integration yet. |
 | Warn before opening story | NOT_STARTED | No Veilgram-specific story-open warning yet. |
@@ -19,7 +19,7 @@ This table tracks technical implementation state in the Veilgram runtime branch.
 | Hide blocked users/reactions/typing/member list | NOT_STARTED | No unified Veilgram implementation yet. |
 | Restricted/deleted forwarding helpers | NOT_STARTED | No Veilgram-specific forwarding implementation yet. |
 | Remove/collapse ads and sponsored posts | IMPLEMENTED_PARTIAL | Ordinary channel-ad heuristics and sponsored-message collapse/reveal exist; render paths still need consolidation. |
-| Local Premium UI | SEPARATE_BRANCH | `feature/local-premium-ui` contains a preference core, but it is not integrated into this runtime branch. |
+| Local Premium UI | IMPLEMENTED_PARTIAL | Per-account runtime preference and Veilgram Settings toggle are integrated; additional presentation consumers can adopt the same preference. |
 | Peek Online | NOT_STARTED | No Veilgram implementation yet. |
 | Banned/kicked chat cache | NOT_STARTED | No Veilgram implementation yet. |
 | Expire button / capture controls | RESEARCHING | Platform-specific behavior still needs integration work. |
