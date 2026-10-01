@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mapfile -t sources < <(find submodules/VeilgramLocalFeatures/Sources -type f -name '*.swift' | sort)
+          sources=(submodules/VeilgramLocalFeatures/Sources/*.swift)
           xcrun swiftc -warnings-as-errors \
             "${sources[@]}" \
             tools/test_veilgram_archive_runtime_batch.swift \
@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mapfile -t sources < <(find submodules/VeilgramLocalFeatures/Sources -type f -name '*.swift' | sort)
+          sources=(submodules/VeilgramLocalFeatures/Sources/*.swift)
           xcrun swiftc -warnings-as-errors \
             "${sources[@]}" \
             tools/test_veilgram_local_core_integration.swift \
