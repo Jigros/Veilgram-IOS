@@ -962,6 +962,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {
                                                 let veilgramDeleteObservedAt = Int32(Date().timeIntervalSince1970)
                                                 var resourceIds: [MediaResourceId] = []
+                                                var veilgramMediaMessages: [Message] = []
                                                 transaction.deleteMessagesInRange(
                                                     peerId: peerId,
                                                     namespace: minAvailableMessageId.namespace,
@@ -974,13 +975,24 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                         VeilgramArchiveStateAdapter.enqueueDeletedMessage(
                                                             accountPeerId: accountPeerId,
                                                             message: message,
-                                                            observedAt: veilgramDeleteObservedAt,
-                                                            mediaBox: postbox.mediaBox
+                                                            observedAt: veilgramDeleteObservedAt
                                                         )
+                                                        veilgramMediaMessages.append(message)
                                                     }
                                                 )
-                                                if !resourceIds.isEmpty {
-                                                    let _ = postbox.mediaBox.removeCachedResources(Array(Set(resourceIds))).start()
+                                                let uniqueResourceIds = Array(Set(resourceIds))
+                                                if !uniqueResourceIds.isEmpty {
+                                                    VeilgramArchiveStateAdapter.enqueueDeletedMedia(
+                                                        accountPeerId: accountPeerId,
+                                                        messages: veilgramMediaMessages,
+                                                        observedAt: veilgramDeleteObservedAt,
+                                                        mediaBox: postbox.mediaBox,
+                                                        completion: {
+                                                            let _ = postbox.mediaBox.removeCachedResources(
+                                                                uniqueResourceIds
+                                                            ).start()
+                                                        }
+                                                    )
                                                 }
                                             }
                                         case let .communityFull(communityFullData):
