@@ -284,16 +284,20 @@ final class VeilgramLocalArchiveController: ViewController, UITableViewDataSourc
     }
 
     private func clearLocalData() {
-        do {
-            let store = try VeilgramArchiveStoreAPI(
-                accountId: self.accountContext.account.peerId.toInt64()
-            )
-            try store.removeAll()
-            VeilgramArchiveRuntimeDiagnostics.clear()
-            self.reloadLocalData()
-        } catch {
-            self.loadError = String(describing: error)
-            self.tableView.reloadData()
+        VeilgramArchiveRuntimeWriter.removeAll(
+            accountPeerId: self.accountContext.account.peerId.toInt64()
+        ) { [weak self] result in
+            guard let self else {
+                return
+            }
+            switch result {
+            case .success:
+                VeilgramArchiveRuntimeDiagnostics.clear()
+                self.reloadLocalData()
+            case let .failure(error):
+                self.loadError = String(describing: error)
+                self.tableView.reloadData()
+            }
         }
     }
 
