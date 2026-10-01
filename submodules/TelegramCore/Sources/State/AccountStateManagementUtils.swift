@@ -4520,6 +4520,7 @@ func replayFinalState(
                 }
                 let veilgramDeleteObservedAt = Int32(Date().timeIntervalSince1970)
                 var resourceIds: [MediaResourceId] = []
+                var veilgramMediaMessages: [Message] = []
                 transaction.deleteMessagesInRange(
                     peerId: id.peerId,
                     namespace: id.namespace,
@@ -4534,10 +4535,23 @@ func replayFinalState(
                             message: message,
                             observedAt: veilgramDeleteObservedAt
                         )
+                        veilgramMediaMessages.append(message)
                     }
                 )
-                if !resourceIds.isEmpty {
-                    let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
+                let uniqueResourceIds = Array(Set(resourceIds))
+                if !uniqueResourceIds.isEmpty {
+                    VeilgramArchiveStateAdapter.enqueueDeletedMedia(
+                        accountPeerId: accountPeerId,
+                        messages: veilgramMediaMessages,
+                        observedAt: veilgramDeleteObservedAt,
+                        mediaBox: mediaBox,
+                        completion: {
+                            let _ = mediaBox.removeCachedResources(
+                                uniqueResourceIds,
+                                force: true
+                            ).start()
+                        }
+                    )
                 }
             case let .UpdatePeerChatInclusion(peerId, groupId, changedGroup):
                 if shouldExcludePeerFromChatList(transaction: transaction, peerId: peerId) {
