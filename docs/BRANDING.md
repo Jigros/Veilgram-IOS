@@ -23,9 +23,9 @@ Status: **NixOS static source checks passed; branded iOS compilation has NOT run
 
 Public `Jigros/Veilgram-Build` only builds unchanged public upstream. It cannot build the private Veilgram feature branch without a separately reviewed minimal-privilege source access mechanism. Never mirror private code or paste a broad PAT into public workflows. The NixOS machine performed static checks at commit `faa1a451f098b53cc2e4ee8b2efec48b29df655b` with clean working tree: `python3 -m py_compile tools/check_veilgram_branding.py`, `python3 -m json.tool build-system/veilgram-development.example.json`, `git diff --check` against the foundation, and `python3 tools/check_veilgram_branding.py` (PASS: Bazel bundle names, 19 localized labels, config placeholders). NixOS checks cannot certify Xcode compilation.
 
-## Distribution/API requirements
+## Branding and feature scope
 
-This is an unshippable branding draft until icon and attribution checks pass. Ghost Mode, suppression of sponsored ads, preserving self-destructing media and other behavioral work is deliberately absent: read `docs/TELEGRAM_API_COMPLIANCE.md` before expanding scope.
+Branding validation is independent from Veilgram runtime feature development. Ghost Mode, sponsored-message handling, archive behavior and other runtime features may evolve on their own branches while branding checks continue. Distribution considerations are recorded separately and are not an implementation gate.
 
 ## IPA identity gate (introduced after initial static audit)
 
