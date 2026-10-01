@@ -661,6 +661,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     open var awaitingAppliedReaction: (MessageReaction.Reaction?, () -> Void)?
     
     private var fetchEffectDisposable: Disposable?
+    private var veilgramDeletedBadgeNode: ASTextNode?
     
     public var playedEffectAnimation: Bool = false
     public var effectAnimationNodes: [ChatMessageTransitionNode.DecorationItemNode] = []
@@ -685,10 +686,52 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         
         self.item = nil
         self.frame = CGRect()
+        self.alpha = 1.0
+        self.veilgramDeletedBadgeNode?.removeFromSupernode()
+        self.veilgramDeletedBadgeNode = nil
     }
     
     open func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
         self.item = item
+        
+        if item.message.veilgramIsLocallyRetainedDeletedMessage {
+            let badgeNode: ASTextNode
+            if let current = self.veilgramDeletedBadgeNode {
+                badgeNode = current
+            } else {
+                badgeNode = ASTextNode()
+                badgeNode.isUserInteractionEnabled = false
+                self.veilgramDeletedBadgeNode = badgeNode
+                self.addSubnode(badgeNode)
+            }
+            badgeNode.attributedText = NSAttributedString(
+                string: "Deleted",
+                attributes: [
+                    .font: UIFont.systemFont(ofSize: 11.0, weight: .semibold),
+                    .foregroundColor: UIColor.systemRed
+                ]
+            )
+            self.alpha = 0.82
+        } else {
+            self.alpha = 1.0
+            self.veilgramDeletedBadgeNode?.removeFromSupernode()
+            self.veilgramDeletedBadgeNode = nil
+        }
+        self.setNeedsLayout()
+    }
+    
+    override open func layout() {
+        super.layout()
+        if let badgeNode = self.veilgramDeletedBadgeNode {
+            let maxWidth = max(0.0, self.bounds.width - 24.0)
+            let size = badgeNode.measure(CGSize(width: maxWidth, height: 18.0))
+            badgeNode.frame = CGRect(
+                x: max(12.0, self.bounds.width - size.width - 12.0),
+                y: 4.0,
+                width: size.width,
+                height: size.height
+            )
+        }
     }
     
     open func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
