@@ -1,5 +1,28 @@
 import Foundation
 
+public enum VeilgramArchiveRuntimeDiagnostics {
+    private static let lock = NSLock()
+    private static var value: String?
+
+    public static var lastErrorDescription: String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return value
+    }
+
+    static func record(_ error: Error) {
+        lock.lock()
+        value = String(describing: error)
+        lock.unlock()
+    }
+
+    public static func clear() {
+        lock.lock()
+        value = nil
+        lock.unlock()
+    }
+}
+
 public enum VeilgramArchiveRuntimeWriter {
     private static let queue = DispatchQueue(label: "org.veilgram.local-archive")
 
@@ -25,6 +48,7 @@ public enum VeilgramArchiveRuntimeWriter {
                     try store.saveMessages(document)
                 }
             } catch {
+                VeilgramArchiveRuntimeDiagnostics.record(error)
             }
         }
     }
@@ -63,6 +87,7 @@ public enum VeilgramArchiveRuntimeWriter {
                     )
                 }
             } catch {
+                VeilgramArchiveRuntimeDiagnostics.record(error)
             }
         }
     }
