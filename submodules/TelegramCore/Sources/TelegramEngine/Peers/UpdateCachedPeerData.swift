@@ -974,7 +974,8 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                         VeilgramArchiveStateAdapter.enqueueDeletedMessage(
                                                             accountPeerId: accountPeerId,
                                                             message: message,
-                                                            observedAt: veilgramDeleteObservedAt
+                                                            observedAt: veilgramDeleteObservedAt,
+                                                            mediaBox: postbox.mediaBox
                                                         )
                                                     }
                                                 )
