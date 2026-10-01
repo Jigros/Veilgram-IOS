@@ -141,6 +141,19 @@ enum VeilgramLocalCoreIntegrationTests {
         precondition(evicted == [media] && mediaDocument.items.isEmpty)
         checks += 3
 
+        var unavailableDocument = VeilgramMediaArchiveDocument()
+        let didAppendUnavailable = try VeilgramMediaArchiveEngine.upsertUnavailable(
+            document: &unavailableDocument,
+            key: mediaKey,
+            archivedAt: 30
+        )
+        precondition(didAppendUnavailable)
+        precondition(unavailableDocument.items.count == 1)
+        precondition(unavailableDocument.items[0].availability == .unavailable)
+        precondition(unavailableDocument.items[0].relativePath == nil)
+        precondition(unavailableDocument.items[0].byteCount == 0)
+        checks += 5
+
         let suite = "veilgram-local-core-\(UUID().uuidString)"
         let base = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
         try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
@@ -148,6 +161,25 @@ enum VeilgramLocalCoreIntegrationTests {
 
         let store = VeilgramProtectedLocalStore(rootURL: base)
         let archiveStore = VeilgramArchiveStoreAPI(store: store)
+
+        let sourceMedia = base.appendingPathComponent("source-media.bin")
+        try Data(repeating: 0x5a, count: 4096).write(to: sourceMedia)
+        let copiedMedia = try archiveStore.copyMediaFile(
+            sourcePath: sourceMedia.path,
+            key: mediaKey,
+            maximumBytes: 1024 * 1024
+        )
+        precondition(copiedMedia.relativePath == "media-42-0-7-0.bin")
+        precondition(copiedMedia.byteCount == 4096)
+        let copiedURL = base.appendingPathComponent(copiedMedia.relativePath)
+        precondition(FileManager.default.fileExists(atPath: copiedURL.path))
+        let copiedAttributes = try FileManager.default.attributesOfItem(atPath: copiedURL.path)
+        if let permissions = copiedAttributes[.posixPermissions] as? NSNumber {
+            precondition(permissions.intValue == 0o600)
+        } else {
+            preconditionFailure("missing media file permissions")
+        }
+        checks += 4
         try archiveStore.saveMessages(messages)
         try archiveStore.saveEdits(edits)
         let rootValues = try base.resourceValues(forKeys: [.isExcludedFromBackupKey])
@@ -167,6 +199,8 @@ enum VeilgramLocalCoreIntegrationTests {
         try archiveStore.removeAll()
         let emptiedMessages = try archiveStore.loadMessages()
         precondition(emptiedMessages.messages.isEmpty)
+        precondition(!FileManager.default.fileExists(atPath: copiedURL.path))
+        checks += 1
 
         try archiveStore.importMessages(messageExport)
         try archiveStore.importEdits(editExport)
