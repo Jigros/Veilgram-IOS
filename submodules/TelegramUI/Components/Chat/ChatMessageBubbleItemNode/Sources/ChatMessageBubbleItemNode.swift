@@ -7082,7 +7082,20 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         item.controllerInteraction.openGroupBoostInfo(peer.id, boostCount)
     }
     @objc private func rankButtonPressed() {
-        guard let item = self.item, let peer = item.message.author, let authorRank = self.authorRank else {
+        guard let item = self.item else {
+            return
+        }
+        if item.content.firstMessageAttributes.veilgramLikelyChannelAd {
+            item.controllerInteraction.displayMessageTooltip(
+                item.message.id,
+                "Veilgram marked this ordinary channel post as a possible ad using on-device heuristics. The message is not hidden.",
+                false,
+                self.rankBadgeNode,
+                nil
+            )
+            return
+        }
+        guard let peer = item.message.author, let authorRank = self.authorRank else {
             return
         }
         var rank: String = ""
