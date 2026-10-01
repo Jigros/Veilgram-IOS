@@ -83,6 +83,40 @@ jobs:
           restore-keys: |
             veilgram-public-device-macos26-xcode26.2-bazel8.4.2-
 
+      - name: Restore encrypted private Bazel cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/veilgram-private-bazel-cache.tar.enc
+          key: veilgram-private-bazel-encrypted-v1-macos26-xcode26.2-bazel8.4.2-${{ github.run_id }}
+          restore-keys: |
+            veilgram-private-bazel-encrypted-v1-macos26-xcode26.2-bazel8.4.2-
+
+      - name: Prepare private Bazel cache
+        shell: bash
+        env:
+          VEILGRAM_ARTIFACT_PASSWORD: ${{ secrets.VEILGRAM_ARTIFACT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          private_cache="$HOME/veilgram-private-device-bazel-cache"
+          encrypted_cache="$RUNNER_TEMP/veilgram-private-bazel-cache.tar.enc"
+          public_cache="$HOME/veilgram-public-device-bazel-cache"
+
+          rm -rf "$private_cache"
+          mkdir -p "$private_cache"
+
+          if [ -s "$encrypted_cache" ]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 250000 \
+              -in "$encrypted_cache" \
+              -pass env:VEILGRAM_ARTIFACT_PASSWORD \
+              | tar -xf - -C "$private_cache"
+            echo "Restored encrypted private Bazel cache."
+          elif [ -d "$public_cache" ] && find "$public_cache" -type f -print -quit | grep -q .; then
+            cp -a "$public_cache/." "$private_cache/"
+            echo "Seeded private cache from fixture-only public Bazel cache."
+          else
+            echo "No reusable Bazel cache found; this run will seed the encrypted private cache."
+          fi
+
       - name: Create private API input
         shell: bash
         env:
@@ -106,6 +140,7 @@ jobs:
           python3 tools/private_device_build.py --preflight-only
 
       - name: Build private ARM64 iPhone IPA
+        id: private_build
         shell: bash
         env:
           VEILGRAM_ARTIFACT_PASSWORD: ${{ secrets.VEILGRAM_ARTIFACT_PASSWORD }}
@@ -113,7 +148,7 @@ jobs:
           set -euo pipefail
           python3 tools/private_device_build.py \
             --build-number "${{ inputs.build_number }}" \
-            --cache-dir "$HOME/veilgram-public-device-bazel-cache"
+            --cache-dir "$HOME/veilgram-private-device-bazel-cache"
           ipa="$(find .veilgram-private/artifacts -maxdepth 1 -type f -name '*.ipa' -print -quit)"
           test -n "$ipa"
           mkdir -p "$RUNNER_TEMP/private-output"
@@ -128,6 +163,72 @@ jobs:
             -name '*.identity.json' -o -name '*.branding.json' \
           \) -exec cp {} "$RUNNER_TEMP/private-output/" \;
           rm -f "$ipa"
+
+      - name: Encrypt private Bazel cache for reuse
+        id: private_cache_pack
+        if: ${{ always() && steps.private_build.outcome != 'cancelled' }}
+        shell: bash
+        env:
+          VEILGRAM_ARTIFACT_PASSWORD: ${{ secrets.VEILGRAM_ARTIFACT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          cache_dir="$HOME/veilgram-private-device-bazel-cache"
+          encrypted_cache="$RUNNER_TEMP/veilgram-private-bazel-cache.tar.enc"
+
+          if [ -z "$VEILGRAM_ARTIFACT_PASSWORD" ] || [ ! -d "$cache_dir" ] || ! find "$cache_dir" -type f -print -quit | grep -q .; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          python3 - "$cache_dir" <<'PY'
+          import os
+          import pathlib
+          import sys
+
+          root = pathlib.Path(sys.argv[1])
+          limit = 2200 * 1024 * 1024
+          files = []
+          total = 0
+          for path in root.rglob("*"):
+              if not path.is_file():
+                  continue
+              try:
+                  stat = path.stat()
+              except OSError:
+                  continue
+              total += stat.st_size
+              files.append((stat.st_mtime_ns, stat.st_size, path))
+
+          if total > limit:
+              files.sort()
+              for _, size, path in files:
+                  if total <= limit:
+                      break
+                  try:
+                      path.unlink()
+                      total -= size
+                  except OSError:
+                      pass
+          print(f"Private Bazel cache retained bytes: {total}")
+          PY
+
+          rm -f "$encrypted_cache"
+          tar -cf - -C "$cache_dir" . \
+            | openssl enc -aes-256-cbc -salt -pbkdf2 -iter 250000 \
+                -out "$encrypted_cache" \
+                -pass env:VEILGRAM_ARTIFACT_PASSWORD
+          chmod 600 "$encrypted_cache"
+          test -s "$encrypted_cache"
+
+          rm -rf "$cache_dir"
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Save encrypted private Bazel cache
+        if: ${{ always() && steps.private_cache_pack.outputs.ready == 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/veilgram-private-bazel-cache.tar.enc
+          key: veilgram-private-bazel-encrypted-v1-macos26-xcode26.2-bazel8.4.2-${{ github.run_id }}
 
       - name: Ensure plaintext IPA is not uploaded
         shell: bash
