@@ -6,8 +6,8 @@ import AccountContext
 import TelegramPresentationData
 import VeilgramLocalFeatures
 
-/// Veilgram-owned settings surface. Experimental options affect only this
-/// screen; no Telegram network/storage behavior is modified by these values.
+/// Veilgram-owned settings surface. Runtime options are per-account and are
+/// consumed by TelegramCore / chat rendering without changing server data.
 final class VeilgramSettingsController: ViewController, UITableViewDataSource, UITableViewDelegate {
     private let accountContext: AccountContext
     private let roadmapPreferenceKey: String
@@ -99,7 +99,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         switch section {
         case 0:
-            return "Ghost mode is per-account. It suppresses cloud read receipts, typing/activity signals and online presence when enabled. Secret-chat read semantics are not modified. Channel-ad collapse remains experimental."
+            return "Ghost mode is per-account. It suppresses cloud read receipts, typing/activity signals and online presence when enabled. Secret-chat read semantics are not modified. Ad detection is local and collapsed posts can always be revealed."
         case 1:
             return "These screens inspect only Veilgram-owned local archive files for this account. Archive capture remains explicitly opt-in."
         case 2:
@@ -166,7 +166,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             } else if indexPath.row == 7 {
                 cell.textLabel?.text = "Collapse high-confidence ads"
                 cell.detailTextLabel?.text = self.adFilterEnabled
-                    ? "Experimental • requires render integration"
+                    ? "Collapse matched channel ads with tap-to-reveal"
                     : "Enable local detection first"
                 cell.textLabel?.textColor = self.adFilterEnabled ? .label : .secondaryLabel
                 let control = UISwitch()
