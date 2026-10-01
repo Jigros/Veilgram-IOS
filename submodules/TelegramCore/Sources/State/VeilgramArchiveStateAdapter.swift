@@ -56,7 +56,8 @@ enum VeilgramArchiveStateAdapter {
     static func enqueueDeletedMessage(
         accountPeerId: PeerId,
         message: Message,
-        observedAt: Int32
+        observedAt: Int32,
+        mediaBox: MediaBox? = nil
     ) {
         let eligibility = eligibility(for: message)
         guard eligibility.isEligibleForLocalRetention else {
@@ -80,6 +81,40 @@ enum VeilgramArchiveStateAdapter {
             message: snapshot,
             eligibility: eligibility
         )
+
+        if let mediaBox {
+            var candidates: [VeilgramLocalMediaArchiveCandidate] = []
+            for (mediaIndex, media) in message.effectiveMedia.enumerated() {
+                let resource: MediaResource?
+                if let image = media as? TelegramMediaImage {
+                    resource = image.representations.last?.resource
+                } else if let file = media as? TelegramMediaFile {
+                    resource = file.resource
+                } else {
+                    resource = nil
+                }
+                guard let resource else {
+                    continue
+                }
+                candidates.append(
+                    VeilgramLocalMediaArchiveCandidate(
+                        key: VeilgramMediaKey(
+                            peerId: message.id.peerId.toInt64(),
+                            messageNamespace: message.id.namespace,
+                            messageId: message.id.id,
+                            mediaIndex: mediaIndex
+                        ),
+                        sourcePath: mediaBox.completedResourcePath(resource),
+                        archivedAt: observedAt
+                    )
+                )
+            }
+            VeilgramArchiveRuntimeWriter.enqueueLocalMediaCandidates(
+                accountPeerId: accountPeerId.toInt64(),
+                candidates: candidates,
+                eligibility: eligibility
+            )
+        }
     }
 
     static func enqueuePreviousEditRevision(
