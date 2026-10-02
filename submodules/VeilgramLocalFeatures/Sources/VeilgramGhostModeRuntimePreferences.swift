@@ -44,6 +44,14 @@ public enum VeilgramGhostModeRuntimePreferences {
             && defaults.bool(forKey: "\(prefix(accountPeerId: accountPeerId)).storyViews")
     }
 
+    public static func readOnInteractionOnly(
+        accountPeerId: Int64,
+        defaults: UserDefaults = .standard
+    ) -> Bool {
+        return isEnabled(accountPeerId: accountPeerId, defaults: defaults)
+            && defaults.bool(forKey: "\(prefix(accountPeerId: accountPeerId)).readOnInteractionOnly")
+    }
+
     public static func setEnabled(
         _ enabled: Bool,
         accountPeerId: Int64,
@@ -84,6 +92,14 @@ public enum VeilgramGhostModeRuntimePreferences {
         defaults.set(enabled, forKey: "\(prefix(accountPeerId: accountPeerId)).storyViews")
     }
 
+    public static func setReadOnInteractionOnly(
+        _ enabled: Bool,
+        accountPeerId: Int64,
+        defaults: UserDefaults = .standard
+    ) {
+        defaults.set(enabled, forKey: "\(prefix(accountPeerId: accountPeerId)).readOnInteractionOnly")
+    }
+
     public static func initializeDefaultsIfNeeded(
         accountPeerId: Int64,
         defaults: UserDefaults = .standard
@@ -92,6 +108,7 @@ public enum VeilgramGhostModeRuntimePreferences {
         let typingKey = "\(prefix(accountPeerId: accountPeerId)).typing"
         let presenceKey = "\(prefix(accountPeerId: accountPeerId)).onlinePresence"
         let storyViewsKey = "\(prefix(accountPeerId: accountPeerId)).storyViews"
+        let readOnInteractionOnlyKey = "\(prefix(accountPeerId: accountPeerId)).readOnInteractionOnly"
 
         if defaults.object(forKey: readKey) == nil {
             defaults.set(true, forKey: readKey)
@@ -104,6 +121,9 @@ public enum VeilgramGhostModeRuntimePreferences {
         }
         if defaults.object(forKey: storyViewsKey) == nil {
             defaults.set(true, forKey: storyViewsKey)
+        }
+        if defaults.object(forKey: readOnInteractionOnlyKey) == nil {
+            defaults.set(false, forKey: readOnInteractionOnlyKey)
         }
     }
 }
