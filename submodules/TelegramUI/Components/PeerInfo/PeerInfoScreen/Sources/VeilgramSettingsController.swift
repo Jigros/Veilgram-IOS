@@ -21,6 +21,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     private var ghostReadReceiptsEnabled: Bool
     private var ghostTypingEnabled: Bool
     private var ghostOnlinePresenceEnabled: Bool
+    private var ghostStoryViewsEnabled: Bool
     private var localPremiumUIEnabled: Bool
 
     init(context: AccountContext) {
@@ -38,6 +39,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         self.ghostReadReceiptsEnabled = VeilgramGhostModeRuntimePreferences.suppressReadReceipts(accountPeerId: accountPeerId)
         self.ghostTypingEnabled = VeilgramGhostModeRuntimePreferences.suppressTyping(accountPeerId: accountPeerId)
         self.ghostOnlinePresenceEnabled = VeilgramGhostModeRuntimePreferences.suppressOnlinePresence(accountPeerId: accountPeerId)
+        self.ghostStoryViewsEnabled = VeilgramGhostModeRuntimePreferences.suppressStoryViews(accountPeerId: accountPeerId)
         self.localPremiumUIEnabled = VeilgramLocalPremiumRuntimePreferences.isEnabled(accountPeerId: accountPeerId)
         let presentation = context.sharedContext.currentPresentationData.with { $0 }
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentation, style: .glass))
@@ -75,7 +77,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
         case 0:
-            return 10
+            return 11
         case 1:
             return 3
         case 2:
@@ -101,7 +103,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         switch section {
         case 0:
-            return "Ghost mode is per-account. It suppresses cloud read receipts, typing/activity signals and online presence when enabled. Secret-chat read semantics are not modified. Ad detection is local and collapsed posts can always be revealed."
+            return "Ghost mode is per-account. It suppresses cloud read receipts, typing/activity signals, online presence and story-view synchronization when enabled. Secret-chat read semantics are not modified. Ad detection is local and collapsed posts can always be revealed."
         case 1:
             return "These screens inspect only Veilgram-owned local archive files for this account. Archive capture remains explicitly opt-in."
         case 2:
@@ -159,13 +161,22 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.addTarget(self, action: #selector(ghostOnlinePresenceChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
             } else if indexPath.row == 6 {
+                cell.textLabel?.text = "Hide story views"
+                cell.detailTextLabel?.text = "Keep stories locally seen without synchronizing the view"
+                cell.textLabel?.textColor = self.ghostModeEnabled ? .label : .secondaryLabel
+                let control = UISwitch()
+                control.isEnabled = self.ghostModeEnabled
+                control.isOn = self.ghostStoryViewsEnabled
+                control.addTarget(self, action: #selector(ghostStoryViewsChanged(_:)), for: .valueChanged)
+                cell.accessoryView = control
+            } else if indexPath.row == 7 {
                 cell.textLabel?.text = "Detect channel ads locally"
                 cell.detailTextLabel?.text = "Experimental heuristic • ordinary channel posts"
                 let control = UISwitch()
                 control.isOn = self.adFilterEnabled
                 control.addTarget(self, action: #selector(adFilterChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
-            } else if indexPath.row == 7 {
+            } else if indexPath.row == 8 {
                 cell.textLabel?.text = "Collapse high-confidence ads"
                 cell.detailTextLabel?.text = self.adFilterEnabled
                     ? "Collapse matched channel ads with tap-to-reveal"
@@ -176,7 +187,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.isOn = self.adCollapseEnabled
                 control.addTarget(self, action: #selector(adCollapseChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
-            } else if indexPath.row == 8 {
+            } else if indexPath.row == 9 {
                 cell.textLabel?.text = "Local Premium UI"
                 cell.detailTextLabel?.text = "Enable Veilgram-owned premium-style presentation"
                 let control = UISwitch()
@@ -215,7 +226,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        if indexPath.section == 0, indexPath.row == 9 {
+        if indexPath.section == 0, indexPath.row == 10 {
             self.push(VeilgramMessageFiltersController(context: self.accountContext))
             return
         }
@@ -249,8 +260,14 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         self.ghostReadReceiptsEnabled = VeilgramGhostModeRuntimePreferences.suppressReadReceipts(accountPeerId: accountPeerId)
         self.ghostTypingEnabled = VeilgramGhostModeRuntimePreferences.suppressTyping(accountPeerId: accountPeerId)
         self.ghostOnlinePresenceEnabled = VeilgramGhostModeRuntimePreferences.suppressOnlinePresence(accountPeerId: accountPeerId)
+        self.ghostStoryViewsEnabled = VeilgramGhostModeRuntimePreferences.suppressStoryViews(accountPeerId: accountPeerId)
         self.tableView.reloadRows(
-            at: [IndexPath(row: 3, section: 0), IndexPath(row: 4, section: 0), IndexPath(row: 5, section: 0)],
+            at: [
+                IndexPath(row: 3, section: 0),
+                IndexPath(row: 4, section: 0),
+                IndexPath(row: 5, section: 0),
+                IndexPath(row: 6, section: 0)
+            ],
             with: .none
         )
     }
@@ -273,6 +290,15 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         self.ghostOnlinePresenceEnabled = sender.isOn
     }
 
+    @objc private func ghostStoryViewsChanged(_ sender: UISwitch) {
+        let accountPeerId = self.accountContext.account.peerId.toInt64()
+        VeilgramGhostModeRuntimePreferences.setSuppressStoryViews(
+            sender.isOn,
+            accountPeerId: accountPeerId
+        )
+        self.ghostStoryViewsEnabled = sender.isOn
+    }
+
     @objc private func localPremiumChanged(_ sender: UISwitch) {
         let accountPeerId = self.accountContext.account.peerId.toInt64()
         self.localPremiumUIEnabled = sender.isOn
@@ -289,7 +315,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             self.adCollapseEnabled = false
             UserDefaults.standard.set(false, forKey: self.adCollapsePreferenceKey)
         }
-        self.tableView.reloadRows(at: [IndexPath(row: 7, section: 0)], with: .none)
+        self.tableView.reloadRows(at: [IndexPath(row: 8, section: 0)], with: .none)
     }
 
     @objc private func adCollapseChanged(_ sender: UISwitch) {
