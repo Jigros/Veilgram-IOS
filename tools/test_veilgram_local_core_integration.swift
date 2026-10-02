@@ -82,10 +82,53 @@ enum VeilgramLocalCoreIntegrationTests {
             eligibility: ordinary
         )
         precondition(!didAppendDuplicateMessage)
+        let newerMessage = VeilgramArchivedMessage(
+            key: key,
+            messageTimestamp: 10,
+            archivedAt: 30,
+            text: "newer",
+            entities: [],
+            hadMedia: false
+        )
+        let staleMessage = VeilgramArchivedMessage(
+            key: key,
+            messageTimestamp: 10,
+            archivedAt: 25,
+            text: "stale",
+            entities: [],
+            hadMedia: false
+        )
+        precondition(try VeilgramMessageArchiveEngine.append(
+            document: &messages,
+            message: newerMessage,
+            eligibility: ordinary
+        ))
+        precondition(!VeilgramMessageArchiveEngine.append(
+            document: &messages,
+            message: staleMessage,
+            eligibility: ordinary
+        ))
+        precondition(messages.messages.first?.text == "newer")
+
+        let ineligibleMessage = VeilgramArchivedMessage(
+            key: VeilgramMessageKey(peerId: 42, namespace: 0, id: 8),
+            messageTimestamp: 11,
+            archivedAt: 31,
+            text: "ephemeral",
+            entities: [],
+            hadMedia: false
+        )
+        precondition(!VeilgramMessageArchiveEngine.append(
+            document: &messages,
+            message: ineligibleMessage,
+            eligibility: ephemeral
+        ))
+        precondition(messages.messages.count == 1)
+
         let encodedMessages = try VeilgramMessageArchiveEngine.encode(messages)
         let decodedMessages = try VeilgramMessageArchiveEngine.decode(encodedMessages)
         precondition(decodedMessages == messages)
-        checks += 3
+        checks += 8
 
         var edits = VeilgramEditHistoryDocument()
         let revision = VeilgramEditRevision(timestamp: 21, text: "test", entities: [entity])
@@ -103,10 +146,42 @@ enum VeilgramLocalCoreIntegrationTests {
             eligibility: ordinary
         )
         precondition(!didAppendDuplicateRevision)
+        let laterRevision = VeilgramEditRevision(timestamp: 30, text: "later", entities: [])
+        let staleRevision = VeilgramEditRevision(timestamp: 29, text: "stale", entities: [])
+        let sameSecondRevision = VeilgramEditRevision(timestamp: 30, text: "same-second-different", entities: [])
+        precondition(try VeilgramEditHistoryEngine.append(
+            document: &edits,
+            key: key,
+            revision: laterRevision,
+            eligibility: ordinary
+        ))
+        precondition(!VeilgramEditHistoryEngine.append(
+            document: &edits,
+            key: key,
+            revision: staleRevision,
+            eligibility: ordinary
+        ))
+        precondition(try VeilgramEditHistoryEngine.append(
+            document: &edits,
+            key: key,
+            revision: sameSecondRevision,
+            eligibility: ordinary
+        ))
+        precondition(edits.records.first?.revisions.map(\.text).suffix(2) == ["later", "same-second-different"])
+
+        let beforeIneligibleRevisionCount = edits.records.first?.revisions.count
+        precondition(!VeilgramEditHistoryEngine.append(
+            document: &edits,
+            key: key,
+            revision: VeilgramEditRevision(timestamp: 31, text: "ephemeral-edit", entities: []),
+            eligibility: ephemeral
+        ))
+        precondition(edits.records.first?.revisions.count == beforeIneligibleRevisionCount)
+
         let encodedEdits = try VeilgramEditHistoryEngine.encode(edits)
         let decodedEdits = try VeilgramEditHistoryEngine.decode(encodedEdits)
         precondition(decodedEdits == edits)
-        checks += 3
+        checks += 9
 
         let mediaKey = VeilgramMediaKey(
             peerId: 42,
