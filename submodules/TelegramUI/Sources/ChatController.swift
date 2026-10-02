@@ -81,6 +81,7 @@ import EntityKeyboard
 import ChatTitleView
 import EmojiStatusComponent
 import ChatTimerScreen
+import VeilgramLocalFeatures
 import MediaPasteboardUI
 import ChatListHeaderComponent
 import ChatControllerInteraction
@@ -2242,9 +2243,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
             }
         }, sendCurrentMessage: { [weak self] silentPosting, messageEffect in
-            if let self {
-                if let _ = self.presentationInterfaceState.interfaceState.mediaDraftState {
-                    self.sendMediaRecording(silentPosting: silentPosting, messageEffect: messageEffect)
+            guard let self else {
+                return
+            }
+
+            let performSend: () -> Void = { [weak self] in
+                guard let self else {
+                    return
+                }
+                if self.presentationInterfaceState.interfaceState.mediaDraftState != nil {
+                    self.sendMediaRecording(
+                        silentPosting: silentPosting,
+                        messageEffect: messageEffect
+                    )
                 } else {
                     self.chatDisplayNode.maybeSendEphemeralMessage(sendNormally: { [weak self] in
                         guard let self else {
@@ -2252,11 +2263,41 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         self.presentPaidMessageAlertIfNeeded(count: 1, completion: { [weak self] postpone in
                             if let self {
-                                self.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, postpone: postpone, messageEffect: messageEffect)
+                                self.chatDisplayNode.sendCurrentMessage(
+                                    silentPosting: silentPosting,
+                                    postpone: postpone,
+                                    messageEffect: messageEffect
+                                )
                             }
                         })
                     })
                 }
+            }
+
+            if VeilgramSendConfirmationPreferences.isEnabled(
+                accountPeerId: self.context.account.peerId.toInt64()
+            ) {
+                let alertController = textAlertController(
+                    context: self.context,
+                    updatedPresentationData: self.updatedPresentationData,
+                    title: "Send message?",
+                    text: "Confirm sending the current message.",
+                    actions: [
+                        TextAlertAction(
+                            type: .genericAction,
+                            title: self.presentationData.strings.Common_Cancel,
+                            action: {}
+                        ),
+                        TextAlertAction(
+                            type: .defaultAction,
+                            title: "Send",
+                            action: performSend
+                        )
+                    ]
+                )
+                self.present(alertController, in: .window(.root))
+            } else {
+                performSend()
             }
         }, sendMessage: { [weak self] text, sourceMessageId in
             guard let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) else {
