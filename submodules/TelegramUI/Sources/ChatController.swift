@@ -2247,15 +2247,39 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
 
-            let performSend: () -> Void = { [weak self] in
+            let interfaceState = self.presentationInterfaceState.interfaceState
+            let peer = self.presentationInterfaceState.renderedPeer?.peer
+            let isCloudPeer = peer is TelegramUser || peer is TelegramGroup || peer is TelegramChannel
+            let isBot = (peer as? TelegramUser)?.botInfo != nil
+            let canDelay = isCloudPeer && !isBot
+                && self.presentationInterfaceState.subject != .scheduledMessages
+                && interfaceState.editMessage == nil
+                && interfaceState.postSuggestionState == nil
+                && interfaceState.mediaDraftState == nil
+                && interfaceState.forwardMessageIds == nil
+                && !mayContainTypedEphemeralBotCommand(interfaceState.effectiveInputState.inputText.string)
+            let delaySeconds = canDelay
+                ? VeilgramDelayedSendPreferences.seconds(accountPeerId: self.context.account.peerId.toInt64())
+                : 0
+
+            let performSend: (Int?) -> Void = { [weak self] delay in
                 guard let self else {
+                    return
+                }
+                // Compute after review, so time spent in the alert does not consume the delay.
+                let scheduleTime = delay.flatMap { VeilgramDelayedSendPreferences.scheduledTimestamp(seconds: $0) }
+                if delay != nil && scheduleTime == nil {
                     return
                 }
                 if self.presentationInterfaceState.interfaceState.mediaDraftState != nil {
                     self.sendMediaRecording(
                         silentPosting: silentPosting,
+                        scheduleTime: scheduleTime,
                         messageEffect: messageEffect
                     )
+                    if scheduleTime != nil {
+                        self.openScheduledMessages()
+                    }
                 } else {
                     self.chatDisplayNode.maybeSendEphemeralMessage(sendNormally: { [weak self] in
                         guard let self else {
@@ -2263,10 +2287,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         self.presentPaidMessageAlertIfNeeded(count: 1, completion: { [weak self] postpone in
                             if let self {
+                                // Recompute after the paid-message prompt as well.
+                                let finalScheduleTime = delay.flatMap { VeilgramDelayedSendPreferences.scheduledTimestamp(seconds: $0) }
+                                if delay != nil && finalScheduleTime == nil {
+                                    return
+                                }
                                 self.chatDisplayNode.sendCurrentMessage(
                                     silentPosting: silentPosting,
+                                    scheduleTime: finalScheduleTime,
                                     postpone: postpone,
-                                    messageEffect: messageEffect
+                                    messageEffect: messageEffect,
+                                    completion: { [weak self] in
+                                        if finalScheduleTime != nil {
+                                            self?.openScheduledMessages()
+                                        }
+                                    }
                                 )
                             }
                         })
@@ -2274,30 +2309,41 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
 
-            if VeilgramSendConfirmationPreferences.isEnabled(
+            let sendNow: () -> Void = { performSend(nil) }
+            if delaySeconds > 0 || VeilgramSendConfirmationPreferences.isEnabled(
                 accountPeerId: self.context.account.peerId.toInt64()
             ) {
+                var actions: [TextAlertAction] = [
+                    TextAlertAction(
+                        type: .genericAction,
+                        title: self.presentationData.strings.Common_Cancel,
+                        action: {}
+                    ),
+                    TextAlertAction(
+                        type: .defaultAction,
+                        title: "Send",
+                        action: sendNow
+                    )
+                ]
+                if delaySeconds > 0 {
+                    actions.append(TextAlertAction(
+                        type: .defaultAction,
+                        title: "Schedule in \(delaySeconds) seconds",
+                        action: { performSend(delaySeconds) }
+                    ))
+                }
                 let alertController = textAlertController(
                     context: self.context,
                     updatedPresentationData: self.updatedPresentationData,
-                    title: "Send message?",
-                    text: "Confirm sending the current message.",
-                    actions: [
-                        TextAlertAction(
-                            type: .genericAction,
-                            title: self.presentationData.strings.Common_Cancel,
-                            action: {}
-                        ),
-                        TextAlertAction(
-                            type: .defaultAction,
-                            title: "Send",
-                            action: performSend
-                        )
-                    ]
+                    title: delaySeconds > 0 ? "Delayed send" : "Send message?",
+                    text: delaySeconds > 0
+                        ? "Review this send. Scheduled Messages lets you edit, send now or cancel after scheduling."
+                        : "Confirm sending the current message.",
+                    actions: actions
                 )
                 self.present(alertController, in: .window(.root))
             } else {
-                performSend()
+                sendNow()
             }
         }, sendMessage: { [weak self] text, sourceMessageId in
             guard let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) else {
