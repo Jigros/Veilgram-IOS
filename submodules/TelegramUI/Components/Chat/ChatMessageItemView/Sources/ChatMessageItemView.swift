@@ -762,28 +762,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
             self.veilgramEditHistoryButtonNode = nil
         }
 
-        var isBroadcastChannel = false
-        if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel {
-            if case .broadcast = channel.info {
-                isBroadcastChannel = true
-            }
-        }
-        let normalizedText = item.message.text.lowercased()
-        let hasLink = item.message.media.contains(where: { $0 is TelegramMediaWebpage })
-            || normalizedText.contains("http://")
-            || normalizedText.contains("https://")
-            || normalizedText.contains("t.me/")
-        let renderDecision = VeilgramMessageRenderRuntime.evaluate(
-            accountId: item.context.account.id.int64,
-            message: editKey,
-            text: item.message.text,
-            peerId: item.message.id.peerId.toInt64(),
-            hasLink: hasLink,
-            isForwarded: item.message.forwardInfo != nil,
-            isBroadcastChannel: isBroadcastChannel,
-            isOfficialSponsored: item.message.attributes.contains(where: { $0 is AdMessageAttribute }),
-            isServiceMessage: item.message.media.contains(where: { $0 is TelegramMediaAction })
-        )
+        let renderDecision = (item as? ChatMessageItemImpl)?.veilgramRenderDecision
 
         self.veilgramRenderLabelNode?.removeFromSupernode()
         self.veilgramRenderLabelNode = nil
