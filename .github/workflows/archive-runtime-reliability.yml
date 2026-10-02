@@ -19,6 +19,8 @@ on:
       - "submodules/TelegramCore/Sources/TelegramEngine/Messages/InstallInteractiveReadMessagesAction.swift"
       - "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift"
       - "submodules/TelegramUI/Sources/AppDelegate.swift"
+      - "submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift"
+      - "submodules/TelegramUI/Components/Chat/ChatMessageItemView/Sources/ChatMessageItemView.swift"
       - "submodules/TelegramUI/Sources/AccountContext.swift"
       - "submodules/TelegramUI/Components/Stories/StoryContainerScreen/Sources/OpenStories.swift"
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalArchiveController.swift"
@@ -26,6 +28,7 @@ on:
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalTransferController.swift"
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift"
       - "tools/test_veilgram_archive_runtime_batch.swift"
+      - "tools/test_veilgram_channel_ad_classifier.swift"
       - "tools/test_veilgram_local_core_integration.swift"
       - "tools/check_veilgram_archive_delete_coverage.py"
       - "tools/check_veilgram_ghost_story_views.py"
@@ -79,6 +82,19 @@ jobs:
             tools/test_veilgram_local_core_integration.swift \
             -o "$RUNNER_TEMP/test-local-core"
           "$RUNNER_TEMP/test-local-core"
+
+      - name: Compile and run unified ad render tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          sources=(submodules/VeilgramLocalFeatures/Sources/*.swift)
+          xcrun swiftc -warnings-as-errors \
+            "${sources[@]}" \
+            tools/test_veilgram_channel_ad_classifier.swift \
+            -o "$RUNNER_TEMP/test-channel-ads"
+          "$RUNNER_TEMP/test-channel-ads"
+          xcrun swiftc -parse submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift
+          xcrun swiftc -parse submodules/TelegramUI/Components/Chat/ChatMessageItemView/Sources/ChatMessageItemView.swift
 
       - name: Check remote-delete archive coverage
         shell: bash
