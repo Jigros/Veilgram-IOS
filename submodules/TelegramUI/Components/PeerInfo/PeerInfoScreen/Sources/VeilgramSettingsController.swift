@@ -79,7 +79,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
         case 0:
-            return 12
+            return 13
         case 1:
             return 3
         case 2:
@@ -163,6 +163,13 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.addTarget(self, action: #selector(ghostOnlinePresenceChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
             } else if indexPath.row == 6 {
+                cell.textLabel?.text = "Peek Online"
+                cell.detailTextLabel?.text = "Advertise online for about 8 seconds, then return offline"
+                let canPeek = self.ghostModeEnabled && self.ghostOnlinePresenceEnabled
+                cell.textLabel?.textColor = canPeek ? .label : .secondaryLabel
+                cell.detailTextLabel?.textColor = canPeek ? .secondaryLabel : .tertiaryLabel
+                cell.selectionStyle = canPeek ? .default : .none
+            } else if indexPath.row == 7 {
                 cell.textLabel?.text = "Hide story views"
                 cell.detailTextLabel?.text = "Keep stories locally seen without synchronizing the view"
                 cell.textLabel?.textColor = self.ghostModeEnabled ? .label : .secondaryLabel
@@ -171,7 +178,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.isOn = self.ghostStoryViewsEnabled
                 control.addTarget(self, action: #selector(ghostStoryViewsChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
-            } else if indexPath.row == 7 {
+            } else if indexPath.row == 8 {
                 cell.textLabel?.text = "Read only on interaction"
                 cell.detailTextLabel?.text = "Do not auto-clear unread state just because messages are visible"
                 cell.textLabel?.textColor = self.ghostModeEnabled ? .label : .secondaryLabel
@@ -180,14 +187,14 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.isOn = self.ghostReadOnInteractionOnlyEnabled
                 control.addTarget(self, action: #selector(ghostReadOnInteractionOnlyChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
-            } else if indexPath.row == 8 {
+            } else if indexPath.row == 9 {
                 cell.textLabel?.text = "Detect channel ads locally"
                 cell.detailTextLabel?.text = "Experimental heuristic • ordinary channel posts"
                 let control = UISwitch()
                 control.isOn = self.adFilterEnabled
                 control.addTarget(self, action: #selector(adFilterChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
-            } else if indexPath.row == 9 {
+            } else if indexPath.row == 10 {
                 cell.textLabel?.text = "Collapse high-confidence ads"
                 cell.detailTextLabel?.text = self.adFilterEnabled
                     ? "Collapse matched channel ads with tap-to-reveal"
@@ -198,7 +205,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.isOn = self.adCollapseEnabled
                 control.addTarget(self, action: #selector(adCollapseChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
-            } else if indexPath.row == 10 {
+            } else if indexPath.row == 11 {
                 cell.textLabel?.text = "Local Premium UI"
                 cell.detailTextLabel?.text = "Enable Veilgram-owned premium-style presentation"
                 let control = UISwitch()
@@ -237,7 +244,15 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        if indexPath.section == 0, indexPath.row == 11 {
+        if indexPath.section == 0, indexPath.row == 6 {
+            if self.ghostModeEnabled && self.ghostOnlinePresenceEnabled {
+                VeilgramGhostModeRuntimePreferences.requestPeekOnline(
+                    accountPeerId: self.accountContext.account.peerId.toInt64()
+                )
+            }
+            return
+        }
+        if indexPath.section == 0, indexPath.row == 12 {
             self.push(VeilgramMessageFiltersController(context: self.accountContext))
             return
         }
@@ -279,7 +294,8 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 IndexPath(row: 4, section: 0),
                 IndexPath(row: 5, section: 0),
                 IndexPath(row: 6, section: 0),
-                IndexPath(row: 7, section: 0)
+                IndexPath(row: 7, section: 0),
+                IndexPath(row: 8, section: 0)
             ],
             with: .none
         )
@@ -337,7 +353,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             self.adCollapseEnabled = false
             UserDefaults.standard.set(false, forKey: self.adCollapsePreferenceKey)
         }
-        self.tableView.reloadRows(at: [IndexPath(row: 9, section: 0)], with: .none)
+        self.tableView.reloadRows(at: [IndexPath(row: 10, section: 0)], with: .none)
     }
 
     @objc private func adCollapseChanged(_ sender: UISwitch) {
