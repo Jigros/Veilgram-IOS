@@ -1179,7 +1179,8 @@ private func validateReplyThreadBatch(postbox: Postbox, network: Network, transa
                                 VeilgramArchiveStateAdapter.enqueueDeletedMessage(
                                     accountPeerId: accountPeerId,
                                     message: message,
-                                    observedAt: Int32(Date().timeIntervalSince1970)
+                                    observedAt: Int32(Date().timeIntervalSince1970),
+                                    mediaBox: postbox.mediaBox
                                 )
                             }
                             _internal_deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [id])
