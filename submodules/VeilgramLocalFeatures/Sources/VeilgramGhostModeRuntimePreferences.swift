@@ -85,5 +85,8 @@ public enum VeilgramGhostModeRuntimePreferences {
         if defaults.object(forKey: presenceKey) == nil {
             defaults.set(true, forKey: presenceKey)
         }
+        if defaults.object(forKey: storyViewsKey) == nil {
+            defaults.set(true, forKey: storyViewsKey)
+        }
     }
 }
