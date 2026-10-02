@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramCore
+import VeilgramLocalFeatures
 import AccountContext
 import ChatHistoryEntry
 import ChatControllerInteraction
@@ -140,6 +141,7 @@ public protocol ChatMessageItem: ListViewItem {
     var unsent: Bool { get }
     var sending: Bool { get }
     var failed: Bool { get }
+    var veilgramRenderDecision: VeilgramMessageRenderDecision? { get }
     
     func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?, isRotated: Bool) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: ChatMessageHeaderSpec)
 }
