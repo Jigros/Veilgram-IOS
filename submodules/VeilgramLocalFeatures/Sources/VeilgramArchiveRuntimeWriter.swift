@@ -70,7 +70,11 @@ struct VeilgramArchivePendingBatch {
         _ message: VeilgramArchivedMessage,
         eligibility: VeilgramArchiveEligibility
     ) {
-        if deletedMessages[message.key] == nil {
+        if let current = deletedMessages[message.key] {
+            guard message.archivedAt >= current.message.archivedAt else {
+                return
+            }
+        } else {
             deletedMessageOrder.append(message.key)
         }
         deletedMessages[message.key] = VeilgramArchivePendingDeletedMessageEvent(
@@ -84,8 +88,13 @@ struct VeilgramArchivePendingBatch {
         revision: VeilgramEditRevision,
         eligibility: VeilgramArchiveEligibility
     ) {
-        guard lastPendingEditRevision[key] != revision else {
-            return
+        if let lastRevision = lastPendingEditRevision[key] {
+            guard lastRevision != revision else {
+                return
+            }
+            guard revision.timestamp >= lastRevision.timestamp else {
+                return
+            }
         }
         lastPendingEditRevision[key] = revision
         editRevisions.append(
