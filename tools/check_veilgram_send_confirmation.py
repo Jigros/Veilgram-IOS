@@ -32,9 +32,12 @@ require(
 )
 require(
     "confirmation-before-enqueue",
-    chat.find("VeilgramSendConfirmationPreferences.isEnabled")
-    < chat.find("self.chatDisplayNode.sendCurrentMessage(", chat.find("VeilgramSendConfirmationPreferences.isEnabled")),
-    "Confirmation must occur before the current message is enqueued.",
+    "let performSend: () -> Void" in chat
+    and "VeilgramSendConfirmationPreferences.isEnabled" in chat
+    and 'title: "Send"' in chat
+    and "action: performSend" in chat
+    and "} else {\n                performSend()\n            }" in chat,
+    "The enqueue closure must only be invoked by confirm or the disabled-preference fast path.",
 )
 
 failed = [x for x in checks if not x[1]]
