@@ -463,6 +463,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
             }
             controller.loginWithCode = { [weak self, weak controller] code in
                 if let strongSelf = self {
+                    Logger.shared.log("VeilgramAuth", "Code submission started")
                     controller?.inProgress = true
                     
                     let authorizationCode: AuthorizationCode
@@ -528,6 +529,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                             }
                             switch result {
                                 case let .signUp(data):
+                                    Logger.shared.log("VeilgramAuth", "Code submission result -> signUp")
                                     if let (termsOfService, explicit) = termsOfService, explicit {
                                         var presentAlertAgainImpl: (() -> Void)?
                                         let presentAlertImpl: () -> Void = {
@@ -580,9 +582,11 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                                         let _ = beginSignUp(account: strongSelf.account, data: data).startStandalone()
                                     }
                                 case .loggedIn:
+                                    Logger.shared.log("VeilgramAuth", "Code submission result -> loggedIn")
                                     controller?.animateSuccess()
                             }
                         }, error: { error in
+                            Logger.shared.log("VeilgramAuth", "Code submission failed")
                             Queue.mainQueue().async {
                                 if let strongSelf = self, let controller = controller {
                                     controller.inProgress = false
@@ -1245,8 +1249,29 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
     private func updateState(state: InnerState) {
         switch state {
         case .authorized:
+            Logger.shared.log("VeilgramAuth", "Authorization state -> authorized")
             self.authorizationCompleted()
         case let .state(state):
+            let stateName: String
+            switch state {
+            case .empty:
+                stateName = "empty"
+            case .phoneEntry:
+                stateName = "phoneEntry"
+            case .confirmationCodeEntry:
+                stateName = "confirmationCodeEntry"
+            case .passwordEntry:
+                stateName = "passwordEntry"
+            case .passwordRecovery:
+                stateName = "passwordRecovery"
+            case .awaitingAccountReset:
+                stateName = "awaitingAccountReset"
+            case .signUp:
+                stateName = "signUp"
+            case .payment:
+                stateName = "payment"
+            }
+            Logger.shared.log("VeilgramAuth", "Authorization state -> \(stateName)")
             switch state {
                 case .empty:
                     if let _ = self.viewControllers.last as? AuthorizationSequenceSplashController {
