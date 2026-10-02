@@ -1755,6 +1755,7 @@ public protocol AccountContext: AnyObject {
     /// Presentation-only effective state. Veilgram may locally enable this for
     /// client-side visuals without changing server entitlements or limits.
     var isPremiumPresentation: Bool { get }
+    var isPremiumPresentationSignal: Signal<Bool, NoError> { get }
     var isFrozen: Bool { get }
     var userLimits: EngineConfiguration.UserLimits { get }
     var peerNameColors: PeerNameColors { get }

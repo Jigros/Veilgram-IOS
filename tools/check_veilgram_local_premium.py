@@ -25,7 +25,9 @@ require(
     "VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium" in context
     and "public private(set) var isPremiumPresentation" in context
     and "localPremiumObserver" in context
-    and "var isPremiumPresentation: Bool { get }" in account_context_protocol,
+    and "var isPremiumPresentation: Bool { get }" in account_context_protocol
+    and "var isPremiumPresentationSignal: Signal<Bool, NoError> { get }" in account_context_protocol
+    and "isPremiumPresentationPromise" in context,
     "AccountContext must expose a separate reactive presentation-only Premium state.",
 )
 require(
@@ -54,9 +56,13 @@ require(
 )
 require(
     "local-app-icons",
-    theme_settings.count("context.isPremiumPresentation") >= 2
+    "context.isPremiumPresentationSignal" in theme_settings
+    and "isPremiumPresentationSignal" in theme_settings
+    and "let isPremium = isPremiumPresentation" in theme_settings
+    and "premiumConfiguration.isPremiumDisabled && !isPremiumPresentation" in theme_settings
+    and "context.account.testingEnvironment" in theme_settings
     and "requestSetAlternateIconName" in theme_settings,
-    "Premium app icons are client-local and must use the presentation state.",
+    "Premium app icons must react to local presentation state while preserving test-environment gating.",
 )
 
 failed = [x for x in checks if not x[1]]

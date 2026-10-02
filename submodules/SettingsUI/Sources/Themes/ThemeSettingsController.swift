@@ -523,7 +523,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     let _ = context.engine.themes.wallpapers().start()
     
     let currentAppIcon: PresentationAppIcon?
-    var appIcons = context.sharedContext.applicationBindings.getAvailableAlternateIcons()
+    let appIcons = context.sharedContext.applicationBindings.getAvailableAlternateIcons()
     if let alternateIconName = context.sharedContext.applicationBindings.getAlternateIconName() {
         currentAppIcon = appIcons.filter { $0.name == alternateIconName }.first
     } else {
@@ -531,11 +531,13 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     }
     
     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
-    if premiumConfiguration.isPremiumDisabled || context.account.testingEnvironment {
-        appIcons = appIcons.filter { !$0.isPremium } 
+    let availableAppIcons: Signal<[PresentationAppIcon], NoError> = context.isPremiumPresentationSignal
+    |> map { isPremiumPresentation in
+        if context.account.testingEnvironment || (premiumConfiguration.isPremiumDisabled && !isPremiumPresentation) {
+            return appIcons.filter { !$0.isPremium }
+        }
+        return appIcons
     }
-    
-    let availableAppIcons: Signal<[PresentationAppIcon], NoError> = .single(appIcons)
     let currentAppIconName = ValuePromise<String?>()
     currentAppIconName.set(currentAppIcon?.name ?? "Blue")
     
@@ -1098,18 +1100,19 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         ]),
         cloudThemes.get(),
         availableAppIcons,
+        context.isPremiumPresentationSignal,
         currentAppIconName.get(),
         removedThemeIndexesPromise.get(),
         animatedEmojiStickers,
         context.account.postbox.peerView(id: context.account.peerId),
         context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
     )
-    |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName, removedThemeIndexes, animatedEmojiStickers, peerView, accountPeer -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, sharedData, cloudThemes, availableAppIcons, isPremiumPresentation, currentAppIconName, removedThemeIndexes, animatedEmojiStickers, peerView, accountPeer -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
         let chatSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.chatSettings]?.get(ChatSettings.self) ?? ChatSettings.defaultSettings
         let mediaSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaDisplaySettings]?.get(MediaDisplaySettings.self) ?? MediaDisplaySettings.defaultSettings
         
-        let isPremium = context.isPremiumPresentation
+        let isPremium = isPremiumPresentation
         
         let themeReference: PresentationThemeReference
         if presentationData.autoNightModeTriggered {

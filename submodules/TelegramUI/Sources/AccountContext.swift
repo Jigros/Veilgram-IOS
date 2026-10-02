@@ -267,7 +267,15 @@ public final class AccountContextImpl: AccountContext {
     public private(set) var audioTranscriptionTrial: AudioTranscription.TrialState
     
     public private(set) var isPremium: Bool
-    public private(set) var isPremiumPresentation: Bool
+    public private(set) var isPremiumPresentation: Bool {
+        didSet {
+            self.isPremiumPresentationPromise.set(self.isPremiumPresentation)
+        }
+    }
+    private let isPremiumPresentationPromise: ValuePromise<Bool>
+    public var isPremiumPresentationSignal: Signal<Bool, NoError> {
+        return self.isPremiumPresentationPromise.get()
+    }
     private var localPremiumObserver: NSObjectProtocol?
     
     private var isFrozenDisposable: Disposable?
@@ -287,10 +295,12 @@ public final class AccountContextImpl: AccountContext {
         self.peerNameColors = PeerNameColors.with(availableReplyColors: availableReplyColors, availableProfileColors: availableProfileColors)
         self.audioTranscriptionTrial = AudioTranscription.TrialState.defaultValue
         self.isPremium = false
-        self.isPremiumPresentation = VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+        let initialPremiumPresentation = VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
             serverIsPremium: false,
             accountPeerId: account.peerId.toInt64()
         )
+        self.isPremiumPresentationPromise = ValuePromise(initialPremiumPresentation, ignoreRepeated: true)
+        self.isPremiumPresentation = initialPremiumPresentation
         self.isFrozen = false
 
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
