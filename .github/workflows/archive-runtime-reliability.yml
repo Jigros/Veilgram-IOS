@@ -19,6 +19,7 @@ on:
       - "submodules/TelegramCore/Sources/TelegramEngine/Messages/InstallInteractiveReadMessagesAction.swift"
       - "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift"
       - "submodules/TelegramUI/Sources/AppDelegate.swift"
+      - "submodules/TelegramUI/Sources/ChatController.swift"
       - "submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift"
       - "submodules/TelegramUI/Components/Chat/ChatMessageItemView/Sources/ChatMessageItemView.swift"
       - "submodules/TelegramUI/Sources/AccountContext.swift"
@@ -35,6 +36,7 @@ on:
       - "tools/check_veilgram_archive_ui.py"
       - "tools/check_veilgram_ghost_story_views.py"
       - "tools/check_veilgram_local_premium.py"
+      - "tools/check_veilgram_send_confirmation.py"
       - "submodules/AuthorizationUI/Sources/AuthorizationSequenceController.swift"
       - "submodules/CountrySelectionUI/Sources/AuthorizationSequenceCountrySelectionController.swift"
       - "submodules/CountrySelectionUI/Sources/AuthorizationSequenceCountrySelectionControllerNode.swift"
@@ -145,6 +147,14 @@ jobs:
           xcrun swiftc -parse submodules/AccountContext/Sources/AccountContext.swift
           xcrun swiftc -parse submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift
           xcrun swiftc -parse submodules/TelegramUI/Sources/AccountContext.swift
+
+      - name: Check send confirmation path
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/check_veilgram_send_confirmation.py
+          xcrun swiftc -parse submodules/TelegramUI/Sources/ChatController.swift
+          xcrun swiftc -parse submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift
 
       - name: Check first-launch auth race
         shell: bash
