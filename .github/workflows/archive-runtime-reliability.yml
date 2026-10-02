@@ -31,6 +31,7 @@ on:
       - "tools/test_veilgram_channel_ad_classifier.swift"
       - "tools/test_veilgram_local_core_integration.swift"
       - "tools/check_veilgram_archive_delete_coverage.py"
+      - "tools/check_veilgram_archive_ui.py"
       - "tools/check_veilgram_ghost_story_views.py"
       - "tools/check_veilgram_local_premium.py"
       - ".github/workflows/archive-runtime-reliability.yml"
@@ -107,6 +108,13 @@ jobs:
             submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift \
             submodules/TelegramCore/Sources/State/HistoryViewStateValidation.swift \
             submodules/TelegramCore/Sources/TelegramEngine/Peers/UpdateCachedPeerData.swift
+
+      - name: Check archive UI completion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/check_veilgram_archive_ui.py
+          xcrun swiftc -parse submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalArchiveDetailController.swift
 
       - name: Check Ghost Mode story-view suppression
         shell: bash
