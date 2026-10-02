@@ -2,6 +2,7 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramApi
+import VeilgramLocalFeatures
 
 public enum EngineStoryInputMedia {
     case image(dimensions: PixelDimensions, data: Data, stickers: [TelegramMediaFile])
@@ -2100,10 +2101,18 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
                 ).postboxRepresentation)
             }
             
-            #if DEBUG && false
-            #else
-            _internal_addSynchronizeViewStoriesOperation(peerId: peerId, storyId: id, transaction: transaction)
-            #endif
+            if !VeilgramGhostModeRuntimePreferences.suppressStoryViews(
+                accountPeerId: account.peerId.toInt64()
+            ) {
+                #if DEBUG && false
+                #else
+                _internal_addSynchronizeViewStoriesOperation(
+                    peerId: peerId,
+                    storyId: id,
+                    transaction: transaction
+                )
+                #endif
+            }
             
             return transaction.getPeer(peerId).flatMap(apiInputUser)
         }
