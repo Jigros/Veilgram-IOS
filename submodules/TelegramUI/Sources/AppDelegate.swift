@@ -221,6 +221,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     var mainWindow: Window1!
     private var dataImportSplash: LegacyDataImportSplash?
     private var memoryUsageOverlayView: UILabel?
+    private var capturePrivacyObserver: NSObjectProtocol?
+    private var capturePrivacyPreferenceObserver: NSObjectProtocol?
+    private var capturePrivacyCoverView: UIView?
     
     private var buildConfig: BuildConfig?
     let episodeId = arc4random()
@@ -1904,6 +1907,56 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }))
     }
 
+    private func ensureCapturePrivacyObservers() {
+        if self.capturePrivacyObserver == nil {
+            self.capturePrivacyObserver = NotificationCenter.default.addObserver(
+                forName: UIScreen.capturedDidChangeNotification,
+                object: UIScreen.main,
+                queue: .main
+            ) { [weak self] _ in
+                self?.updateCapturePrivacyCover()
+            }
+        }
+        if self.capturePrivacyPreferenceObserver == nil {
+            self.capturePrivacyPreferenceObserver = NotificationCenter.default.addObserver(
+                forName: VeilgramCapturePrivacyPreferences.didChangeNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.updateCapturePrivacyCover()
+            }
+        }
+    }
+
+    private func updateCapturePrivacyCover() {
+        guard let window = self.window else {
+            return
+        }
+        let shouldCover = VeilgramCapturePrivacyPreferences.isEnabled()
+            && UIScreen.main.isCaptured
+
+        if shouldCover {
+            let cover: UIView
+            if let current = self.capturePrivacyCoverView {
+                cover = current
+            } else {
+                cover = UIView(frame: window.bounds)
+                cover.backgroundColor = .black
+                cover.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                cover.isUserInteractionEnabled = true
+                cover.accessibilityIdentifier = "Veilgram.CapturePrivacyCover"
+                self.capturePrivacyCoverView = cover
+            }
+            if cover.superview !== window {
+                window.addSubview(cover)
+            }
+            cover.frame = window.bounds
+            window.bringSubviewToFront(cover)
+        } else {
+            self.capturePrivacyCoverView?.removeFromSuperview()
+        }
+    }
+
     func applicationWillResignActive(_ application: UIApplication) {
         self.isActiveValue = false
         self.isActivePromise.set(false)
@@ -2016,6 +2069,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        self.ensureCapturePrivacyObservers()
+        self.updateCapturePrivacyCover()
+
         self.isInForegroundValue = true
         self.isInForegroundPromise.set(true)
         self.isActiveValue = true
