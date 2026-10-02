@@ -74,12 +74,16 @@ private func loadCountryCodes() -> [Country] {
     return result
 }
 
-private var countryCodes: [Country] = loadCountryCodes()
 private var countryCodesByPrefix: [String: (Country, Country.CountryCode)] = [:]
+private var countryCodes: [Country] = loadCountryCodes()
 
 public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccountManagerTypes>, engine: TelegramEngineUnauthorized, completion: @escaping () -> Void) {
     let _ = (engine.localization.getCountriesList(accountManager: accountManager, langCode: nil)
     |> deliverOnMainQueue).start(next: { countries in
+        guard !countries.isEmpty else {
+            completion()
+            return
+        }
         countryCodes = countries
         
         var countriesByPrefix: [String: (Country, Country.CountryCode)] = [:]
@@ -105,6 +109,10 @@ public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccoun
 public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccountManagerTypes>, engine: TelegramEngine, completion: @escaping () -> Void) {
     let _ = (engine.localization.getCountriesList(accountManager: accountManager, langCode: nil)
     |> deliverOnMainQueue).start(next: { countries in
+        guard !countries.isEmpty else {
+            completion()
+            return
+        }
         countryCodes = countries
 
         var countriesByPrefix: [String: (Country, Country.CountryCode)] = [:]
@@ -204,6 +212,9 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
     }
     
     public static func setupCountryCodes(countries: [Country], codesByPrefix: [String: (Country, Country.CountryCode)]) {
+        guard !countries.isEmpty else {
+            return
+        }
         countryCodes = countries
         countryCodesByPrefix = codesByPrefix
     }
