@@ -170,7 +170,7 @@ enum VeilgramLocalCoreIntegrationTests {
             preferredExtension: "dat",
             maximumBytes: 1024 * 1024
         )
-        precondition(copiedMedia.relativePath == "media-42-0-7-0.dat")
+        precondition(copiedMedia.relativePath == "media-item-42-0-7-0.dat")
         precondition(copiedMedia.byteCount == 4096)
         let copiedURL = base.appendingPathComponent(copiedMedia.relativePath)
         precondition(FileManager.default.fileExists(atPath: copiedURL.path))
