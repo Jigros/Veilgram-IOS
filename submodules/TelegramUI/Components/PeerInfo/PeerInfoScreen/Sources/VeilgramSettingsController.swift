@@ -26,6 +26,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     private var ghostStoryWarningEnabled: Bool
     private var localPremiumUIEnabled: Bool
     private var capturePrivacyEnabled: Bool
+    private var sendConfirmationEnabled: Bool
 
     init(context: AccountContext) {
         self.accountContext = context
@@ -47,6 +48,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         self.ghostStoryWarningEnabled = VeilgramGhostModeRuntimePreferences.warnBeforeVisibleStoryViews(accountPeerId: accountPeerId)
         self.localPremiumUIEnabled = VeilgramLocalPremiumRuntimePreferences.isEnabled(accountPeerId: accountPeerId)
         self.capturePrivacyEnabled = VeilgramCapturePrivacyPreferences.isEnabled()
+        self.sendConfirmationEnabled = VeilgramSendConfirmationPreferences.isEnabled(accountPeerId: accountPeerId)
         let presentation = context.sharedContext.currentPresentationData.with { $0 }
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentation, style: .glass))
         self.title = "Veilgram"
@@ -83,7 +85,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
         case 0:
-            return 15
+            return 16
         case 1:
             return 3
         case 2:
@@ -232,6 +234,13 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.isOn = self.capturePrivacyEnabled
                 control.addTarget(self, action: #selector(capturePrivacyChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
+            } else if indexPath.row == 14 {
+                cell.textLabel?.text = "Confirm before sending"
+                cell.detailTextLabel?.text = "Ask before sending the current text or recorded message"
+                let control = UISwitch()
+                control.isOn = self.sendConfirmationEnabled
+                control.addTarget(self, action: #selector(sendConfirmationChanged(_:)), for: .valueChanged)
+                cell.accessoryView = control
             } else {
                 cell.textLabel?.text = "Message filters"
                 cell.detailTextLabel?.text = "Local rules • add, enable, disable or delete"
@@ -272,7 +281,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             }
             return
         }
-        if indexPath.section == 0, indexPath.row == 14 {
+        if indexPath.section == 0, indexPath.row == 15 {
             self.push(VeilgramMessageFiltersController(context: self.accountContext))
             return
         }
@@ -370,6 +379,15 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     @objc private func capturePrivacyChanged(_ sender: UISwitch) {
         VeilgramCapturePrivacyPreferences.setEnabled(sender.isOn)
         self.capturePrivacyEnabled = sender.isOn
+    }
+
+    @objc private func sendConfirmationChanged(_ sender: UISwitch) {
+        let accountPeerId = self.accountContext.account.peerId.toInt64()
+        self.sendConfirmationEnabled = sender.isOn
+        VeilgramSendConfirmationPreferences.setEnabled(
+            sender.isOn,
+            accountPeerId: accountPeerId
+        )
     }
 
     @objc private func localPremiumChanged(_ sender: UISwitch) {
