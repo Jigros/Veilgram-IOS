@@ -33,6 +33,31 @@ require(
     "MessageHistoryTable must expose removed messages while their data is still readable, before processIndexOperations.",
 )
 
+global_delete_anchor = "case let .DeleteMessagesWithGlobalIds(ids):"
+direct_delete_anchor = "case let .DeleteMessages(ids):"
+global_delete_start = text["state"].find(global_delete_anchor)
+direct_delete_start = text["state"].find(direct_delete_anchor, global_delete_start)
+min_available_start = text["state"].find("case let .UpdateMinAvailableMessage(id):", direct_delete_start)
+global_delete_slice = text["state"][global_delete_start:direct_delete_start]
+direct_delete_slice = text["state"][direct_delete_start:min_available_start]
+
+require(
+    "global-delete-media-copy-before-unlink",
+    global_delete_anchor in text["state"]
+    and "VeilgramArchiveStateAdapter.enqueueDeletedMedia" in global_delete_slice
+    and "completion:" in global_delete_slice
+    and "mediaBox.removeCachedResources" in global_delete_slice,
+    "Global-id deletion must archive already-local media before cache resources are unlinked.",
+)
+
+require(
+    "direct-delete-media-adapter",
+    direct_delete_anchor in text["state"]
+    and "VeilgramArchiveStateAdapter.enqueueDeletedMessage" in direct_delete_slice
+    and "mediaBox: mediaBox" in direct_delete_slice,
+    "Ordinary DeleteMessages must pass MediaBox into the archive adapter.",
+)
+
 state_anchor = "case let .UpdateMinAvailableMessage(id):"
 state_slice = text["state"][text["state"].find(state_anchor):]
 require(
