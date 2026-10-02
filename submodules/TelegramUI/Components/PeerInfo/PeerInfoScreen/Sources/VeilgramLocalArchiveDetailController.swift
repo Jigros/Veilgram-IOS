@@ -6,7 +6,7 @@ import AccountContext
 import TelegramPresentationData
 import VeilgramLocalFeatures
 
-final class VeilgramLocalArchiveDetailController: ViewController, UITableViewDataSource, UITableViewDelegate, UIDocumentInteractionControllerDelegate {
+final class VeilgramLocalArchiveDetailController: ViewController, UITableViewDataSource, UITableViewDelegate, UIDocumentInteractionControllerDelegate, UISearchResultsUpdating {
     enum Mode {
         case messages
         case edits
@@ -21,6 +21,8 @@ final class VeilgramLocalArchiveDetailController: ViewController, UITableViewDat
     private let accountContext: AccountContext
     private let mode: Mode
     private let tableView = UITableView(frame: .zero, style: .insetGrouped)
+    private let searchController = UISearchController(searchResultsController: nil)
+    private var searchQuery = ""
 
     private var messages: [VeilgramArchivedMessage] = []
     private var edits: [EditRow] = []
@@ -72,6 +74,14 @@ final class VeilgramLocalArchiveDetailController: ViewController, UITableViewDat
         self.tableView.rowHeight = UITableView.automaticDimension
         self.displayNode.view.addSubview(self.tableView)
 
+        self.searchController.searchResultsUpdater = self
+        self.searchController.obscuresBackgroundDuringPresentation = false
+        self.searchController.searchBar.autocapitalizationType = .none
+        self.searchController.searchBar.autocorrectionType = .no
+        self.searchController.searchBar.placeholder = "Search text, peer:123, msg:456"
+        self.navigationItem.searchController = self.searchController
+        self.navigationItem.hidesSearchBarWhenScrolling = false
+
         self.reload()
     }
 
@@ -95,11 +105,11 @@ final class VeilgramLocalArchiveDetailController: ViewController, UITableViewDat
         }
         switch self.mode {
         case .messages:
-            return max(1, self.messages.count)
+            return max(1, self.visibleMessages.count)
         case .edits:
-            return max(1, self.edits.count)
+            return max(1, self.visibleEdits.count)
         case .media:
-            return max(1, self.media.count)
+            return max(1, self.visibleMedia.count)
         }
     }
 
@@ -132,24 +142,34 @@ final class VeilgramLocalArchiveDetailController: ViewController, UITableViewDat
 
         switch self.mode {
         case .messages:
-            guard !self.messages.isEmpty else {
-                return Self.emptyCell(cell, text: "No archived messages")
+            let visibleMessages = self.visibleMessages
+            guard !visibleMessages.isEmpty else {
+                return Self.emptyCell(cell, text: self.searchQuery.isEmpty ? "No archived messages" : "No matching messages")
             }
-            let item = self.messages[indexPath.row]
+            let item = visibleMessages[indexPath.row]
             cell.textLabel?.text = Self.preview(item.text)
             cell.detailTextLabel?.text = "peer \(item.key.peerId) • msg \(item.key.id) • archived \(Self.dateString(item.archivedAt))"
         case .edits:
-            guard !self.edits.isEmpty else {
-                return Self.emptyCell(cell, text: "No saved revisions")
+            let visibleEdits = self.visibleEdits
+            guard !visibleEdits.isEmpty else {
+                return Self.emptyCell(cell, text: self.searchQuery.isEmpty ? "No saved revisions" : "No matching revisions")
             }
-            let item = self.edits[indexPath.row]
+            let item = visibleEdits[indexPath.row]
+            let revisionCount = self.edits.reduce(into: 0) { count, candidate in
+                if candidate.key == item.key {
+                    count += 1
+                }
+            }
             cell.textLabel?.text = Self.preview(item.revision.text)
-            cell.detailTextLabel?.text = "peer \(item.key.peerId) • msg \(item.key.id) • observed \(Self.dateString(item.revision.timestamp))"
+            cell.detailTextLabel?.text = "peer \(item.key.peerId) • msg \(item.key.id) • \(revisionCount) revision\(revisionCount == 1 ? "" : "s") • \(Self.dateString(item.revision.timestamp))"
+            cell.selectionStyle = .default
+            cell.accessoryType = .disclosureIndicator
         case .media:
-            guard !self.media.isEmpty else {
-                return Self.emptyCell(cell, text: "No archived media metadata")
+            let visibleMedia = self.visibleMedia
+            guard !visibleMedia.isEmpty else {
+                return Self.emptyCell(cell, text: self.searchQuery.isEmpty ? "No archived media metadata" : "No matching media")
             }
-            let item = self.media[indexPath.row]
+            let item = visibleMedia[indexPath.row]
             let availability = item.availability == .available ? "available" : "unavailable"
             cell.textLabel?.text = item.relativePath ?? "Media unavailable"
             cell.detailTextLabel?.text = "peer \(item.key.peerId) • msg \(item.key.messageId) • \(availability) • \(Self.byteString(item.byteCount))"
@@ -163,14 +183,32 @@ final class VeilgramLocalArchiveDetailController: ViewController, UITableViewDat
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        guard indexPath.section == 0,
-              self.mode == .media,
-              !self.media.isEmpty,
-              indexPath.row < self.media.count else {
+        guard indexPath.section == 0 else {
             return
         }
 
-        let item = self.media[indexPath.row]
+        if self.mode == .edits {
+            let visibleEdits = self.visibleEdits
+            guard indexPath.row < visibleEdits.count else {
+                return
+            }
+            let item = visibleEdits[indexPath.row]
+            self.searchController.isActive = true
+            self.searchController.searchBar.text = "peer:\(item.key.peerId) msg:\(item.key.id)"
+            self.searchQuery = self.searchController.searchBar.text ?? ""
+            self.tableView.reloadData()
+            return
+        }
+
+        guard self.mode == .media else {
+            return
+        }
+        let visibleMedia = self.visibleMedia
+        guard indexPath.row < visibleMedia.count else {
+            return
+        }
+
+        let item = visibleMedia[indexPath.row]
         guard item.availability == .available else {
             return
         }
@@ -214,6 +252,74 @@ final class VeilgramLocalArchiveDetailController: ViewController, UITableViewDat
         if self.documentInteractionController === controller {
             self.documentInteractionController = nil
         }
+    }
+
+    func updateSearchResults(for searchController: UISearchController) {
+        self.searchQuery = searchController.searchBar.text ?? ""
+        self.tableView.reloadData()
+    }
+
+    private var visibleMessages: [VeilgramArchivedMessage] {
+        return self.messages.filter {
+            Self.matchesSearch(
+                query: self.searchQuery,
+                text: $0.text,
+                peerId: $0.key.peerId,
+                messageId: $0.key.id
+            )
+        }
+    }
+
+    private var visibleEdits: [EditRow] {
+        return self.edits.filter {
+            Self.matchesSearch(
+                query: self.searchQuery,
+                text: $0.revision.text,
+                peerId: $0.key.peerId,
+                messageId: $0.key.id
+            )
+        }
+    }
+
+    private var visibleMedia: [VeilgramMediaItem] {
+        return self.media.filter {
+            Self.matchesSearch(
+                query: self.searchQuery,
+                text: $0.relativePath ?? "",
+                peerId: $0.key.peerId,
+                messageId: $0.key.messageId
+            )
+        }
+    }
+
+    private static func matchesSearch(
+        query: String,
+        text: String,
+        peerId: Int64,
+        messageId: Int32
+    ) -> Bool {
+        let normalized = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else {
+            return true
+        }
+
+        let searchableText = text.lowercased()
+        for rawToken in normalized.split(whereSeparator: { $0.isWhitespace }) {
+            let token = String(rawToken)
+            let lower = token.lowercased()
+            if lower.hasPrefix("peer:") {
+                guard let value = Int64(lower.dropFirst(5)), value == peerId else {
+                    return false
+                }
+            } else if lower.hasPrefix("msg:") {
+                guard let value = Int32(lower.dropFirst(4)), value == messageId else {
+                    return false
+                }
+            } else if !searchableText.contains(lower) {
+                return false
+            }
+        }
+        return true
     }
 
     private func reload() {
