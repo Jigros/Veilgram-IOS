@@ -204,6 +204,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
     private var sectionTitles: [String]
     
     private var searchResults: [((String, String), String, Int)] = []
+    private var currentSearchQuery = ""
     private var countryNamesAndCodes: [((String, String), String, [Int])]
     
     private let topEdgeEffectView: EdgeEffectView
@@ -397,12 +398,10 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
         self.sectionTitles = sections.map { $0.0 }
         self.tableView.reloadData()
 
-        if !self.searchTableView.isHidden,
-           let searchInputView = self.searchInput?.view as? SearchInputPanelComponent.View {
-            let query = searchInputView.query
+        if !self.currentSearchQuery.isEmpty {
             self.searchResults = searchCountries(
                 items: self.countryNamesAndCodes,
-                query: query
+                query: self.currentSearchQuery
             )
             self.searchTableView.reloadData()
         } else {
@@ -412,6 +411,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
     }
 
     func updateSearchQuery(_ query: String) {
+        self.currentSearchQuery = query
         if query.isEmpty {
             self.searchResults = []
             self.searchTableView.reloadData()
