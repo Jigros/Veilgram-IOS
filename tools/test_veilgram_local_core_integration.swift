@@ -97,7 +97,7 @@ enum VeilgramLocalCoreIntegrationTests {
         ))
         checks += 8
 
-        let ordinary        let ordinary = VeilgramArchiveEligibility(
+        let ordinary = VeilgramArchiveEligibility(
             isCloudMessage: true,
             isSecretChat: false,
             isViewOnce: false,
