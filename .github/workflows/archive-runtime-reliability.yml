@@ -35,6 +35,11 @@ on:
       - "tools/check_veilgram_archive_ui.py"
       - "tools/check_veilgram_ghost_story_views.py"
       - "tools/check_veilgram_local_premium.py"
+      - "submodules/AuthorizationUI/Sources/AuthorizationSequenceController.swift"
+      - "submodules/CountrySelectionUI/Sources/AuthorizationSequenceCountrySelectionController.swift"
+      - "submodules/CountrySelectionUI/Sources/AuthorizationSequenceCountrySelectionControllerNode.swift"
+      - "submodules/TelegramUI/Resources/PhoneCountries.txt"
+      - "tools/check_veilgram_auth_first_launch.py"
       - ".github/workflows/archive-runtime-reliability.yml"
   workflow_dispatch:
 
@@ -139,6 +144,15 @@ jobs:
           xcrun swiftc -parse submodules/AccountContext/Sources/AccountContext.swift
           xcrun swiftc -parse submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift
           xcrun swiftc -parse submodules/TelegramUI/Sources/AccountContext.swift
+
+      - name: Check first-launch auth race
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/check_veilgram_auth_first_launch.py
+          xcrun swiftc -parse submodules/AuthorizationUI/Sources/AuthorizationSequenceController.swift
+          xcrun swiftc -parse submodules/CountrySelectionUI/Sources/AuthorizationSequenceCountrySelectionController.swift
+          xcrun swiftc -parse submodules/CountrySelectionUI/Sources/AuthorizationSequenceCountrySelectionControllerNode.swift
 
   ios-build:
     needs: swift-tests
