@@ -265,6 +265,9 @@ public enum VeilgramArchiveRuntimeWriter {
             do {
                 let store = try VeilgramArchiveStoreAPI(accountId: accountPeerId)
                 var document = try store.loadMedia()
+                let originalPaths = Set(document.items.compactMap { $0.relativePath })
+                var rollbackPaths = Set<String>()
+                var cleanupAfterCommitPaths = Set<String>()
                 var changed = false
 
                 for candidate in eligibleCandidates {
@@ -274,19 +277,17 @@ public enum VeilgramArchiveRuntimeWriter {
                             continue
                         }
                         if let relativePath = existing.relativePath {
-                            do {
-                                try store.removeMediaFile(relativePath: relativePath)
-                            } catch {
-                                VeilgramArchiveRuntimeDiagnostics.record(error)
-                            }
+                            cleanupAfterCommitPaths.insert(relativePath)
                         }
                     }
 
-                    if makeRoomForMediaItemIfNeeded(
+                    if let evictedForCapacity = makeRoomForMediaItemIfNeeded(
                         document: &document,
-                        incomingKey: candidate.key,
-                        store: store
+                        incomingKey: candidate.key
                     ) {
+                        if let relativePath = evictedForCapacity.relativePath {
+                            cleanupAfterCommitPaths.insert(relativePath)
+                        }
                         changed = true
                     }
 
@@ -308,6 +309,11 @@ public enum VeilgramArchiveRuntimeWriter {
                             preferredExtension: candidate.fileExtension,
                             maximumBytes: maximumMediaItemBytes
                         )
+                        if !originalPaths.contains(copied.relativePath) {
+                            rollbackPaths.insert(copied.relativePath)
+                        }
+                        cleanupAfterCommitPaths.remove(copied.relativePath)
+
                         let item = VeilgramMediaItem(
                             key: candidate.key,
                             relativePath: copied.relativePath,
@@ -339,20 +345,37 @@ public enum VeilgramArchiveRuntimeWriter {
                 }
 
                 if changed {
-                    let evicted = VeilgramMediaArchiveEngine.enforceQuota(
+                    let quotaEvicted = VeilgramMediaArchiveEngine.enforceQuota(
                         document: &document,
                         maximumBytes: maximumMediaArchiveBytes
                     )
-                    for item in evicted {
+                    for item in quotaEvicted {
                         if let relativePath = item.relativePath {
+                            cleanupAfterCommitPaths.insert(relativePath)
+                        }
+                    }
+
+                    do {
+                        try store.saveMedia(document)
+                    } catch {
+                        for relativePath in rollbackPaths {
                             do {
                                 try store.removeMediaFile(relativePath: relativePath)
                             } catch {
                                 VeilgramArchiveRuntimeDiagnostics.record(error)
                             }
                         }
+                        throw error
                     }
-                    try store.saveMedia(document)
+
+                    let committedPaths = Set(document.items.compactMap { $0.relativePath })
+                    for relativePath in cleanupAfterCommitPaths where !committedPaths.contains(relativePath) {
+                        do {
+                            try store.removeMediaFile(relativePath: relativePath)
+                        } catch {
+                            VeilgramArchiveRuntimeDiagnostics.record(error)
+                        }
+                    }
                 }
             } catch {
                 VeilgramArchiveRuntimeDiagnostics.record(error)
@@ -463,15 +486,13 @@ public enum VeilgramArchiveRuntimeWriter {
         }
     }
 
-    @discardableResult
     private static func makeRoomForMediaItemIfNeeded(
         document: inout VeilgramMediaArchiveDocument,
-        incomingKey: VeilgramMediaKey,
-        store: VeilgramArchiveStoreAPI
-    ) -> Bool {
+        incomingKey: VeilgramMediaKey
+    ) -> VeilgramMediaItem? {
         guard !document.items.contains(where: { $0.key == incomingKey }),
               document.items.count >= VeilgramMediaArchiveEngine.maximumItems else {
-            return false
+            return nil
         }
         guard let oldestIndex = document.items.indices.min(by: { lhs, rhs in
             let left = document.items[lhs]
@@ -481,18 +502,10 @@ public enum VeilgramArchiveRuntimeWriter {
             }
             return left.archivedAt < right.archivedAt
         }) else {
-            return false
+            return nil
         }
 
-        let evicted = document.items.remove(at: oldestIndex)
-        if let relativePath = evicted.relativePath {
-            do {
-                try store.removeMediaFile(relativePath: relativePath)
-            } catch {
-                VeilgramArchiveRuntimeDiagnostics.record(error)
-            }
-        }
-        return true
+        return document.items.remove(at: oldestIndex)
     }
 
     private static func scheduleFlushIfNeeded() {
