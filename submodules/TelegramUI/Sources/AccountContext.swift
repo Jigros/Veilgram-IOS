@@ -293,22 +293,6 @@ public final class AccountContextImpl: AccountContext {
         )
         self.isFrozen = false
 
-        self.localPremiumObserver = NotificationCenter.default.addObserver(
-            forName: VeilgramLocalPremiumRuntimePreferences.didChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard let self,
-                  let accountValue = notification.object as? NSNumber,
-                  accountValue.int64Value == self.account.peerId.toInt64() else {
-                return
-            }
-            self.isPremiumPresentation = VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
-                serverIsPremium: self.isPremium,
-                accountPeerId: self.account.peerId.toInt64()
-            )
-        }
-        
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
         if let locationManager = self.sharedContextImpl.locationManager {
@@ -529,6 +513,22 @@ public final class AccountContextImpl: AccountContext {
             }
             (self.animationRenderer as? DCTMultiAnimationRendererImpl)?.useYuvA = settings.compressedEmojiCache
         })
+
+        self.localPremiumObserver = NotificationCenter.default.addObserver(
+            forName: VeilgramLocalPremiumRuntimePreferences.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self,
+                  let accountValue = notification.object as? NSNumber,
+                  accountValue.int64Value == self.account.peerId.toInt64() else {
+                return
+            }
+            self.isPremiumPresentation = VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+                serverIsPremium: self.isPremium,
+                accountPeerId: self.account.peerId.toInt64()
+            )
+        }
     }
     
     deinit {
