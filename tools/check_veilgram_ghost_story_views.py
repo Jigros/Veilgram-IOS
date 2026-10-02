@@ -9,6 +9,7 @@ prefs = (ROOT / "submodules/VeilgramLocalFeatures/Sources/VeilgramGhostModeRunti
 settings = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift").read_text(encoding="utf-8")
 interactive_read = (ROOT / "submodules/TelegramCore/Sources/TelegramEngine/Messages/InstallInteractiveReadMessagesAction.swift").read_text(encoding="utf-8")
 presence = (ROOT / "submodules/TelegramCore/Sources/State/ManagedAccountPresence.swift").read_text(encoding="utf-8")
+open_stories = (ROOT / "submodules/TelegramUI/Components/Stories/StoryContainerScreen/Sources/OpenStories.swift").read_text(encoding="utf-8")
 
 checks = []
 
@@ -76,6 +77,24 @@ require(
     "Peek Online" in settings
     and "requestPeekOnline" in settings,
     "Veilgram settings must expose the one-shot Peek Online action.",
+)
+require(
+    "story-warning-pref",
+    "warnBeforeVisibleStoryViews" in prefs
+    and "setWarnBeforeVisibleStoryViews" in prefs,
+    "Ghost Mode must persist the visible-story warning preference.",
+)
+require(
+    "story-warning-runtime",
+    "presentVeilgramStoryOpenWarningIfNeeded" in open_stories
+    and "Ghost Mode is enabled, but Hide story views is off" in open_stories,
+    "Story opening must warn before a view can be synchronized when protection is off.",
+)
+require(
+    "story-warning-ui",
+    "Warn before visible story views" in settings
+    and "ghostStoryWarningChanged" in settings,
+    "Veilgram settings must expose the story-open warning toggle.",
 )
 
 failed = [x for x in checks if not x[1]]
