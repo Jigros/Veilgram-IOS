@@ -5,6 +5,36 @@ import AccountContext
 import SwiftSignalKit
 import TelegramCore
 import AvatarNode
+import VeilgramLocalFeatures
+
+private func presentVeilgramStoryOpenWarningIfNeeded(
+    context: AccountContext,
+    parentController: ViewController?,
+    proceed: @escaping () -> Void
+) {
+    let accountPeerId = context.account.peerId.toInt64()
+    let shouldWarn = VeilgramGhostModeRuntimePreferences.warnBeforeVisibleStoryViews(
+        accountPeerId: accountPeerId
+    ) && !VeilgramGhostModeRuntimePreferences.suppressStoryViews(
+        accountPeerId: accountPeerId
+    )
+
+    guard shouldWarn, let parentController else {
+        proceed()
+        return
+    }
+
+    let alert = UIAlertController(
+        title: "Story view",
+        message: "Ghost Mode is enabled, but Hide story views is off. Opening this story may synchronize a view to Telegram.",
+        preferredStyle: .alert
+    )
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    alert.addAction(UIAlertAction(title: "View story", style: .default, handler: { _ in
+        proceed()
+    }))
+    parentController.present(alert, animated: true)
+}
 
 public extension StoryContainerScreen {
     static func openArchivedStories(context: AccountContext, parentController: ViewController, avatarNode: AvatarNode, sharedProgressDisposable: MetaDisposable?) {
@@ -24,60 +54,65 @@ public extension StoryContainerScreen {
         }
         |> deliverOnMainQueue
         |> map { [weak parentController, weak avatarNode] _ -> Void in
-            var transitionIn: StoryContainerScreen.TransitionIn?
-            if let avatarNode {
-                transitionIn = StoryContainerScreen.TransitionIn(
-                    sourceView: avatarNode.view,
-                    sourceRect: avatarNode.view.bounds,
-                    sourceCornerRadius: avatarNode.view.bounds.width * 0.5,
-                    sourceIsAvatar: false
-                )
-                avatarNode.isHidden = true
-            }
-            
-            let storyContainerScreen = StoryContainerScreen(
+            presentVeilgramStoryOpenWarningIfNeeded(
                 context: context,
-                content: storyContent,
-                transitionIn: transitionIn,
-                transitionOut: { peerId, _ in
-                    if let avatarNode {
-                        let destinationView = avatarNode.view
-                        return StoryContainerScreen.TransitionOut(
-                            destinationView: destinationView,
-                            transitionView: StoryContainerScreen.TransitionView(
-                                makeView: { [weak destinationView] in
-                                    let parentView = UIView()
-                                    if let copyView = destinationView?.snapshotContentTree(unhide: true) {
-                                        parentView.addSubview(copyView)
-                                    }
-                                    return parentView
-                                },
-                                updateView: { copyView, state, transition in
-                                    guard let view = copyView.subviews.first else {
+                parentController: parentController
+            ) {
+                var transitionIn: StoryContainerScreen.TransitionIn?
+                if let avatarNode {
+                    transitionIn = StoryContainerScreen.TransitionIn(
+                        sourceView: avatarNode.view,
+                        sourceRect: avatarNode.view.bounds,
+                        sourceCornerRadius: avatarNode.view.bounds.width * 0.5,
+                        sourceIsAvatar: false
+                    )
+                    avatarNode.isHidden = true
+                }
+                
+                let storyContainerScreen = StoryContainerScreen(
+                    context: context,
+                    content: storyContent,
+                    transitionIn: transitionIn,
+                    transitionOut: { peerId, _ in
+                        if let avatarNode {
+                            let destinationView = avatarNode.view
+                            return StoryContainerScreen.TransitionOut(
+                                destinationView: destinationView,
+                                transitionView: StoryContainerScreen.TransitionView(
+                                    makeView: { [weak destinationView] in
+                                        let parentView = UIView()
+                                        if let copyView = destinationView?.snapshotContentTree(unhide: true) {
+                                            parentView.addSubview(copyView)
+                                        }
+                                        return parentView
+                                    },
+                                    updateView: { copyView, state, transition in
+                                        guard let view = copyView.subviews.first else {
+                                            return
+                                        }
+                                        let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
+                                        transition.setPosition(view: view, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+                                        transition.setScale(view: view, scale: size.width / state.destinationSize.width)
+                                    },
+                                    insertCloneTransitionView: nil
+                                ),
+                                destinationRect: destinationView.bounds,
+                                destinationCornerRadius: destinationView.bounds.width * 0.5,
+                                destinationIsAvatar: false,
+                                completed: { [weak avatarNode] in
+                                    guard let avatarNode else {
                                         return
                                     }
-                                    let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
-                                    transition.setPosition(view: view, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
-                                    transition.setScale(view: view, scale: size.width / state.destinationSize.width)
-                                },
-                                insertCloneTransitionView: nil
-                            ),
-                            destinationRect: destinationView.bounds,
-                            destinationCornerRadius: destinationView.bounds.width * 0.5,
-                            destinationIsAvatar: false,
-                            completed: { [weak avatarNode] in
-                                guard let avatarNode else {
-                                    return
+                                    avatarNode.isHidden = false
                                 }
-                                avatarNode.isHidden = false
-                            }
-                        )
-                    } else {
-                        return nil
+                            )
+                        } else {
+                            return nil
+                        }
                     }
-                }
-            )
-            parentController?.push(storyContainerScreen)
+                )
+                parentController?.push(storyContainerScreen)
+            }
         }
         |> ignoreValues
         
@@ -199,20 +234,25 @@ public extension StoryContainerScreen {
             if state.slice == nil {
                 return
             }
-            
-            let transitionIn: StoryContainerScreen.TransitionIn? = transitionIn()
-            
-            let storyContainerScreen = StoryContainerScreen(
+
+            presentVeilgramStoryOpenWarningIfNeeded(
                 context: context,
-                content: storyContent,
-                transitionIn: transitionIn,
-                transitionOut: { peerId, _ in
-                    return transitionOut(peerId)
-                }
-            )
-            setFocusedItem(storyContainerScreen.focusedItem)
-            parentController?.push(storyContainerScreen)
-            completion(storyContainerScreen)
+                parentController: parentController
+            ) {
+                let transitionIn: StoryContainerScreen.TransitionIn? = transitionIn()
+                
+                let storyContainerScreen = StoryContainerScreen(
+                    context: context,
+                    content: storyContent,
+                    transitionIn: transitionIn,
+                    transitionOut: { peerId, _ in
+                        return transitionOut(peerId)
+                    }
+                )
+                setFocusedItem(storyContainerScreen.focusedItem)
+                parentController?.push(storyContainerScreen)
+                completion(storyContainerScreen)
+            }
         }
         |> ignoreValues
         
