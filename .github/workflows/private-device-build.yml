@@ -6,7 +6,7 @@ on:
       source_ref:
         description: Git ref to build
         required: true
-        default: feature/private-device-auth-handoff
+        default: cleanup/remove-project-policy-guards
       build_number:
         description: Local build number
         required: true
