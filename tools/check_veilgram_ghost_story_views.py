@@ -49,7 +49,8 @@ require(
 require(
     "manual-read-runtime",
     "VeilgramGhostModeRuntimePreferences.readOnInteractionOnly" in interactive_read
-    and "return EmptyDisposable" in interactive_read,
+    and "return postbox.installStoreMessageAction" in interactive_read
+    and "return\n" in interactive_read,
     "Automatic visible-message read action must be disabled in manual-read mode.",
 )
 require(

@@ -24,6 +24,17 @@ public enum VeilgramGhostModeRuntimePreferences {
             && defaults.bool(forKey: "\(prefix(accountPeerId: accountPeerId)).readReceipts")
     }
 
+    // Protocol receipts for expiring media and secret chats remain upstream-owned.
+    public static func shouldSuppressContentReceipt(
+        accountPeerId: Int64,
+        isCloudPeer: Bool,
+        requiresProtocolReceipt: Bool,
+        defaults: UserDefaults = .standard
+    ) -> Bool {
+        return isCloudPeer && !requiresProtocolReceipt
+            && suppressReadReceipts(accountPeerId: accountPeerId, defaults: defaults)
+    }
+
     public static func suppressTyping(
         accountPeerId: Int64,
         defaults: UserDefaults = .standard

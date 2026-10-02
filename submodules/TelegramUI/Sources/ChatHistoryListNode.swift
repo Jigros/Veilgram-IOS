@@ -38,6 +38,7 @@ import TextFormat
 import ChatNewThreadInfoItem
 import PhoneNumberFormat
 import Postbox
+import VeilgramLocalFeatures
 
 struct ChatTopVisibleMessageRange: Equatable {
     var lowerBound: MessageIndex
@@ -2527,6 +2528,13 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                 return
             }
             
+            if strongSelf.chatLocation.peerId?.namespace != Namespaces.Peer.SecretChat
+                && VeilgramGhostModeRuntimePreferences.readOnInteractionOnly(
+                    accountPeerId: strongSelf.context.account.peerId.toInt64()
+                ) {
+                return
+            }
+
             var apply = false
             let _ = previousMaxIncomingMessageIndexByNamespace.modify { dict in
                 let previousIndex = dict[messageIndex.id.namespace]
@@ -4663,6 +4671,25 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         }
     }
     
+    func readVisibleMessagesOnSendInteraction() {
+        guard self.chatLocation.peerId?.namespace != Namespaces.Peer.SecretChat,
+            self.canReadHistoryValue,
+            self.subject != .scheduledMessages,
+            !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory,
+            !self.context.account.isSupportUser,
+            VeilgramGhostModeRuntimePreferences.readOnInteractionOnly(
+                accountPeerId: self.context.account.peerId.toInt64()
+            ) else {
+            return
+        }
+        let _ = (self.maxVisibleIncomingMessageIndex.get()
+        |> take(1)
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] index in
+            guard let self else { return }
+            self.context.applyMaxReadIndex(for: self.chatLocation, contextHolder: self.chatLocationContextHolder, messageIndex: index)
+        })
+    }
+
     public func disconnect() {
         self.historyDisposable.set(nil)
     }

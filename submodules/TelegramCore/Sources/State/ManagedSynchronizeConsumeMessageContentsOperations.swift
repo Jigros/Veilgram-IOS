@@ -3,6 +3,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
+import VeilgramLocalFeatures
 
 
 private final class ManagedSynchronizeConsumeMessageContentsOperationHelper {
@@ -110,8 +111,31 @@ func managedSynchronizeConsumeMessageContentOperations(postbox: Postbox, network
 }
 
 private func synchronizeConsumeMessageContents(transaction: Transaction, network: Network, stateManager: AccountStateManager, peerId: PeerId, operation: SynchronizeConsumeMessageContentsOperation) -> Signal<Void, NoError> {
+    let isCloudPeer = peerId.namespace == Namespaces.Peer.CloudUser
+        || peerId.namespace == Namespaces.Peer.CloudGroup
+        || peerId.namespace == Namespaces.Peer.CloudChannel
+    let messageIds = operation.messageIds.filter { id in
+        let requiresProtocolReceipt: Bool
+        if let message = transaction.getMessage(id) {
+            requiresProtocolReceipt = message.attributes.contains { attribute in
+                attribute is AutoremoveTimeoutMessageAttribute || attribute is AutoclearTimeoutMessageAttribute
+            }
+        } else {
+            // An unavailable ordinary message must not leak a deferred receipt.
+            requiresProtocolReceipt = false
+        }
+        return !VeilgramGhostModeRuntimePreferences.shouldSuppressContentReceipt(
+            accountPeerId: stateManager.accountPeerId.toInt64(),
+            isCloudPeer: isCloudPeer,
+            requiresProtocolReceipt: requiresProtocolReceipt
+        )
+    }
+    guard !messageIds.isEmpty else {
+        // Complete the operation so disabling Ghost later cannot replay these receipts.
+        return .complete()
+    }
     if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
-        return network.request(Api.functions.messages.readMessageContents(id: operation.messageIds.map { $0.id }))
+        return network.request(Api.functions.messages.readMessageContents(id: messageIds.map { $0.id }))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.messages.AffectedMessages?, NoError> in
             return .single(nil)
@@ -128,7 +152,7 @@ private func synchronizeConsumeMessageContents(transaction: Transaction, network
         }
     } else if peerId.namespace == Namespaces.Peer.CloudChannel {
         if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
-            return network.request(Api.functions.channels.readMessageContents(channel: inputChannel, id: operation.messageIds.map { $0.id }))
+            return network.request(Api.functions.channels.readMessageContents(channel: inputChannel, id: messageIds.map { $0.id }))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.Bool?, NoError> in
                 return .single(nil)

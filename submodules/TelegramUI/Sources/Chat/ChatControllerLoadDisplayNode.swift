@@ -1117,6 +1117,9 @@ extension ChatControllerImpl {
                         }
                         if case .scheduledMessages = strongSelf.presentationInterfaceState.subject {
                         } else {
+                            if !shouldDivert && scheduleTime == nil && messageIds.contains(where: { $0 != nil }) {
+                                strongSelf.chatDisplayNode.historyNode.readVisibleMessagesOnSendInteraction()
+                            }
                             strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                             
                             if shouldOpenScheduledMessages {

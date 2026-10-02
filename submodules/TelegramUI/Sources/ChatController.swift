@@ -9053,10 +9053,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             if commit || !isScheduledMessages {
                 self.commitPurposefulAction()
+                let isImmediateInteraction = !messages.isEmpty && !messages.contains { message in
+                    message.attributes.contains { $0 is OutgoingScheduleInfoMessageAttribute }
+                }
                 
                 let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: self.transformEnqueueMessages(messages, postpone: postpone))
                 |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
                     if let strongSelf = self, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
+                        if isImmediateInteraction {
+                            strongSelf.chatDisplayNode.historyNode.readVisibleMessagesOnSendInteraction()
+                        }
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                     }
                 })

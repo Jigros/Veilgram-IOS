@@ -36,6 +36,11 @@ on:
       - "tools/check_veilgram_ad_render_stability.py"
       - "tools/check_veilgram_archive_ui.py"
       - "tools/check_veilgram_ghost_story_views.py"
+      - "tools/check_veilgram_ghost_receipts.py"
+      - "tools/test_veilgram_ghost_receipts.swift"
+      - "submodules/TelegramCore/Sources/State/ManagedSynchronizeConsumeMessageContentsOperations.swift"
+      - "submodules/TelegramUI/Sources/ChatHistoryListNode.swift"
+      - "submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift"
       - "tools/check_veilgram_local_premium.py"
       - "tools/check_veilgram_send_confirmation.py"
       - "tools/check_veilgram_native_scheduling.py"
@@ -142,6 +147,13 @@ jobs:
             submodules/TelegramCore/Sources/TelegramEngine/Messages/InstallInteractiveReadMessagesAction.swift \
             submodules/TelegramUI/Components/Stories/StoryContainerScreen/Sources/OpenStories.swift \
             submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift
+
+      - name: Check Ghost content receipts and interaction reads
+        run: |
+          python3 tools/check_veilgram_ghost_receipts.py
+          xcrun swiftc -warnings-as-errors submodules/VeilgramLocalFeatures/Sources/VeilgramGhostModeRuntimePreferences.swift tools/test_veilgram_ghost_receipts.swift -o "$RUNNER_TEMP/test-ghost-receipts"
+          "$RUNNER_TEMP/test-ghost-receipts"
+          xcrun swiftc -parse submodules/TelegramCore/Sources/State/ManagedSynchronizeConsumeMessageContentsOperations.swift submodules/TelegramUI/Sources/ChatHistoryListNode.swift submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
 
       - name: Check Local Premium presentation boundary
         shell: bash
