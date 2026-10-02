@@ -17,6 +17,7 @@ on:
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalArchiveDetailController.swift"
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalTransferController.swift"
       - "tools/test_veilgram_archive_runtime_batch.swift"
+      - "tools/test_veilgram_local_core_integration.swift"
       - "tools/check_veilgram_archive_delete_coverage.py"
       - ".github/workflows/archive-runtime-reliability.yml"
   workflow_dispatch:
