@@ -10,6 +10,7 @@ on:
       - "submodules/Postbox/Sources/MessageHistoryTable.swift"
       - "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift"
       - "submodules/TelegramCore/Sources/State/HistoryViewStateValidation.swift"
+      - "submodules/TelegramCore/Sources/State/ManagedAccountPresence.swift"
       - "submodules/TelegramCore/Sources/State/ManagedSynchronizeViewStoriesOperations.swift"
       - "submodules/TelegramCore/Sources/State/VeilgramArchiveStateAdapter.swift"
       - "submodules/TelegramCore/Sources/TelegramEngine/Peers/UpdateCachedPeerData.swift"
@@ -92,6 +93,7 @@ jobs:
           set -euo pipefail
           python3 tools/check_veilgram_ghost_story_views.py
           xcrun swiftc -parse \
+            submodules/TelegramCore/Sources/State/ManagedAccountPresence.swift \
             submodules/TelegramCore/Sources/State/ManagedSynchronizeViewStoriesOperations.swift \
             submodules/TelegramCore/Sources/TelegramEngine/Messages/Stories.swift \
             submodules/TelegramCore/Sources/TelegramEngine/Messages/InstallInteractiveReadMessagesAction.swift \
