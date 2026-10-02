@@ -792,7 +792,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                 let labelNode = ASTextNode()
                 labelNode.isUserInteractionEnabled = false
                 labelNode.attributedText = NSAttributedString(
-                    string: renderDecision.isAdvertisement ? "Likely ad" : "Filter: \(renderDecision.label)",
+                    string: renderDecision.isAdvertisement ? renderDecision.label : "Filter: \(renderDecision.label)",
                     attributes: [
                         .font: UIFont.systemFont(ofSize: 10.0, weight: .semibold),
                         .foregroundColor: renderDecision.isAdvertisement ? UIColor.systemOrange : UIColor.systemPurple
