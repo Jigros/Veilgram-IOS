@@ -1428,6 +1428,45 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             f(.default)
                         })))
                     }
+
+                    if let messageNode {
+                        actions.append(.action(ContextMenuActionItem(
+                            text: "Message Shot",
+                            icon: { theme in
+                                return generateTintedImage(
+                                    image: UIImage(bundleImageName: "Chat/Context Menu/Share"),
+                                    color: theme.actionSheet.primaryTextColor
+                                )
+                            },
+                            action: { [weak messageNode] controller, completion in
+                                controller?.dismiss(completion: {
+                                    guard let messageNode else {
+                                        return
+                                    }
+                                    let view = messageNode.view
+                                    let bounds = view.bounds.integral
+                                    guard bounds.width > 0.0, bounds.height > 0.0 else {
+                                        return
+                                    }
+                                    let renderer = UIGraphicsImageRenderer(bounds: bounds)
+                                    let image = renderer.image { context in
+                                        if !view.drawHierarchy(in: bounds, afterScreenUpdates: true) {
+                                            view.layer.render(in: context.cgContext)
+                                        }
+                                    }
+                                    let activityController = UIActivityViewController(
+                                        activityItems: [image],
+                                        applicationActivities: nil
+                                    )
+                                    controllerInteraction.navigationController()?.present(
+                                        activityController,
+                                        animated: true
+                                    )
+                                })
+                                completion(.default)
+                            }
+                        )))
+                    }
                 }
                 
                 var showTranslateIfTopical = false
