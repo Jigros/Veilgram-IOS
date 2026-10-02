@@ -322,10 +322,15 @@ private func synchronizeMarkAllUnseenReactions(transaction: Transaction, postbox
         }
     }
     
-    let signal = network.request(Api.functions.messages.readReactions(flags: flags, peer: inputPeer, topMsgId: topMsgId, savedPeerId: savedPeerId))
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, Bool> in
-        return .fail(true)
+    let signal: Signal<Void, Bool> = deferred { () -> Signal<Api.messages.AffectedHistory?, Bool> in
+        if VeilgramGhostModeRuntimePreferences.suppressReadReceipts(accountPeerId: stateManager.accountPeerId.toInt64()) {
+            return .single(nil)
+        }
+        return network.request(Api.functions.messages.readReactions(flags: flags, peer: inputPeer, topMsgId: topMsgId, savedPeerId: savedPeerId))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, Bool> in
+            return .fail(true)
+        }
     }
     |> mapToSignal { result -> Signal<Void, Bool> in
         if let result = result {
@@ -425,10 +430,15 @@ private func synchronizeMarkAllUnseenPollVotes(transaction: Transaction, postbox
     }
     let _ = savedPeerId
     
-    let signal = network.request(Api.functions.messages.readPollVotes(flags: flags, peer: inputPeer, topMsgId: topMsgId))
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, Bool> in
-        return .fail(true)
+    let signal: Signal<Void, Bool> = deferred { () -> Signal<Api.messages.AffectedHistory?, Bool> in
+        if VeilgramGhostModeRuntimePreferences.suppressReadReceipts(accountPeerId: stateManager.accountPeerId.toInt64()) {
+            return .single(nil)
+        }
+        return network.request(Api.functions.messages.readPollVotes(flags: flags, peer: inputPeer, topMsgId: topMsgId))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, Bool> in
+            return .fail(true)
+        }
     }
     |> mapToSignal { result -> Signal<Void, Bool> in
         if let result = result {

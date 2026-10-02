@@ -38,3 +38,5 @@ for name in ["synchronizeMarkAllUnseen", "synchronizeMarkAllUnseenReactions", "s
 all_chats = (root / "submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkAllChatsAsRead.swift").read_text()
 assert all_chats.index("suppressReadReceipts") < all_chats.index("channels.readHistory")
 print("PASS: mention/reaction completion, six forum RPCs, live-location and bulk read boundaries")
+assert bulk.count("let signal: Signal<Void, Bool> = deferred") == 2
+print("PASS: bulk reaction/poll retry subscriptions recheck live Ghost state")
