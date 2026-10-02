@@ -6,6 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 prefs = (ROOT / "submodules/VeilgramLocalFeatures/Sources/VeilgramLocalPremiumRuntimePreferences.swift").read_text(encoding="utf-8")
 context = (ROOT / "submodules/TelegramUI/Sources/AccountContext.swift").read_text(encoding="utf-8")
 settings = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift").read_text(encoding="utf-8")
+account_context_protocol = (ROOT / "submodules/AccountContext/Sources/AccountContext.swift").read_text(encoding="utf-8")
+theme_settings = (ROOT / "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift").read_text(encoding="utf-8")
 
 checks = []
 
@@ -21,9 +23,16 @@ require(
 require(
     "account-context-routing",
     "VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium" in context
-    and "public private(set) var isPremium" in context
-    and "localPremiumObserver" in context,
-    "AccountContext.isPremium must react to the local presentation preference.",
+    and "public private(set) var isPremiumPresentation" in context
+    and "localPremiumObserver" in context
+    and "var isPremiumPresentation: Bool { get }" in account_context_protocol,
+    "AccountContext must expose a separate reactive presentation-only Premium state.",
+)
+require(
+    "server-premium-stays-real",
+    "self.isPremium = isPremium" in context
+    and "self.isPremiumPresentation = VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium" in context,
+    "Existing AccountContext.isPremium must remain the real Telegram entitlement.",
 )
 require(
     "server-limits-stay-server-backed",
@@ -42,6 +51,12 @@ require(
     "Local Premium UI" in settings
     and "VeilgramLocalPremiumRuntimePreferences.setEnabled" in settings,
     "Veilgram settings must expose the local presentation toggle.",
+)
+require(
+    "local-app-icons",
+    theme_settings.count("context.isPremiumPresentation") >= 2
+    and "requestSetAlternateIconName" in theme_settings,
+    "Premium app icons are client-local and must use the presentation state.",
 )
 
 failed = [x for x in checks if not x[1]]
