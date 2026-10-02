@@ -1,6 +1,10 @@
 import Foundation
 
 public enum VeilgramGhostModeRuntimePreferences {
+    public static let peekOnlineNotification = Notification.Name(
+        "org.veilgram.ghost.peek-online"
+    )
+
     private static func prefix(accountPeerId: Int64) -> String {
         return "veilgram.ghost.runtime.v1.\(accountPeerId)"
     }
@@ -98,6 +102,13 @@ public enum VeilgramGhostModeRuntimePreferences {
         defaults: UserDefaults = .standard
     ) {
         defaults.set(enabled, forKey: "\(prefix(accountPeerId: accountPeerId)).readOnInteractionOnly")
+    }
+
+    public static func requestPeekOnline(accountPeerId: Int64) {
+        NotificationCenter.default.post(
+            name: peekOnlineNotification,
+            object: NSNumber(value: accountPeerId)
+        )
     }
 
     public static func initializeDefaultsIfNeeded(
