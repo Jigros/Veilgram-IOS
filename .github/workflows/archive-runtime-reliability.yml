@@ -17,6 +17,7 @@ on:
       - "submodules/TelegramCore/Sources/TelegramEngine/Messages/Stories.swift"
       - "submodules/TelegramCore/Sources/TelegramEngine/Messages/InstallInteractiveReadMessagesAction.swift"
       - "submodules/TelegramUI/Sources/AppDelegate.swift"
+      - "submodules/TelegramUI/Components/Stories/StoryContainerScreen/Sources/OpenStories.swift"
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalArchiveController.swift"
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalArchiveDetailController.swift"
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalTransferController.swift"
@@ -97,6 +98,7 @@ jobs:
             submodules/TelegramCore/Sources/State/ManagedSynchronizeViewStoriesOperations.swift \
             submodules/TelegramCore/Sources/TelegramEngine/Messages/Stories.swift \
             submodules/TelegramCore/Sources/TelegramEngine/Messages/InstallInteractiveReadMessagesAction.swift \
+            submodules/TelegramUI/Components/Stories/StoryContainerScreen/Sources/OpenStories.swift \
             submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift
 
   ios-build:
