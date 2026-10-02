@@ -762,7 +762,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
             self.veilgramEditHistoryButtonNode = nil
         }
 
-        let renderDecision = (item as? ChatMessageItemImpl)?.veilgramRenderDecision
+        let renderDecision = item.veilgramRenderDecision
 
         self.veilgramRenderLabelNode?.removeFromSupernode()
         self.veilgramRenderLabelNode = nil
