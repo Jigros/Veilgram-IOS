@@ -128,7 +128,9 @@ public enum VeilgramMessageArchiveEngine {
         guard isEligible(eligibility) else { return false }
         try validate(message)
         if let index = document.messages.firstIndex(where: { $0.key == message.key }) {
-            guard document.messages[index] != message else { return false }
+            let current = document.messages[index]
+            guard current != message else { return false }
+            guard message.archivedAt >= current.archivedAt else { return false }
             document.messages[index] = message
             return true
         }
@@ -262,7 +264,10 @@ public enum VeilgramEditHistoryEngine {
         guard eligibility.isEligibleForLocalRetention else { return false }
         try validate(revision)
         if let index = document.records.firstIndex(where: { $0.message == key }) {
-            guard document.records[index].revisions.last != revision else { return false }
+            if let lastRevision = document.records[index].revisions.last {
+                guard lastRevision != revision else { return false }
+                guard revision.timestamp >= lastRevision.timestamp else { return false }
+            }
             document.records[index].revisions.append(revision)
             if document.records[index].revisions.count > maximumRevisionsPerMessage {
                 document.records[index].revisions.removeFirst(
