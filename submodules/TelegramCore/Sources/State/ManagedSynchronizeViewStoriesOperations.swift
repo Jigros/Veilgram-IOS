@@ -3,6 +3,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
+import VeilgramLocalFeatures
 
 private final class ManagedSynchronizeViewStoriesOperationsHelper {
     var operationDisposables: [PeerId: (Int32, Disposable)] = [:]
@@ -85,6 +86,11 @@ func managedSynchronizeViewStoriesOperations(postbox: Postbox, network: Network,
             
             for (entry, disposable) in beginOperations {
                 let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
+                    if VeilgramGhostModeRuntimePreferences.suppressStoryViews(
+                        accountPeerId: stateManager.accountPeerId.toInt64()
+                    ) {
+                        return .complete()
+                    }
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeViewStoriesOperation {
                             if let peer = transaction.getPeer(entry.peerId) {
