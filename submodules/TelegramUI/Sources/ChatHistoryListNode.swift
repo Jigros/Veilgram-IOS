@@ -4695,7 +4695,11 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     }
     
     private func updateReadHistoryActions() {
-        let canRead = self.canReadHistoryValue && self.isScrollAtBottomPosition
+        let suppressAutomaticRead = self.chatLocation.peerId?.namespace != Namespaces.Peer.SecretChat
+            && VeilgramGhostModeRuntimePreferences.readOnInteractionOnly(
+                accountPeerId: self.context.account.peerId.toInt64()
+            )
+        let canRead = self.canReadHistoryValue && self.isScrollAtBottomPosition && !suppressAutomaticRead
         
         if canRead != (self.interactiveReadActionDisposable != nil) {
             if let interactiveReadActionDisposable = self.interactiveReadActionDisposable {

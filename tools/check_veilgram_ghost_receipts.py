@@ -13,3 +13,9 @@ assert read.index("readOnInteractionOnly") < read.index("previousMaxIncomingMess
 assert "readVisibleMessagesOnSendInteraction()" in send
 assert "!shouldDivert && scheduleTime == nil && messageIds.contains" in send
 print("PASS: receipt queue filtering and automatic/immediate-send read paths")
+thread = (root / "submodules/TelegramCore/Sources/TelegramEngine/Messages/ReplyThreadHistory.swift").read_text()
+apply = thread[thread.index("func applyMaxReadIndex(messageIndex:"):thread.index("public class ReplyThreadHistoryContext")]
+assert apply.index("VeilgramGhostModeRuntimePreferences.suppressReadReceipts") < apply.index("Api.functions.messages.readSavedHistory")
+assert apply.index("VeilgramGhostModeRuntimePreferences.suppressReadReceipts") < apply.index("Api.functions.messages.readDiscussion")
+assert "&& !suppressAutomaticRead" in history
+print("PASS: thread read RPC boundary and read-on-interaction arrival/reaction listeners")

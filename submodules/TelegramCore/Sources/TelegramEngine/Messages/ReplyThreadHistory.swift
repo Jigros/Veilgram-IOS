@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import TelegramApi
+import VeilgramLocalFeatures
 
 private struct DiscussionMessage {
     var messageId: MessageId
@@ -474,6 +475,13 @@ private class ReplyThreadHistoryContextImpl {
                         revalidate = true
                     }
                 }
+            }
+
+            if VeilgramGhostModeRuntimePreferences.suppressReadReceipts(
+                accountPeerId: strongSelf.account.peerId.toInt64()
+            ) {
+                strongSelf.readDisposable.set(nil)
+                return
             }
 
             if let subPeerId {

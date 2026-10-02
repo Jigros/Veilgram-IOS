@@ -37,6 +37,7 @@ on:
       - "tools/check_veilgram_archive_ui.py"
       - "tools/check_veilgram_ghost_story_views.py"
       - "tools/check_veilgram_ghost_receipts.py"
+      - "submodules/TelegramCore/Sources/TelegramEngine/Messages/ReplyThreadHistory.swift"
       - "tools/test_veilgram_ghost_receipts.swift"
       - "submodules/TelegramCore/Sources/State/ManagedSynchronizeConsumeMessageContentsOperations.swift"
       - "submodules/TelegramUI/Sources/ChatHistoryListNode.swift"
@@ -153,7 +154,7 @@ jobs:
           python3 tools/check_veilgram_ghost_receipts.py
           xcrun swiftc -warnings-as-errors submodules/VeilgramLocalFeatures/Sources/VeilgramGhostModeRuntimePreferences.swift tools/test_veilgram_ghost_receipts.swift -o "$RUNNER_TEMP/test-ghost-receipts"
           "$RUNNER_TEMP/test-ghost-receipts"
-          xcrun swiftc -parse submodules/TelegramCore/Sources/State/ManagedSynchronizeConsumeMessageContentsOperations.swift submodules/TelegramUI/Sources/ChatHistoryListNode.swift submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
+          xcrun swiftc -parse submodules/TelegramCore/Sources/TelegramEngine/Messages/ReplyThreadHistory.swift submodules/TelegramCore/Sources/State/ManagedSynchronizeConsumeMessageContentsOperations.swift submodules/TelegramUI/Sources/ChatHistoryListNode.swift submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
 
       - name: Check Local Premium presentation boundary
         shell: bash
