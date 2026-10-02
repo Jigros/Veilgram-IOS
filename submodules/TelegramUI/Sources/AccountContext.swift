@@ -24,6 +24,7 @@ import DCTAnimationCacheImpl
 import DCTMultiAnimationRendererImpl
 import AppBundle
 import DirectMediaImageCache
+import VeilgramLocalFeatures
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -266,6 +267,8 @@ public final class AccountContextImpl: AccountContext {
     public private(set) var audioTranscriptionTrial: AudioTranscription.TrialState
     
     public private(set) var isPremium: Bool
+    private var serverIsPremium: Bool = false
+    private var localPremiumObserver: NSObjectProtocol?
     
     private var isFrozenDisposable: Disposable?
     public private(set) var isFrozen: Bool
@@ -283,8 +286,27 @@ public final class AccountContextImpl: AccountContext {
         self.userLimits = EngineConfiguration.UserLimits(UserLimitsConfiguration.defaultValue)
         self.peerNameColors = PeerNameColors.with(availableReplyColors: availableReplyColors, availableProfileColors: availableProfileColors)
         self.audioTranscriptionTrial = AudioTranscription.TrialState.defaultValue
-        self.isPremium = false
+        self.isPremium = VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+            serverIsPremium: false,
+            accountPeerId: account.peerId.toInt64()
+        )
         self.isFrozen = false
+
+        self.localPremiumObserver = NotificationCenter.default.addObserver(
+            forName: VeilgramLocalPremiumRuntimePreferences.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self,
+                  let accountValue = notification.object as? NSNumber,
+                  accountValue.int64Value == self.account.peerId.toInt64() else {
+                return
+            }
+            self.isPremium = VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+                serverIsPremium: self.serverIsPremium,
+                accountPeerId: self.account.peerId.toInt64()
+            )
+        }
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
@@ -449,7 +471,11 @@ public final class AccountContextImpl: AccountContext {
             guard let self = self else {
                 return
             }
-            self.isPremium = isPremium
+            self.serverIsPremium = isPremium
+            self.isPremium = VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+                serverIsPremium: isPremium,
+                accountPeerId: self.account.peerId.toInt64()
+            )
             self.userLimits = userLimits
         })
         
@@ -515,6 +541,9 @@ public final class AccountContextImpl: AccountContext {
         self.userLimitsConfigurationDisposable?.dispose()
         self.peerNameColorsConfigurationDisposable?.dispose()
         self.isFrozenDisposable?.dispose()
+        if let localPremiumObserver {
+            NotificationCenter.default.removeObserver(localPremiumObserver)
+        }
     }
     
     public func storeSecureIdPassword(password: String) {
