@@ -6,7 +6,7 @@ import AccountContext
 import TelegramPresentationData
 import VeilgramLocalFeatures
 
-final class VeilgramLocalArchiveDetailController: ViewController, UITableViewDataSource {
+final class VeilgramLocalArchiveDetailController: ViewController, UITableViewDataSource, UITableViewDelegate, UIDocumentInteractionControllerDelegate {
     enum Mode {
         case messages
         case edits
@@ -26,6 +26,7 @@ final class VeilgramLocalArchiveDetailController: ViewController, UITableViewDat
     private var edits: [EditRow] = []
     private var media: [VeilgramMediaItem] = []
     private var loadError: String?
+    private var documentInteractionController: UIDocumentInteractionController?
 
     init(context: AccountContext, mode: Mode) {
         self.accountContext = context
@@ -66,6 +67,7 @@ final class VeilgramLocalArchiveDetailController: ViewController, UITableViewDat
 
         self.tableView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         self.tableView.dataSource = self
+        self.tableView.delegate = self
         self.tableView.backgroundColor = .systemGroupedBackground
         self.tableView.rowHeight = UITableView.automaticDimension
         self.displayNode.view.addSubview(self.tableView)
@@ -151,8 +153,67 @@ final class VeilgramLocalArchiveDetailController: ViewController, UITableViewDat
             let availability = item.availability == .available ? "available" : "unavailable"
             cell.textLabel?.text = item.relativePath ?? "Media unavailable"
             cell.detailTextLabel?.text = "peer \(item.key.peerId) • msg \(item.key.messageId) • \(availability) • \(Self.byteString(item.byteCount))"
+            if item.availability == .available {
+                cell.selectionStyle = .default
+                cell.accessoryType = .disclosureIndicator
+            }
         }
         return cell
+    }
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        guard indexPath.section == 0,
+              self.mode == .media,
+              !self.media.isEmpty,
+              indexPath.row < self.media.count else {
+            return
+        }
+
+        let item = self.media[indexPath.row]
+        guard item.availability == .available else {
+            return
+        }
+
+        do {
+            let store = try VeilgramArchiveStoreAPI(
+                accountId: self.accountContext.account.peerId.toInt64()
+            )
+            guard let url = try store.archivedMediaURL(for: item) else {
+                self.loadError = "Archived media bytes are missing or no longer match their metadata."
+                self.tableView.reloadData()
+                return
+            }
+
+            let controller = UIDocumentInteractionController(url: url)
+            controller.delegate = self
+            self.documentInteractionController = controller
+            if !controller.presentPreview(animated: true) {
+                self.documentInteractionController = nil
+                let activity = UIActivityViewController(
+                    activityItems: [url],
+                    applicationActivities: nil
+                )
+                self.present(activity, animated: true)
+            }
+        } catch {
+            self.loadError = String(describing: error)
+            self.tableView.reloadData()
+        }
+    }
+
+    func documentInteractionControllerViewControllerForPreview(
+        _ controller: UIDocumentInteractionController
+    ) -> UIViewController {
+        return self
+    }
+
+    func documentInteractionControllerDidEndPreview(
+        _ controller: UIDocumentInteractionController
+    ) {
+        if self.documentInteractionController === controller {
+            self.documentInteractionController = nil
+        }
     }
 
     private func reload() {
