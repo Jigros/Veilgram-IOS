@@ -1,4 +1,5 @@
 import Foundation
+import VeilgramLocalFeatures
 import TelegramApi
 import Postbox
 import SwiftSignalKit
@@ -117,6 +118,12 @@ private enum GetUnseenIdsError {
 }
 
 private func synchronizeMarkAllUnseen(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, operation: SynchronizeMarkAllUnseenPersonalMessagesOperation) -> Signal<Void, NoError> {
+    if peerId.namespace != Namespaces.Peer.SecretChat
+        && VeilgramGhostModeRuntimePreferences.suppressReadReceipts(accountPeerId: stateManager.accountPeerId.toInt64()) {
+        // The local mark-all transaction already ran; consume the queued network operation.
+        return .complete()
+    }
+
     guard let inputPeer = transaction.getPeer(peerId).flatMap(apiInputPeer) else {
         return .complete()
     }
@@ -143,6 +150,9 @@ private func synchronizeMarkAllUnseen(transaction: Transaction, postbox: Postbox
             let filteredIds = ids.filter { $0.id <= operation.maxId }
             if filteredIds.isEmpty {
                 return .single(ids.min()?.id)
+            }
+            if VeilgramGhostModeRuntimePreferences.suppressReadReceipts(accountPeerId: stateManager.accountPeerId.toInt64()) {
+                return .single(nil)
             }
             if peerId.namespace == Namespaces.Peer.CloudChannel {
                 guard let inputChannel = inputChannel else {
@@ -284,6 +294,12 @@ func managedSynchronizeMarkAllUnseenReactionsOperations(postbox: Postbox, networ
 }
 
 private func synchronizeMarkAllUnseenReactions(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, operation: SynchronizeMarkAllUnseenReactionsOperation) -> Signal<Void, NoError> {
+    if peerId.namespace != Namespaces.Peer.SecretChat
+        && VeilgramGhostModeRuntimePreferences.suppressReadReceipts(accountPeerId: stateManager.accountPeerId.toInt64()) {
+        // The local mark-all transaction already ran; consume the queued network operation.
+        return .complete()
+    }
+
     guard let peer = transaction.getPeer(peerId) else {
         return .complete()
     }
@@ -380,6 +396,12 @@ func managedSynchronizeMarkAllUnseenPollVotesOperations(postbox: Postbox, networ
 }
 
 private func synchronizeMarkAllUnseenPollVotes(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, operation: SynchronizeMarkAllUnseenReactionsOperation) -> Signal<Void, NoError> {
+    if peerId.namespace != Namespaces.Peer.SecretChat
+        && VeilgramGhostModeRuntimePreferences.suppressReadReceipts(accountPeerId: stateManager.accountPeerId.toInt64()) {
+        // The local mark-all transaction already ran; consume the queued network operation.
+        return .complete()
+    }
+
     guard let peer = transaction.getPeer(peerId) else {
         return .complete()
     }

@@ -19,3 +19,22 @@ assert apply.index("VeilgramGhostModeRuntimePreferences.suppressReadReceipts") <
 assert apply.index("VeilgramGhostModeRuntimePreferences.suppressReadReceipts") < apply.index("Api.functions.messages.readDiscussion")
 assert "&& !suppressAutomaticRead" in history
 print("PASS: thread read RPC boundary and read-on-interaction arrival/reaction listeners")
+
+personal = (root / "submodules/TelegramCore/Sources/State/ManagedConsumePersonalMessagesActions.swift").read_text()
+for name in ["synchronizeConsumeMessageContents", "synchronizeReadMessageReactionsOrPollVotes"]:
+    body = personal[personal.index("private func " + name + "("):]
+    assert body.index("suppressGhostPersonalRead") < body.index("network.request")
+assert "consumed: true, pending: false" in personal
+assert "action: nil" in personal and "tags.remove(.unseenReaction)" in personal
+forum = (root / "submodules/TelegramCore/Sources/TelegramEngine/Messages/ApplyMaxReadIndexInteractively.swift").read_text()
+assert forum.count("if !viewTracker.veilgramSuppressReadReceipts {") == 6
+tracker = (root / "submodules/TelegramCore/Sources/State/AccountViewTracker.swift").read_text()
+live = tracker[tracker.index("public func updateSeenLiveLocationForMessageIds"):]
+assert live.index("if self.veilgramSuppressReadReceipts") < live.index("readMessageContents")
+bulk = (root / "submodules/TelegramCore/Sources/State/ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift").read_text()
+for name in ["synchronizeMarkAllUnseen", "synchronizeMarkAllUnseenReactions", "synchronizeMarkAllUnseenPollVotes"]:
+    body = bulk[bulk.index("private func " + name + "("):]
+    assert body.index("suppressReadReceipts") < body.index("network.request")
+all_chats = (root / "submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkAllChatsAsRead.swift").read_text()
+assert all_chats.index("suppressReadReceipts") < all_chats.index("channels.readHistory")
+print("PASS: mention/reaction completion, six forum RPCs, live-location and bulk read boundaries")

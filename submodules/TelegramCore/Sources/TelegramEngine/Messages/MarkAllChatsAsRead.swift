@@ -1,4 +1,5 @@
 import Foundation
+import VeilgramLocalFeatures
 import TelegramApi
 import Postbox
 import SwiftSignalKit
@@ -17,6 +18,9 @@ func _internal_markAllChatsAsRead(postbox: Postbox, network: Network, stateManag
         }
         
         return postbox.transaction { transaction -> Signal<Void, NoError> in
+            if VeilgramGhostModeRuntimePreferences.suppressReadReceipts(accountPeerId: stateManager.accountPeerId.toInt64()) {
+                return .complete()
+            }
             var signals: [Signal<Void, NoError>] = []
             for peer in result {
                 switch peer {

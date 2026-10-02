@@ -4,6 +4,7 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 import CryptoUtils
+import VeilgramLocalFeatures
 
 private struct Md5Hash: Hashable {
     public let data: Data
@@ -251,7 +252,60 @@ func managedReadReactionOrPollVoteActions(postbox: Postbox, network: Network, st
     }
 }
 
+// Complete local state without leaving a receipt to replay after Ghost is disabled.
+private func completeGhostPersonalReadAction(postbox: Postbox, id: MessageId, isReaction: Bool) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Void in
+        if isReaction {
+            transaction.setPendingMessageAction(type: .readReactionOrPollVote, id: id, action: nil)
+        } else {
+            transaction.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: id, action: nil)
+        }
+        transaction.updateMessage(id, update: { message in
+            var attributes = message.attributes
+            var media = message.media
+            var tags = message.tags
+            for i in 0 ..< attributes.count {
+                if isReaction, let attribute = attributes[i] as? ReactionsMessageAttribute {
+                    attributes[i] = attribute.withAllSeen()
+                } else if !isReaction, attributes[i] is ConsumablePersonalMentionMessageAttribute {
+                    attributes[i] = ConsumablePersonalMentionMessageAttribute(consumed: true, pending: false)
+                }
+            }
+            if isReaction {
+                for i in 0 ..< media.count {
+                    if let poll = media[i] as? TelegramMediaPoll {
+                        media[i] = poll.withoutUnreadResults()
+                    }
+                }
+                tags.remove(.unseenReaction)
+                tags.remove(.unseenPollVote)
+            } else {
+                tags.remove(.unseenPersonalMessage)
+            }
+            return .update(StoreMessage(id: message.id, customStableId: nil, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, threadId: message.threadId, timestamp: message.timestamp, flags: StoreMessageFlags(message.flags), tags: tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: message.author?.id, text: message.text, attributes: attributes, media: media))
+        })
+    }
+}
+
+private func suppressGhostPersonalRead(transaction: Transaction, stateManager: AccountStateManager, id: MessageId) -> Bool {
+    let isCloudPeer = id.peerId.namespace == Namespaces.Peer.CloudUser
+        || id.peerId.namespace == Namespaces.Peer.CloudGroup
+        || id.peerId.namespace == Namespaces.Peer.CloudChannel
+    let requiresProtocolReceipt = transaction.getMessage(id)?.attributes.contains { attribute in
+        attribute is AutoremoveTimeoutMessageAttribute || attribute is AutoclearTimeoutMessageAttribute
+    } ?? false
+    return VeilgramGhostModeRuntimePreferences.shouldSuppressContentReceipt(
+        accountPeerId: stateManager.accountPeerId.toInt64(),
+        isCloudPeer: isCloudPeer,
+        requiresProtocolReceipt: requiresProtocolReceipt
+    )
+}
+
 private func synchronizeConsumeMessageContents(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, id: MessageId) -> Signal<Void, NoError> {
+    if suppressGhostPersonalRead(transaction: transaction, stateManager: stateManager, id: id) {
+        return completeGhostPersonalReadAction(postbox: postbox, id: id, isReaction: false)
+    }
+
     if id.peerId.namespace == Namespaces.Peer.CloudUser || id.peerId.namespace == Namespaces.Peer.CloudGroup {
         return network.request(Api.functions.messages.readMessageContents(id: [id.id]))
             |> map(Optional.init)
@@ -321,6 +375,10 @@ private func synchronizeConsumeMessageContents(transaction: Transaction, postbox
 }
 
 private func synchronizeReadMessageReactionsOrPollVotes(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, id: MessageId) -> Signal<Void, NoError> {
+    if suppressGhostPersonalRead(transaction: transaction, stateManager: stateManager, id: id) {
+        return completeGhostPersonalReadAction(postbox: postbox, id: id, isReaction: true)
+    }
+
     if id.peerId.namespace == Namespaces.Peer.CloudUser || id.peerId.namespace == Namespaces.Peer.CloudGroup {
         return network.request(Api.functions.messages.readMessageContents(id: [id.id]))
         |> map(Optional.init)

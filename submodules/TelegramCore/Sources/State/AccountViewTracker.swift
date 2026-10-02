@@ -1,4 +1,5 @@
 import Foundation
+import VeilgramLocalFeatures
 import Postbox
 import SwiftSignalKit
 import TelegramApi
@@ -283,6 +284,11 @@ private struct ViewCountContextState {
 }
 
 public final class AccountViewTracker {
+    // Read live account-scoped settings at dispatch time, including explicit forum actions.
+    var veilgramSuppressReadReceipts: Bool {
+        return VeilgramGhostModeRuntimePreferences.suppressReadReceipts(accountPeerId: self.accountPeerId.toInt64())
+    }
+
     weak var account: Account?
     private let accountPeerId: PeerId
     private let queue = Queue()
@@ -944,6 +950,9 @@ public final class AccountViewTracker {
     
     public func updateSeenLiveLocationForMessageIds(messageIds: Set<MessageId>) {
         self.queue.async {
+            if self.veilgramSuppressReadReceipts {
+                return
+            }
             var addedMessageIds: [MessageId] = []
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for messageId in messageIds {
@@ -961,6 +970,9 @@ public final class AccountViewTracker {
                     if let account = self.account {
                         let signal = (account.postbox.transaction { transaction -> Signal<Void, NoError> in
                             if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                                if self.veilgramSuppressReadReceipts {
+                                    return .complete()
+                                }
                                 let request: Signal<Bool, MTRpcError>
                                 switch inputPeer {
                                 case .inputPeerChat, .inputPeerSelf, .inputPeerUser:
