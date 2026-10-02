@@ -56,6 +56,14 @@ public enum VeilgramGhostModeRuntimePreferences {
             && defaults.bool(forKey: "\(prefix(accountPeerId: accountPeerId)).readOnInteractionOnly")
     }
 
+    public static func warnBeforeVisibleStoryViews(
+        accountPeerId: Int64,
+        defaults: UserDefaults = .standard
+    ) -> Bool {
+        return isEnabled(accountPeerId: accountPeerId, defaults: defaults)
+            && defaults.bool(forKey: "\(prefix(accountPeerId: accountPeerId)).warnBeforeVisibleStoryViews")
+    }
+
     public static func setEnabled(
         _ enabled: Bool,
         accountPeerId: Int64,
@@ -104,6 +112,14 @@ public enum VeilgramGhostModeRuntimePreferences {
         defaults.set(enabled, forKey: "\(prefix(accountPeerId: accountPeerId)).readOnInteractionOnly")
     }
 
+    public static func setWarnBeforeVisibleStoryViews(
+        _ enabled: Bool,
+        accountPeerId: Int64,
+        defaults: UserDefaults = .standard
+    ) {
+        defaults.set(enabled, forKey: "\(prefix(accountPeerId: accountPeerId)).warnBeforeVisibleStoryViews")
+    }
+
     public static func requestPeekOnline(accountPeerId: Int64) {
         NotificationCenter.default.post(
             name: peekOnlineNotification,
@@ -120,6 +136,7 @@ public enum VeilgramGhostModeRuntimePreferences {
         let presenceKey = "\(prefix(accountPeerId: accountPeerId)).onlinePresence"
         let storyViewsKey = "\(prefix(accountPeerId: accountPeerId)).storyViews"
         let readOnInteractionOnlyKey = "\(prefix(accountPeerId: accountPeerId)).readOnInteractionOnly"
+        let warnBeforeVisibleStoryViewsKey = "\(prefix(accountPeerId: accountPeerId)).warnBeforeVisibleStoryViews"
 
         if defaults.object(forKey: readKey) == nil {
             defaults.set(true, forKey: readKey)
@@ -135,6 +152,9 @@ public enum VeilgramGhostModeRuntimePreferences {
         }
         if defaults.object(forKey: readOnInteractionOnlyKey) == nil {
             defaults.set(false, forKey: readOnInteractionOnlyKey)
+        }
+        if defaults.object(forKey: warnBeforeVisibleStoryViewsKey) == nil {
+            defaults.set(true, forKey: warnBeforeVisibleStoryViewsKey)
         }
     }
 }
