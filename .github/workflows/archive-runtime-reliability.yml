@@ -26,7 +26,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: archive-runtime-reliability-${{ github.ref }}
+  group: archive-runtime-reliability-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
