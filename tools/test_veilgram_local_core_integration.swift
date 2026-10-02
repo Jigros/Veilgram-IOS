@@ -98,11 +98,12 @@ enum VeilgramLocalCoreIntegrationTests {
             entities: [],
             hadMedia: false
         )
-        precondition(try VeilgramMessageArchiveEngine.append(
+        let didAppendNewerMessage = try VeilgramMessageArchiveEngine.append(
             document: &messages,
             message: newerMessage,
             eligibility: ordinary
-        ))
+        )
+        precondition(didAppendNewerMessage)
         precondition(!VeilgramMessageArchiveEngine.append(
             document: &messages,
             message: staleMessage,
@@ -149,24 +150,26 @@ enum VeilgramLocalCoreIntegrationTests {
         let laterRevision = VeilgramEditRevision(timestamp: 30, text: "later", entities: [])
         let staleRevision = VeilgramEditRevision(timestamp: 29, text: "stale", entities: [])
         let sameSecondRevision = VeilgramEditRevision(timestamp: 30, text: "same-second-different", entities: [])
-        precondition(try VeilgramEditHistoryEngine.append(
+        let didAppendLaterRevision = try VeilgramEditHistoryEngine.append(
             document: &edits,
             key: key,
             revision: laterRevision,
             eligibility: ordinary
-        ))
+        )
+        precondition(didAppendLaterRevision)
         precondition(!VeilgramEditHistoryEngine.append(
             document: &edits,
             key: key,
             revision: staleRevision,
             eligibility: ordinary
         ))
-        precondition(try VeilgramEditHistoryEngine.append(
+        let didAppendSameSecondRevision = try VeilgramEditHistoryEngine.append(
             document: &edits,
             key: key,
             revision: sameSecondRevision,
             eligibility: ordinary
-        ))
+        )
+        precondition(didAppendSameSecondRevision)
         precondition(edits.records.first?.revisions.map(\.text).suffix(2) == ["later", "same-second-different"])
 
         let beforeIneligibleRevisionCount = edits.records.first?.revisions.count
