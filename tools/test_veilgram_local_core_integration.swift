@@ -276,7 +276,15 @@ enum VeilgramLocalCoreIntegrationTests {
         )
         precondition(didStoreMedia)
         try archiveStore.saveMedia(storedMediaDocument)
-        checks += 1
+
+        let reopenedStore = VeilgramArchiveStoreAPI(
+            store: VeilgramProtectedLocalStore(rootURL: base)
+        )
+        let reopenedMedia = try reopenedStore.loadMedia()
+        precondition(reopenedMedia == storedMediaDocument)
+        let reopenedURL = try reopenedStore.archivedMediaURL(for: storedMediaItem)
+        precondition(reopenedURL == copiedURL)
+        checks += 3
 
         try archiveStore.saveMessages(messages)
         try archiveStore.saveEdits(edits)
