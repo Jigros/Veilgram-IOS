@@ -4,7 +4,7 @@ public struct VeilgramArchiveStoreAPI {
     private static let messageFile = "message-archive-v1.json"
     private static let editFile = "edit-history-v1.json"
     private static let mediaFile = "media-archive-v1.json"
-    private static let mediaBinaryPrefix = "media-"
+    private static let mediaBinaryPrefix = "media-item-"
 
     private let store: VeilgramProtectedLocalStore
     private let accountId: Int64?
