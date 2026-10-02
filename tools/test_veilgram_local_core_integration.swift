@@ -97,6 +97,34 @@ enum VeilgramLocalCoreIntegrationTests {
         ))
         checks += 8
 
+        let sendConfirmationSuite = "veilgram-send-confirmation-\(UUID().uuidString)"
+        let sendConfirmationDefaults = UserDefaults(suiteName: sendConfirmationSuite)!
+        defer { sendConfirmationDefaults.removePersistentDomain(forName: sendConfirmationSuite) }
+        let sendConfirmationAccount: Int64 = 202
+        precondition(!VeilgramSendConfirmationPreferences.isEnabled(
+            accountPeerId: sendConfirmationAccount,
+            defaults: sendConfirmationDefaults
+        ))
+        VeilgramSendConfirmationPreferences.setEnabled(
+            true,
+            accountPeerId: sendConfirmationAccount,
+            defaults: sendConfirmationDefaults
+        )
+        precondition(VeilgramSendConfirmationPreferences.isEnabled(
+            accountPeerId: sendConfirmationAccount,
+            defaults: sendConfirmationDefaults
+        ))
+        VeilgramSendConfirmationPreferences.setEnabled(
+            false,
+            accountPeerId: sendConfirmationAccount,
+            defaults: sendConfirmationDefaults
+        )
+        precondition(!VeilgramSendConfirmationPreferences.isEnabled(
+            accountPeerId: sendConfirmationAccount,
+            defaults: sendConfirmationDefaults
+        ))
+        checks += 3
+
         let ordinary = VeilgramArchiveEligibility(
             isCloudMessage: true,
             isSecretChat: false,
