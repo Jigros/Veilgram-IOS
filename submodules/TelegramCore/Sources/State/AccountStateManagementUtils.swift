@@ -4442,6 +4442,7 @@ func replayFinalState(
             case let .DeleteMessagesWithGlobalIds(ids):
                 let veilgramDeleteObservedAt = Int32(Date().timeIntervalSince1970)
                 var veilgramGlobalIdsToDelete: [Int32] = []
+                var veilgramMediaMessages: [Message] = []
                 for globalId in ids {
                     let mappedIds = transaction.messageIdsForGlobalIds([globalId])
                     var retainedAnyMessage = false
@@ -4450,9 +4451,9 @@ func replayFinalState(
                             VeilgramArchiveStateAdapter.enqueueDeletedMessage(
                                 accountPeerId: accountPeerId,
                                 message: message,
-                                observedAt: veilgramDeleteObservedAt,
-                                mediaBox: mediaBox
+                                observedAt: veilgramDeleteObservedAt
                             )
+                            veilgramMediaMessages.append(message)
                             if VeilgramArchiveStateAdapter.shouldRetainDeletedMessage(
                                 accountPeerId: accountPeerId,
                                 message: message
@@ -4472,15 +4473,34 @@ func replayFinalState(
                         veilgramGlobalIdsToDelete.append(globalId)
                     }
                 }
+                var resourceIds: [MediaResourceId] = []
                 if !veilgramGlobalIdsToDelete.isEmpty {
-                    var resourceIds: [MediaResourceId] = []
                     transaction.deleteMessagesWithGlobalIds(veilgramGlobalIdsToDelete, forEachMedia: { media in
                         addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
                     })
-                    if !resourceIds.isEmpty {
-                        let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
-                    }
                     deletedMessageIds.append(contentsOf: veilgramGlobalIdsToDelete.map { .global($0) })
+                }
+                if !veilgramMediaMessages.isEmpty {
+                    let uniqueResourceIds = Array(Set(resourceIds))
+                    VeilgramArchiveStateAdapter.enqueueDeletedMedia(
+                        accountPeerId: accountPeerId,
+                        messages: veilgramMediaMessages,
+                        observedAt: veilgramDeleteObservedAt,
+                        mediaBox: mediaBox,
+                        completion: {
+                            if !uniqueResourceIds.isEmpty {
+                                let _ = mediaBox.removeCachedResources(
+                                    uniqueResourceIds,
+                                    force: true
+                                ).start()
+                            }
+                        }
+                    )
+                } else if !resourceIds.isEmpty {
+                    let _ = mediaBox.removeCachedResources(
+                        Array(Set(resourceIds)),
+                        force: true
+                    ).start()
                 }
             case let .DeleteMessages(ids):
                 let veilgramDeleteObservedAt = Int32(Date().timeIntervalSince1970)
@@ -4490,7 +4510,8 @@ func replayFinalState(
                         VeilgramArchiveStateAdapter.enqueueDeletedMessage(
                             accountPeerId: accountPeerId,
                             message: message,
-                            observedAt: veilgramDeleteObservedAt
+                            observedAt: veilgramDeleteObservedAt,
+                            mediaBox: mediaBox
                         )
                         if VeilgramArchiveStateAdapter.shouldRetainDeletedMessage(
                             accountPeerId: accountPeerId,
