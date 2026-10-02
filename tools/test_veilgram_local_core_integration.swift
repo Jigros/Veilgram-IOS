@@ -191,11 +191,12 @@ enum VeilgramLocalCoreIntegrationTests {
             availability: .available
         )
         var storedMediaDocument = VeilgramMediaArchiveDocument()
-        precondition(try VeilgramMediaArchiveEngine.appendAvailable(
+        let didStoreMedia = try VeilgramMediaArchiveEngine.appendAvailable(
             document: &storedMediaDocument,
             item: storedMediaItem,
             eligibility: mediaEligibility
-        ))
+        )
+        precondition(didStoreMedia)
         try archiveStore.saveMedia(storedMediaDocument)
         checks += 1
 
