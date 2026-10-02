@@ -61,9 +61,10 @@ public struct VeilgramArchiveStoreAPI {
     func copyMediaFile(
         sourcePath: String,
         key: VeilgramMediaKey,
+        preferredExtension: String?,
         maximumBytes: Int64
     ) throws -> (relativePath: String, byteCount: Int64) {
-        let fileName = Self.mediaFileName(key)
+        let fileName = Self.mediaFileName(key, preferredExtension: preferredExtension)
         let byteCount = try store.copyFile(
             from: URL(fileURLWithPath: sourcePath),
             fileName: fileName,
@@ -76,8 +77,24 @@ public struct VeilgramArchiveStoreAPI {
         try store.remove(fileName: relativePath)
     }
 
-    private static func mediaFileName(_ key: VeilgramMediaKey) -> String {
-        return "\(mediaBinaryPrefix)\(key.peerId)-\(key.messageNamespace)-\(key.messageId)-\(key.mediaIndex).bin"
+    private static func mediaFileName(
+        _ key: VeilgramMediaKey,
+        preferredExtension: String?
+    ) -> String {
+        let normalizedExtension: String
+        if let preferredExtension {
+            let candidate = preferredExtension
+                .lowercased()
+                .filter { $0.isLetter || $0.isNumber }
+            if !candidate.isEmpty && candidate.count <= 12 {
+                normalizedExtension = candidate
+            } else {
+                normalizedExtension = "bin"
+            }
+        } else {
+            normalizedExtension = "bin"
+        }
+        return "\(mediaBinaryPrefix)\(key.peerId)-\(key.messageNamespace)-\(key.messageId)-\(key.mediaIndex).\(normalizedExtension)"
     }
 
     public func exportMessages(createdAt: Int32) throws -> Data {
