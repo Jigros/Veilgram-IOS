@@ -50,6 +50,8 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
     private var applicationStateDisposable: Disposable?
     
     private var didPlayPresentationAnimation = false
+    private var codeSubmissionStartedAt: CFAbsoluteTime?
+    private var codeSubmissionResultAt: CFAbsoluteTime?
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -464,6 +466,8 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
             controller.loginWithCode = { [weak self, weak controller] code in
                 if let strongSelf = self {
                     Logger.shared.log("VeilgramAuth", "Code submission started")
+                    strongSelf.codeSubmissionStartedAt = CFAbsoluteTimeGetCurrent()
+                    strongSelf.codeSubmissionResultAt = nil
                     controller?.inProgress = true
                     
                     let authorizationCode: AuthorizationCode
@@ -582,7 +586,29 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                                         let _ = beginSignUp(account: strongSelf.account, data: data).startStandalone()
                                     }
                                 case .loggedIn:
-                                    Logger.shared.log("VeilgramAuth", "Code submission result -> loggedIn")
+                                    let now = CFAbsoluteTimeGetCurrent()
+                                    let requestDuration: String
+                                    if let startedAt = strongSelf.codeSubmissionStartedAt {
+                                        requestDuration = String(format: "%.3f", now - startedAt)
+                                    } else {
+                                        requestDuration = "unknown"
+                                    }
+                                    Logger.shared.log(
+                                        "VeilgramAuth",
+                                        "Code submission result -> loggedIn requestSeconds=\(requestDuration)"
+                                    )
+                                    strongSelf.codeSubmissionResultAt = now
+                                    let expectedResultAt = now
+                                    Queue.mainQueue().after(2.0) { [weak strongSelf] in
+                                        guard let strongSelf,
+                                              strongSelf.codeSubmissionResultAt == expectedResultAt else {
+                                            return
+                                        }
+                                        Logger.shared.log(
+                                            "VeilgramAuth",
+                                            "Auth state did not advance within 2s after code result"
+                                        )
+                                    }
                                     controller?.animateSuccess()
                             }
                         }, error: { error in
@@ -1247,6 +1273,16 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
     }
     
     private func updateState(state: InnerState) {
+        if let resultAt = self.codeSubmissionResultAt {
+            let stateDelay = CFAbsoluteTimeGetCurrent() - resultAt
+            Logger.shared.log(
+                "VeilgramAuth",
+                "Auth state advanced after code result seconds=\(String(format: "%.3f", stateDelay))"
+            )
+            self.codeSubmissionResultAt = nil
+            self.codeSubmissionStartedAt = nil
+        }
+
         switch state {
         case .authorized:
             Logger.shared.log("VeilgramAuth", "Authorization state -> authorized")
