@@ -16,7 +16,10 @@ private final class AccountPresenceManagerImpl {
     
     private var shouldKeepOnlinePresenceDisposable: Disposable?
     private let currentRequestDisposable = MetaDisposable()
+    private let peekRequestDisposable = MetaDisposable()
+    private var peekObserver: NSObjectProtocol?
     private var onlineTimer: SignalKitTimer?
+    private var peekTimer: SignalKitTimer?
     
     private var wasOnline: Bool = false
     
@@ -36,15 +39,71 @@ private final class AccountPresenceManagerImpl {
                 self.updatePresence(value)
             }
         })
+
+        self.peekObserver = NotificationCenter.default.addObserver(
+            forName: VeilgramGhostModeRuntimePreferences.peekOnlineNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] notification in
+            guard let self,
+                  let value = notification.object as? NSNumber,
+                  value.int64Value == self.accountPeerId.toInt64() else {
+                return
+            }
+            self.queue.async {
+                self.performPeekOnline()
+            }
+        }
     }
     
     deinit {
         assert(self.queue.isCurrent())
         self.shouldKeepOnlinePresenceDisposable?.dispose()
         self.currentRequestDisposable.dispose()
+        self.peekRequestDisposable.dispose()
+        if let peekObserver {
+            NotificationCenter.default.removeObserver(peekObserver)
+        }
         self.onlineTimer?.invalidate()
+        self.peekTimer?.invalidate()
     }
     
+    private func performPeekOnline() {
+        guard VeilgramGhostModeRuntimePreferences.suppressOnlinePresence(
+            accountPeerId: self.accountPeerId.toInt64()
+        ) else {
+            return
+        }
+
+        self.peekTimer?.invalidate()
+        self.peekTimer = nil
+
+        let request = self.network.request(
+            Api.functions.account.updateStatus(offline: .boolFalse)
+        )
+        self.peekRequestDisposable.set((
+            request
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> deliverOn(self.queue)
+        ).start(completed: { [weak self] in
+            guard let self else {
+                return
+            }
+            let timer = SignalKitTimer(
+                timeout: 8.0,
+                repeat: false,
+                completion: { [weak self] in
+                    self?.updatePresence(false)
+                },
+                queue: self.queue
+            )
+            self.peekTimer = timer
+            timer.start()
+        }))
+    }
+
     private func updatePresence(_ isOnline: Bool) {
         let effectiveIsOnline = isOnline && !VeilgramGhostModeRuntimePreferences.suppressOnlinePresence(
             accountPeerId: self.accountPeerId.toInt64()
