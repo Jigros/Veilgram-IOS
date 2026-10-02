@@ -1,4 +1,4 @@
-name: BUILD-1 Veilgram branded simulator (manual)
+name: BUILD-1 Veilgram branded simulator (manual preview)
 
 on:
   workflow_dispatch:
@@ -27,9 +27,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Keep upstream .gitmodules and pinned gitlinks intact.
-          # Standalone repo makes ../rlottie.git and ../tgcalls.git resolve
-          # incorrectly to Jigros repos; restore the official upstream owners.
+          # Official upstream uses relative URLs; on a standalone Veilgram
+          # repository they incorrectly resolve to non-existent Jigros repos.
+          # Override only checkout-local config, preserving tracked .gitmodules
+          # and every pinned gitlink SHA.
           git config submodule.submodules/rlottie/rlottie.url https://github.com/TelegramMessenger/rlottie.git
           git config submodule.submodules/TgVoipWebrtc/tgcalls.url https://github.com/TelegramMessenger/tgcalls.git
           git -c protocol.file.allow=never submodule update --init --recursive
