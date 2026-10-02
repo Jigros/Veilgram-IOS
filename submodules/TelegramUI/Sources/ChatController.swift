@@ -2298,8 +2298,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     postpone: postpone,
                                     messageEffect: messageEffect,
                                     completion: { [weak self] in
-                                        if finalScheduleTime != nil {
-                                            self?.openScheduledMessages()
+                                        if finalScheduleTime != nil, let self {
+                                            // Match upstream scheduled-send completion: the normal
+                                            // history may not receive a row to clear the composer.
+                                            self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                                $0.updatedInterfaceState {
+                                                    $0.withUpdatedReplyMessageSubject(nil)
+                                                        .withUpdatedSendMessageEffect(nil)
+                                                        .withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: "")))
+                                                }
+                                            })
+                                            self.openScheduledMessages()
                                         }
                                     }
                                 )
