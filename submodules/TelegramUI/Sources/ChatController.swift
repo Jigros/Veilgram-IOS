@@ -1976,6 +1976,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return
                             }
                             
+                            strongSelf.chatDisplayNode.historyNode.readVisibleMessagesOnSendInteraction()
                             let _ = (strongSelf.context.engine.messages.sendStarsReaction(id: message.id, count: 1, privacy: nil)
                             |> deliverOnMainQueue).startStandalone(next: { privacy in
                                 guard let strongSelf = self else {
@@ -2175,6 +2176,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             })
                         }
                         
+                        strongSelf.chatDisplayNode.historyNode.readVisibleMessagesOnSendInteraction()
                         let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageIds: [message.id], reactions: mappedUpdatedReactions, isLarge: false, storeAsRecentlyUsed: false).startStandalone()
                     }
                 }

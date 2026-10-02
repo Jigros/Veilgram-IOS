@@ -48,3 +48,9 @@ assert "messageIds.contains(where: { $0 != nil })" in audio_send
 assert "!hasScheduleAttribute, scheduleTime == nil" in audio_send
 assert "readVisibleMessagesOnSendInteraction()" in audio_send
 print("PASS: accepted immediate audio-draft interaction; canceled/rejected/scheduled paths excluded")
+
+controller = (root / "submodules/TelegramUI/Sources/ChatController.swift").read_text()
+reaction_action = controller[controller.index("updateMessageReaction: { [weak self]"):controller.index("activateMessagePinch:", controller.index("updateMessageReaction: { [weak self]"))]
+assert reaction_action.index("readVisibleMessagesOnSendInteraction()") < reaction_action.index("sendStarsReaction(")
+assert reaction_action.rindex("readVisibleMessagesOnSendInteraction()") < reaction_action.index("updateMessageReactionsInteractively(")
+print("PASS: accepted ordinary and Stars reactions trigger read-on-interaction after validation")
