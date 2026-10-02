@@ -2,8 +2,16 @@ import Foundation
 import Postbox
 import TelegramApi
 import SwiftSignalKit
+import VeilgramLocalFeatures
 
 func _internal_installInteractiveReadMessagesAction(postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, threadId: Int64?) -> Disposable {
+    if peerId.namespace != Namespaces.Peer.SecretChat
+        && VeilgramGhostModeRuntimePreferences.readOnInteractionOnly(
+            accountPeerId: stateManager.accountPeerId.toInt64()
+        ) {
+        return EmptyDisposable
+    }
+
     return postbox.installStoreMessageAction(peerId: peerId, { messages, transaction in
         var consumeMessageIds: [MessageId] = []
         var readReactionOrPollVotesIds: [MessageId] = []
