@@ -262,12 +262,25 @@ enum VeilgramLocalCoreIntegrationTests {
         } else {
             preconditionFailure("missing media file permissions")
         }
-        checks += 4
+
+        try Data(repeating: 0x33, count: 2048).write(to: sourceMedia)
+        let replacedMedia = try archiveStore.copyMediaFile(
+            sourcePath: sourceMedia.path,
+            key: mediaKey,
+            preferredExtension: "dat",
+            maximumBytes: 1024 * 1024
+        )
+        precondition(replacedMedia.relativePath == copiedMedia.relativePath)
+        precondition(replacedMedia.byteCount == 2048)
+        let replacedBytes = try Data(contentsOf: copiedURL)
+        precondition(replacedBytes.count == 2048)
+        precondition(replacedBytes.first == 0x33)
+        checks += 8
 
         let storedMediaItem = VeilgramMediaItem(
             key: mediaKey,
-            relativePath: copiedMedia.relativePath,
-            byteCount: copiedMedia.byteCount,
+            relativePath: replacedMedia.relativePath,
+            byteCount: replacedMedia.byteCount,
             archivedAt: 40,
             lastAccessedAt: 40,
             availability: .available
