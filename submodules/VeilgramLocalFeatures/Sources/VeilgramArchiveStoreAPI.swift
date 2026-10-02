@@ -58,6 +58,19 @@ public struct VeilgramArchiveStoreAPI {
         try store.write(try VeilgramMediaArchiveEngine.encode(document), fileName: Self.mediaFile)
     }
 
+    public func archivedMediaURL(for item: VeilgramMediaItem) throws -> URL? {
+        guard item.availability == .available,
+              let relativePath = item.relativePath,
+              let fileURL = try store.existingFileURL(fileName: relativePath) else {
+            return nil
+        }
+        let values = try fileURL.resourceValues(forKeys: [.fileSizeKey])
+        guard Int64(values.fileSize ?? -1) == item.byteCount else {
+            return nil
+        }
+        return fileURL
+    }
+
     func copyMediaFile(
         sourcePath: String,
         key: VeilgramMediaKey,
