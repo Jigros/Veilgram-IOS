@@ -200,11 +200,11 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
     private let tableView: UITableView
     private let searchTableView: UITableView
     
-    private let sections: [(String, [((String, String), String, Int)])]
-    private let sectionTitles: [String]
+    private var sections: [(String, [((String, String), String, Int)])]
+    private var sectionTitles: [String]
     
     private var searchResults: [((String, String), String, Int)] = []
-    private let countryNamesAndCodes: [((String, String), String, [Int])]
+    private var countryNamesAndCodes: [((String, String), String, [Int])]
     
     private let topEdgeEffectView: EdgeEffectView
     
@@ -372,6 +372,45 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
         })
     }
     
+    func reloadCountries() {
+        let countryNamesAndCodes = localizedCountryNamesAndCodes(strings: self.strings)
+        var sections: [(String, [((String, String), String, Int)])] = []
+        for (names, id, codes) in countryNamesAndCodes.sorted(by: { lhs, rhs in
+            return lhs.0.1 < rhs.0.1
+        }) {
+            guard !names.1.isEmpty else {
+                continue
+            }
+            let title = String(
+                names.1[names.1.startIndex ..< names.1.index(after: names.1.startIndex)]
+            ).uppercased()
+            if sections.isEmpty || sections[sections.count - 1].0 != title {
+                sections.append((title, []))
+            }
+            for code in codes {
+                sections[sections.count - 1].1.append((names, id, code))
+            }
+        }
+
+        self.countryNamesAndCodes = countryNamesAndCodes
+        self.sections = sections
+        self.sectionTitles = sections.map { $0.0 }
+        self.tableView.reloadData()
+
+        if !self.searchTableView.isHidden,
+           let searchInputView = self.searchInput?.view as? SearchInputPanelComponent.View {
+            let query = searchInputView.query
+            self.searchResults = searchCountries(
+                items: self.countryNamesAndCodes,
+                query: query
+            )
+            self.searchTableView.reloadData()
+        } else {
+            self.searchResults = []
+            self.searchTableView.reloadData()
+        }
+    }
+
     func updateSearchQuery(_ query: String) {
         if query.isEmpty {
             self.searchResults = []
