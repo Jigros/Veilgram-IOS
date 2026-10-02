@@ -10,15 +10,19 @@ on:
       - "submodules/Postbox/Sources/MessageHistoryTable.swift"
       - "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift"
       - "submodules/TelegramCore/Sources/State/HistoryViewStateValidation.swift"
+      - "submodules/TelegramCore/Sources/State/ManagedSynchronizeViewStoriesOperations.swift"
       - "submodules/TelegramCore/Sources/State/VeilgramArchiveStateAdapter.swift"
       - "submodules/TelegramCore/Sources/TelegramEngine/Peers/UpdateCachedPeerData.swift"
+      - "submodules/TelegramCore/Sources/TelegramEngine/Messages/Stories.swift"
       - "submodules/TelegramUI/Sources/AppDelegate.swift"
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalArchiveController.swift"
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalArchiveDetailController.swift"
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalTransferController.swift"
+      - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift"
       - "tools/test_veilgram_archive_runtime_batch.swift"
       - "tools/test_veilgram_local_core_integration.swift"
       - "tools/check_veilgram_archive_delete_coverage.py"
+      - "tools/check_veilgram_ghost_story_views.py"
       - ".github/workflows/archive-runtime-reliability.yml"
   workflow_dispatch:
 
@@ -80,6 +84,16 @@ jobs:
             submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift \
             submodules/TelegramCore/Sources/State/HistoryViewStateValidation.swift \
             submodules/TelegramCore/Sources/TelegramEngine/Peers/UpdateCachedPeerData.swift
+
+      - name: Check Ghost Mode story-view suppression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/check_veilgram_ghost_story_views.py
+          xcrun swiftc -parse \
+            submodules/TelegramCore/Sources/State/ManagedSynchronizeViewStoriesOperations.swift \
+            submodules/TelegramCore/Sources/TelegramEngine/Messages/Stories.swift \
+            submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift
 
   ios-build:
     needs: swift-tests
