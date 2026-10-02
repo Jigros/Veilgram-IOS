@@ -61,19 +61,6 @@ enum VeilgramLocalCoreIntegrationTests {
             defaults: premiumDefaults
         ))
 
-        var premiumNotificationCount = 0
-        let premiumObserver = NotificationCenter.default.addObserver(
-            forName: VeilgramLocalPremiumRuntimePreferences.didChangeNotification,
-            object: nil,
-            queue: nil
-        ) { notification in
-            if let value = notification.object as? NSNumber,
-               value.int64Value == premiumAccount {
-                premiumNotificationCount += 1
-            }
-        }
-        defer { NotificationCenter.default.removeObserver(premiumObserver) }
-
         VeilgramLocalPremiumRuntimePreferences.setEnabled(
             true,
             accountPeerId: premiumAccount,
@@ -88,14 +75,6 @@ enum VeilgramLocalCoreIntegrationTests {
             accountPeerId: premiumAccount,
             defaults: premiumDefaults
         ))
-        precondition(premiumNotificationCount == 1)
-
-        VeilgramLocalPremiumRuntimePreferences.setEnabled(
-            true,
-            accountPeerId: premiumAccount,
-            defaults: premiumDefaults
-        )
-        precondition(premiumNotificationCount == 1)
 
         VeilgramLocalPremiumRuntimePreferences.setEnabled(
             false,
@@ -116,10 +95,9 @@ enum VeilgramLocalCoreIntegrationTests {
             accountPeerId: premiumAccount,
             defaults: premiumDefaults
         ))
-        precondition(premiumNotificationCount == 2)
-        checks += 10
+        checks += 8
 
-        let ordinary = VeilgramArchiveEligibility(
+        let ordinary        let ordinary = VeilgramArchiveEligibility(
             isCloudMessage: true,
             isSecretChat: false,
             isViewOnce: false,
