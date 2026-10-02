@@ -71,7 +71,23 @@ enum VeilgramArchiveRuntimeBatchTests {
                 VeilgramMessageKey(peerId: 100, namespace: 0, id: 7)
             ]?.message.text == "version-999"
         )
-        checks += 3
+        coalescedDeletes.appendDeletedMessage(
+            VeilgramArchivedMessage(
+                key: VeilgramMessageKey(peerId: 100, namespace: 0, id: 7),
+                messageTimestamp: 7,
+                archivedAt: 998,
+                text: "stale-after-newer",
+                entities: [],
+                hadMedia: false
+            ),
+            eligibility: ordinary
+        )
+        precondition(
+            coalescedDeletes.deletedMessages[
+                VeilgramMessageKey(peerId: 100, namespace: 0, id: 7)
+            ]?.message.text == "version-999"
+        )
+        checks += 4
 
         // Consecutive duplicate revisions for one message are dropped.
         var duplicateEdits = VeilgramArchivePendingBatch()
@@ -90,7 +106,20 @@ enum VeilgramArchiveRuntimeBatchTests {
         }
         precondition(duplicateEdits.eventCount == 1)
         precondition(duplicateEdits.editRevisions.count == 1)
-        checks += 2
+        duplicateEdits.appendEditRevision(
+            key: editKey,
+            revision: VeilgramEditRevision(timestamp: 0, text: "stale", entities: []),
+            eligibility: ordinary
+        )
+        precondition(duplicateEdits.editRevisions.count == 1)
+        duplicateEdits.appendEditRevision(
+            key: editKey,
+            revision: VeilgramEditRevision(timestamp: 1, text: "same-second-different", entities: []),
+            eligibility: ordinary
+        )
+        precondition(duplicateEdits.editRevisions.count == 2)
+        precondition(duplicateEdits.editRevisions.last?.revision.text == "same-second-different")
+        checks += 5
 
         // 1000 distinct edit revisions preserve order across threshold-sized
         // batches instead of coalescing different revisions.
