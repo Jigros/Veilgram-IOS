@@ -85,11 +85,23 @@ struct VeilgramProtectedLocalStore {
         if fileManager.fileExists(atPath: temporaryURL.path) {
             try fileManager.removeItem(at: temporaryURL)
         }
+        defer {
+            if fileManager.fileExists(atPath: temporaryURL.path) {
+                try? fileManager.removeItem(at: temporaryURL)
+            }
+        }
+
         try fileManager.copyItem(at: sourceURL, to: temporaryURL)
         if fileManager.fileExists(atPath: destinationURL.path) {
-            try fileManager.removeItem(at: destinationURL)
+            _ = try fileManager.replaceItemAt(
+                destinationURL,
+                withItemAt: temporaryURL,
+                backupItemName: nil,
+                options: []
+            )
+        } else {
+            try fileManager.moveItem(at: temporaryURL, to: destinationURL)
         }
-        try fileManager.moveItem(at: temporaryURL, to: destinationURL)
 
         try applyProtection(to: destinationURL)
         return byteCount
