@@ -125,15 +125,16 @@ enum VeilgramArchiveStateAdapter {
 
         var candidates: [VeilgramLocalMediaArchiveCandidate] = []
         for (mediaIndex, media) in message.effectiveMedia.enumerated() {
-            let resource: MediaResource?
-            if let image = media as? TelegramMediaImage {
-                resource = image.representations.last?.resource
+            let resource: MediaResource
+            let fileExtension: String?
+            if let image = media as? TelegramMediaImage,
+               let imageResource = image.representations.last?.resource {
+                resource = imageResource
+                fileExtension = "jpg"
             } else if let file = media as? TelegramMediaFile {
                 resource = file.resource
+                fileExtension = preferredExtension(for: file)
             } else {
-                resource = nil
-            }
-            guard let resource else {
                 continue
             }
             candidates.append(
@@ -146,11 +147,47 @@ enum VeilgramArchiveStateAdapter {
                     ),
                     sourcePath: mediaBox.completedResourcePath(resource),
                     archivedAt: observedAt,
+                    fileExtension: fileExtension,
                     eligibility: eligibility
                 )
             )
         }
         return candidates
+    }
+
+    private static func preferredExtension(for file: TelegramMediaFile) -> String? {
+        if let fileName = file.fileName {
+            let pathExtension = (fileName as NSString).pathExtension
+            if !pathExtension.isEmpty {
+                return pathExtension
+            }
+        }
+        switch file.mimeType.lowercased() {
+        case "video/mp4":
+            return "mp4"
+        case "video/webm":
+            return "webm"
+        case "application/pdf":
+            return "pdf"
+        case "application/zip":
+            return "zip"
+        case "image/jpeg":
+            return "jpg"
+        case "image/png":
+            return "png"
+        case "image/webp":
+            return "webp"
+        case "image/gif":
+            return "gif"
+        case "audio/ogg", "application/ogg":
+            return "ogg"
+        case "audio/mpeg":
+            return "mp3"
+        case "audio/mp4":
+            return "m4a"
+        default:
+            return nil
+        }
     }
 
     static func enqueuePreviousEditRevision(
