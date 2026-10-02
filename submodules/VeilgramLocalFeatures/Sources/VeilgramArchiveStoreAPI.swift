@@ -166,8 +166,8 @@ public struct VeilgramArchiveStoreAPI {
         )
         _ = try VeilgramMediaArchiveEngine.encode(metadataOnlyDocument)
 
-        try store.removeFiles(withPrefix: Self.mediaBinaryPrefix)
         try saveMedia(metadataOnlyDocument)
+        try store.removeFiles(withPrefix: Self.mediaBinaryPrefix)
     }
 
     public func removeAll() throws {
