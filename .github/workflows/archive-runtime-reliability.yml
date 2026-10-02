@@ -6,6 +6,7 @@ on:
       - cleanup/remove-project-policy-guards
     paths:
       - "submodules/VeilgramLocalFeatures/**"
+      - "submodules/AccountContext/Sources/AccountContext.swift"
       - "submodules/Postbox/Sources/Postbox.swift"
       - "submodules/Postbox/Sources/MessageHistoryTable.swift"
       - "submodules/TelegramCore/Sources/State/AccountStateManagementUtils.swift"
@@ -16,6 +17,7 @@ on:
       - "submodules/TelegramCore/Sources/TelegramEngine/Peers/UpdateCachedPeerData.swift"
       - "submodules/TelegramCore/Sources/TelegramEngine/Messages/Stories.swift"
       - "submodules/TelegramCore/Sources/TelegramEngine/Messages/InstallInteractiveReadMessagesAction.swift"
+      - "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift"
       - "submodules/TelegramUI/Sources/AppDelegate.swift"
       - "submodules/TelegramUI/Sources/AccountContext.swift"
       - "submodules/TelegramUI/Components/Stories/StoryContainerScreen/Sources/OpenStories.swift"
@@ -109,6 +111,8 @@ jobs:
           set -euo pipefail
           python3 tools/check_veilgram_local_premium.py
           xcrun swiftc -parse \
+            submodules/AccountContext/Sources/AccountContext.swift \
+            submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift \
             submodules/TelegramUI/Sources/AccountContext.swift
 
   ios-build:
