@@ -79,9 +79,19 @@ public enum VeilgramChannelAdClassifier {
         _ input: VeilgramChannelAdInput,
         options: VeilgramChannelAdOptions
     ) -> VeilgramChannelAdDecision {
-        guard options.enabled,
-              input.isBroadcastChannel,
-              !input.isOfficialSponsoredMessage,
+        guard options.enabled else {
+            return VeilgramChannelAdDecision(action: .keep)
+        }
+
+        if input.isOfficialSponsoredMessage {
+            return VeilgramChannelAdDecision(
+                action: options.collapseEnabled ? .collapse : .label,
+                confidence: 100,
+                reasons: ["officialSponsored"]
+            )
+        }
+
+        guard input.isBroadcastChannel,
               !input.isServiceMessage,
               !options.allowedChannelIds.contains(input.channelId) else {
             return VeilgramChannelAdDecision(action: .keep)
