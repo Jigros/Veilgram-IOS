@@ -23,6 +23,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     private var ghostOnlinePresenceEnabled: Bool
     private var ghostStoryViewsEnabled: Bool
     private var ghostReadOnInteractionOnlyEnabled: Bool
+    private var ghostStoryWarningEnabled: Bool
     private var localPremiumUIEnabled: Bool
 
     init(context: AccountContext) {
@@ -42,6 +43,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         self.ghostOnlinePresenceEnabled = VeilgramGhostModeRuntimePreferences.suppressOnlinePresence(accountPeerId: accountPeerId)
         self.ghostStoryViewsEnabled = VeilgramGhostModeRuntimePreferences.suppressStoryViews(accountPeerId: accountPeerId)
         self.ghostReadOnInteractionOnlyEnabled = VeilgramGhostModeRuntimePreferences.readOnInteractionOnly(accountPeerId: accountPeerId)
+        self.ghostStoryWarningEnabled = VeilgramGhostModeRuntimePreferences.warnBeforeVisibleStoryViews(accountPeerId: accountPeerId)
         self.localPremiumUIEnabled = VeilgramLocalPremiumRuntimePreferences.isEnabled(accountPeerId: accountPeerId)
         let presentation = context.sharedContext.currentPresentationData.with { $0 }
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentation, style: .glass))
@@ -79,7 +81,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
         case 0:
-            return 13
+            return 14
         case 1:
             return 3
         case 2:
@@ -188,13 +190,22 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.addTarget(self, action: #selector(ghostReadOnInteractionOnlyChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
             } else if indexPath.row == 9 {
+                cell.textLabel?.text = "Warn before visible story views"
+                cell.detailTextLabel?.text = "Confirm before opening a story when Hide story views is off"
+                cell.textLabel?.textColor = self.ghostModeEnabled ? .label : .secondaryLabel
+                let control = UISwitch()
+                control.isEnabled = self.ghostModeEnabled
+                control.isOn = self.ghostStoryWarningEnabled
+                control.addTarget(self, action: #selector(ghostStoryWarningChanged(_:)), for: .valueChanged)
+                cell.accessoryView = control
+            } else if indexPath.row == 10 {
                 cell.textLabel?.text = "Detect channel ads locally"
                 cell.detailTextLabel?.text = "Experimental heuristic • ordinary channel posts"
                 let control = UISwitch()
                 control.isOn = self.adFilterEnabled
                 control.addTarget(self, action: #selector(adFilterChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
-            } else if indexPath.row == 10 {
+            } else if indexPath.row == 11 {
                 cell.textLabel?.text = "Collapse high-confidence ads"
                 cell.detailTextLabel?.text = self.adFilterEnabled
                     ? "Collapse matched channel ads with tap-to-reveal"
@@ -205,7 +216,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.isOn = self.adCollapseEnabled
                 control.addTarget(self, action: #selector(adCollapseChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
-            } else if indexPath.row == 11 {
+            } else if indexPath.row == 12 {
                 cell.textLabel?.text = "Local Premium UI"
                 cell.detailTextLabel?.text = "Enable Veilgram-owned premium-style presentation"
                 let control = UISwitch()
@@ -252,7 +263,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             }
             return
         }
-        if indexPath.section == 0, indexPath.row == 12 {
+        if indexPath.section == 0, indexPath.row == 13 {
             self.push(VeilgramMessageFiltersController(context: self.accountContext))
             return
         }
@@ -295,7 +306,8 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 IndexPath(row: 5, section: 0),
                 IndexPath(row: 6, section: 0),
                 IndexPath(row: 7, section: 0),
-                IndexPath(row: 8, section: 0)
+                IndexPath(row: 8, section: 0),
+                IndexPath(row: 9, section: 0)
             ],
             with: .none
         )
@@ -337,6 +349,15 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         self.ghostReadOnInteractionOnlyEnabled = sender.isOn
     }
 
+    @objc private func ghostStoryWarningChanged(_ sender: UISwitch) {
+        let accountPeerId = self.accountContext.account.peerId.toInt64()
+        VeilgramGhostModeRuntimePreferences.setWarnBeforeVisibleStoryViews(
+            sender.isOn,
+            accountPeerId: accountPeerId
+        )
+        self.ghostStoryWarningEnabled = sender.isOn
+    }
+
     @objc private func localPremiumChanged(_ sender: UISwitch) {
         let accountPeerId = self.accountContext.account.peerId.toInt64()
         self.localPremiumUIEnabled = sender.isOn
@@ -353,7 +374,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             self.adCollapseEnabled = false
             UserDefaults.standard.set(false, forKey: self.adCollapsePreferenceKey)
         }
-        self.tableView.reloadRows(at: [IndexPath(row: 10, section: 0)], with: .none)
+        self.tableView.reloadRows(at: [IndexPath(row: 11, section: 0)], with: .none)
     }
 
     @objc private func adCollapseChanged(_ sender: UISwitch) {
