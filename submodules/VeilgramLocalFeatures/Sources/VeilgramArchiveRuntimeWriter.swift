@@ -261,7 +261,24 @@ public enum VeilgramArchiveRuntimeWriter {
                 for candidate in eligibleCandidates {
                     if let existing = document.items.first(where: { $0.key == candidate.key }),
                        existing.availability == .available {
-                        continue
+                        if (try? store.archivedMediaURL(for: existing)) != nil {
+                            continue
+                        }
+                        if let relativePath = existing.relativePath {
+                            do {
+                                try store.removeMediaFile(relativePath: relativePath)
+                            } catch {
+                                VeilgramArchiveRuntimeDiagnostics.record(error)
+                            }
+                        }
+                    }
+
+                    if makeRoomForMediaItemIfNeeded(
+                        document: &document,
+                        incomingKey: candidate.key,
+                        store: store
+                    ) {
+                        changed = true
                     }
 
                     guard let sourcePath = candidate.sourcePath else {
@@ -435,6 +452,38 @@ public enum VeilgramArchiveRuntimeWriter {
                 }
             }
         }
+    }
+
+    @discardableResult
+    private static func makeRoomForMediaItemIfNeeded(
+        document: inout VeilgramMediaArchiveDocument,
+        incomingKey: VeilgramMediaKey,
+        store: VeilgramArchiveStoreAPI
+    ) -> Bool {
+        guard !document.items.contains(where: { $0.key == incomingKey }),
+              document.items.count >= VeilgramMediaArchiveEngine.maximumItems else {
+            return false
+        }
+        guard let oldestIndex = document.items.indices.min(by: { lhs, rhs in
+            let left = document.items[lhs]
+            let right = document.items[rhs]
+            if left.lastAccessedAt != right.lastAccessedAt {
+                return left.lastAccessedAt < right.lastAccessedAt
+            }
+            return left.archivedAt < right.archivedAt
+        }) else {
+            return false
+        }
+
+        let evicted = document.items.remove(at: oldestIndex)
+        if let relativePath = evicted.relativePath {
+            do {
+                try store.removeMediaFile(relativePath: relativePath)
+            } catch {
+                VeilgramArchiveRuntimeDiagnostics.record(error)
+            }
+        }
+        return true
     }
 
     private static func scheduleFlushIfNeeded() {
