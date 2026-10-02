@@ -12,6 +12,17 @@ import ComponentFlow
 import BundleIconComponent
 import GlassBarButtonComponent
 
+private let countryCodesDidChangeNotification = Notification.Name(
+    "org.veilgram.auth.countries-did-change"
+)
+
+private func notifyCountryCodesDidChange() {
+    NotificationCenter.default.post(
+        name: countryCodesDidChangeNotification,
+        object: nil
+    )
+}
+
 private func loadCountryCodes() -> [Country] {
     guard let filePath = getAppBundle().path(forResource: "PhoneCountries", ofType: "txt") else {
         Logger.shared.log("VeilgramAuth", "PhoneCountries bundle resource is missing")
@@ -103,6 +114,7 @@ public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccoun
             }
         }
         countryCodesByPrefix = countriesByPrefix
+        notifyCountryCodesDidChange()
                 
         Queue.mainQueue().async {
             completion()
@@ -134,6 +146,7 @@ public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccoun
             }
         }
         countryCodesByPrefix = countriesByPrefix
+        notifyCountryCodesDidChange()
         Queue.mainQueue().async {
             completion()
         }
@@ -225,6 +238,7 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
         Logger.shared.log("VeilgramAuth", "Applied injected countries count=\(countries.count)")
         countryCodes = countries
         countryCodesByPrefix = codesByPrefix
+        notifyCountryCodesDidChange()
     }
     
     public static func lookupCountryNameById(_ id: String, strings: PresentationStrings) -> String? {
@@ -339,6 +353,7 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
     private var closeButtonNode: BarComponentHostNode?
     private var searchButtonNode: BarComponentHostNode?
     private var navigationContentNode: AuthorizationSequenceCountrySelectionNavigationContentNode?
+    private var countriesObserver: NSObjectProtocol?
     
     private var controllerNode: AuthorizationSequenceCountrySelectionControllerNode {
         return self.displayNode as! AuthorizationSequenceCountrySelectionControllerNode
@@ -354,6 +369,21 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
         self.glass = glass
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme, hideBackground: glass, hideSeparator: glass, style: glass ? .glass : .legacy), strings: NavigationBarStrings(presentationStrings: strings)))
+
+        self.countriesObserver = NotificationCenter.default.addObserver(
+            forName: countryCodesDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self, self.isNodeLoaded else {
+                return
+            }
+            Logger.shared.log(
+                "VeilgramAuth",
+                "Refreshing visible country picker count=\(Self.countries().count)"
+            )
+            self.controllerNode.reloadCountries()
+        }
         
         self._hasGlassStyle = glass
         
@@ -381,6 +411,12 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        if let countriesObserver {
+            NotificationCenter.default.removeObserver(countriesObserver)
+        }
     }
     
     override public func loadDisplayNode() {
