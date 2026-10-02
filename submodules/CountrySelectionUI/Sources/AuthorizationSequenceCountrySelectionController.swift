@@ -14,6 +14,7 @@ import GlassBarButtonComponent
 
 private func loadCountryCodes() -> [Country] {
     guard let filePath = getAppBundle().path(forResource: "PhoneCountries", ofType: "txt") else {
+        Logger.shared.log("VeilgramAuth", "PhoneCountries bundle resource is missing")
         return []
     }
     guard let stringData = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {
@@ -70,6 +71,7 @@ private func loadCountryCodes() -> [Country] {
     }
     
     countryCodesByPrefix = countriesByPrefix
+    Logger.shared.log("VeilgramAuth", "Loaded bundled countries count=\(result.count) prefixes=\(countriesByPrefix.count)")
     
     return result
 }
@@ -81,9 +83,11 @@ public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccoun
     let _ = (engine.localization.getCountriesList(accountManager: accountManager, langCode: nil)
     |> deliverOnMainQueue).start(next: { countries in
         guard !countries.isEmpty else {
+            Logger.shared.log("VeilgramAuth", "Ignored empty unauthorized server countries response")
             completion()
             return
         }
+        Logger.shared.log("VeilgramAuth", "Applied unauthorized server countries count=\(countries.count)")
         countryCodes = countries
         
         var countriesByPrefix: [String: (Country, Country.CountryCode)] = [:]
@@ -110,9 +114,11 @@ public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccoun
     let _ = (engine.localization.getCountriesList(accountManager: accountManager, langCode: nil)
     |> deliverOnMainQueue).start(next: { countries in
         guard !countries.isEmpty else {
+            Logger.shared.log("VeilgramAuth", "Ignored empty authorized server countries response")
             completion()
             return
         }
+        Logger.shared.log("VeilgramAuth", "Applied authorized server countries count=\(countries.count)")
         countryCodes = countries
 
         var countriesByPrefix: [String: (Country, Country.CountryCode)] = [:]
@@ -213,8 +219,10 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
     
     public static func setupCountryCodes(countries: [Country], codesByPrefix: [String: (Country, Country.CountryCode)]) {
         guard !countries.isEmpty else {
+            Logger.shared.log("VeilgramAuth", "Ignored empty injected countries configuration")
             return
         }
+        Logger.shared.log("VeilgramAuth", "Applied injected countries count=\(countries.count)")
         countryCodes = countries
         countryCodesByPrefix = codesByPrefix
     }
