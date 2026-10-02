@@ -110,10 +110,9 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/check_veilgram_local_premium.py
-          xcrun swiftc -parse \
-            submodules/AccountContext/Sources/AccountContext.swift \
-            submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift \
-            submodules/TelegramUI/Sources/AccountContext.swift
+          xcrun swiftc -parse submodules/AccountContext/Sources/AccountContext.swift
+          xcrun swiftc -parse submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift
+          xcrun swiftc -parse submodules/TelegramUI/Sources/AccountContext.swift
 
   ios-build:
     needs: swift-tests
