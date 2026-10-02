@@ -8,6 +8,7 @@ manager = (ROOT / "submodules/TelegramCore/Sources/State/ManagedSynchronizeViewS
 prefs = (ROOT / "submodules/VeilgramLocalFeatures/Sources/VeilgramGhostModeRuntimePreferences.swift").read_text(encoding="utf-8")
 settings = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift").read_text(encoding="utf-8")
 interactive_read = (ROOT / "submodules/TelegramCore/Sources/TelegramEngine/Messages/InstallInteractiveReadMessagesAction.swift").read_text(encoding="utf-8")
+presence = (ROOT / "submodules/TelegramCore/Sources/State/ManagedAccountPresence.swift").read_text(encoding="utf-8")
 
 checks = []
 
@@ -55,6 +56,26 @@ require(
     "Read only on interaction" in settings
     and "ghostReadOnInteractionOnlyChanged" in settings,
     "Veilgram settings must expose the manual-read toggle.",
+)
+require(
+    "peek-online-signal",
+    "peekOnlineNotification" in prefs
+    and "requestPeekOnline" in prefs,
+    "Ghost Mode must expose an account-scoped one-shot Peek Online signal.",
+)
+require(
+    "peek-online-runtime",
+    "performPeekOnline" in presence
+    and "updateStatus(offline: .boolFalse)" in presence
+    and "timeout: 8.0" in presence
+    and "updatePresence(false)" in presence,
+    "Presence manager must briefly advertise online and then restore offline state.",
+)
+require(
+    "peek-online-ui",
+    "Peek Online" in settings
+    and "requestPeekOnline" in settings,
+    "Veilgram settings must expose the one-shot Peek Online action.",
 )
 
 failed = [x for x in checks if not x[1]]
