@@ -41,6 +41,84 @@ enum VeilgramLocalCoreIntegrationTests {
         ))
         checks += 5
 
+        let premiumSuite = "veilgram-local-premium-\(UUID().uuidString)"
+        let premiumDefaults = UserDefaults(suiteName: premiumSuite)!
+        defer { premiumDefaults.removePersistentDomain(forName: premiumSuite) }
+        let premiumAccount: Int64 = 101
+
+        precondition(!VeilgramLocalPremiumRuntimePreferences.isEnabled(
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(!VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+            serverIsPremium: false,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+            serverIsPremium: true,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+
+        var premiumNotificationCount = 0
+        let premiumObserver = NotificationCenter.default.addObserver(
+            forName: VeilgramLocalPremiumRuntimePreferences.didChangeNotification,
+            object: nil,
+            queue: nil
+        ) { notification in
+            if let value = notification.object as? NSNumber,
+               value.int64Value == premiumAccount {
+                premiumNotificationCount += 1
+            }
+        }
+        defer { NotificationCenter.default.removeObserver(premiumObserver) }
+
+        VeilgramLocalPremiumRuntimePreferences.setEnabled(
+            true,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        )
+        precondition(VeilgramLocalPremiumRuntimePreferences.isEnabled(
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+            serverIsPremium: false,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(premiumNotificationCount == 1)
+
+        VeilgramLocalPremiumRuntimePreferences.setEnabled(
+            true,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        )
+        precondition(premiumNotificationCount == 1)
+
+        VeilgramLocalPremiumRuntimePreferences.setEnabled(
+            false,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        )
+        precondition(!VeilgramLocalPremiumRuntimePreferences.isEnabled(
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(!VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+            serverIsPremium: false,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+            serverIsPremium: true,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(premiumNotificationCount == 2)
+        checks += 10
+
         let ordinary = VeilgramArchiveEligibility(
             isCloudMessage: true,
             isSecretChat: false,
