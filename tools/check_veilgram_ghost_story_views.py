@@ -7,6 +7,7 @@ stories = (ROOT / "submodules/TelegramCore/Sources/TelegramEngine/Messages/Stori
 manager = (ROOT / "submodules/TelegramCore/Sources/State/ManagedSynchronizeViewStoriesOperations.swift").read_text(encoding="utf-8")
 prefs = (ROOT / "submodules/VeilgramLocalFeatures/Sources/VeilgramGhostModeRuntimePreferences.swift").read_text(encoding="utf-8")
 settings = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift").read_text(encoding="utf-8")
+interactive_read = (ROOT / "submodules/TelegramCore/Sources/TelegramEngine/Messages/InstallInteractiveReadMessagesAction.swift").read_text(encoding="utf-8")
 
 checks = []
 
@@ -37,6 +38,23 @@ require(
     and "ghostStoryViewsChanged" in settings
     and "setSuppressStoryViews" in settings,
     "Veilgram settings must expose the per-account story-view toggle.",
+)
+require(
+    "manual-read-pref",
+    "readOnInteractionOnly" in prefs and "setReadOnInteractionOnly" in prefs,
+    "Ghost Mode must persist the manual/read-on-interaction preference.",
+)
+require(
+    "manual-read-runtime",
+    "VeilgramGhostModeRuntimePreferences.readOnInteractionOnly" in interactive_read
+    and "return EmptyDisposable" in interactive_read,
+    "Automatic visible-message read action must be disabled in manual-read mode.",
+)
+require(
+    "manual-read-ui",
+    "Read only on interaction" in settings
+    and "ghostReadOnInteractionOnlyChanged" in settings,
+    "Veilgram settings must expose the manual-read toggle.",
 )
 
 failed = [x for x in checks if not x[1]]
