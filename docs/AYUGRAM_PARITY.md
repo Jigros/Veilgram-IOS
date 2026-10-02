@@ -9,7 +9,7 @@ This table tracks technical implementation state in the Veilgram runtime branch.
 | Suppress online / force offline | IMPLEMENTED | `ManagedAccountPresence.swift` maps the effective presence to offline while the setting is enabled. |
 | Suppress typing/send activities | IMPLEMENTED | `ManagedLocalInputActivities.swift` suppresses typing, recording, upload and group-call speaking activity while Ghost Mode activity suppression is enabled. |
 | Manual/read-on-interaction mode | IMPLEMENTED | Per-account read-on-interaction setting controls automatic cloud read-state updates. |
-| Delayed scheduled send | IMPLEMENTED_PARTIAL | Per-account Off/30s/60s/5min choice wraps current-text sends with review, then uses the upstream scheduled queue. Recordings, forwards, bots, ephemeral commands, edits and suggested posts keep their existing paths. New CI/device gate pending. |
+| Native scheduled / repeating send | UPSTREAM_IMPLEMENTED_VERIFY | Native long-press send menu, schedule picker and server queue. Repeating sends use the real account Premium status. Custom delay preference/modal removed; fresh compile and physical-device matrix pending (#50). |
 | Warn before opening story | IMPLEMENTED | Story-open warning is integrated with Ghost Mode and the effective story-view preference. |
 | Persistent deleted message archive | IMPLEMENTED | Batched writer with lifecycle flush/retry and serialized clear/import; ordinary delete, history-validation and min-available/range paths are covered. |
 | Edit history | IMPLEMENTED | Previous text/entity revisions are captured on edit and exposed in Veilgram UI. |
@@ -44,6 +44,6 @@ Compilation status and device-test status are tracked separately from feature st
 
 ## Verified integration gate
 
-Runtime source `6f98453a8787eee8711862832459938096e0a196` passed both Swift/source tests and the full iOS simulator compile in [Actions run #85](https://github.com/Jigros/Veilgram-IOS/actions/runs/37008158360). The delayed-send changes following that source require a new gate; this prior PASS does not validate them.
+Runtime source `6f98453a8787eee8711862832459938096e0a196` passed both Swift/source tests and the full iOS simulator compile in [Actions run #85](https://github.com/Jigros/Veilgram-IOS/actions/runs/37008158360). Changes following that source require a new gate; this prior PASS does not validate them.
 
-Delayed send: Veilgram Settings → Delayed send → Off / 30 seconds / 1 minute / 5 minutes. Sending current text presents Cancel, Send and Schedule actions. Scheduled messages can be edited, sent immediately or deleted using the upstream Scheduled Messages screen. Cancel before scheduling preserves the composer. Scheduling uses the server queue and survives closing the app. Physical-device checks should cover cancellation, reply/entities/effects, silent sends, paid-message prompts, app restart and delivery timing.
+Native scheduled send: hold the Send button and select the upstream Schedule Message action. Use the native date/time picker, send-when-online option where available, and Repeat with a real Premium account. The server stores the schedule; the upstream Scheduled Messages screen supports edit, reschedule, send now and delete. There is no Veilgram fixed-delay preference or alternate send modal. Verify text, media, recordings, replies/entities/effects, silent sends, paid-message handling, cancellation, restart and delivery on a physical device. Local Premium must not unlock server repeat entitlement.

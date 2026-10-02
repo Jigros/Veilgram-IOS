@@ -27,7 +27,6 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     private var localPremiumUIEnabled: Bool
     private var capturePrivacyEnabled: Bool
     private var sendConfirmationEnabled: Bool
-    private var delayedSendSeconds: Int
 
     init(context: AccountContext) {
         self.accountContext = context
@@ -50,7 +49,6 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         self.localPremiumUIEnabled = VeilgramLocalPremiumRuntimePreferences.isEnabled(accountPeerId: accountPeerId)
         self.capturePrivacyEnabled = VeilgramCapturePrivacyPreferences.isEnabled()
         self.sendConfirmationEnabled = VeilgramSendConfirmationPreferences.isEnabled(accountPeerId: accountPeerId)
-        self.delayedSendSeconds = VeilgramDelayedSendPreferences.seconds(accountPeerId: accountPeerId)
         let presentation = context.sharedContext.currentPresentationData.with { $0 }
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentation, style: .glass))
         self.title = "Veilgram"
@@ -87,7 +85,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
         case 0:
-            return 17
+            return 16
         case 1:
             return 3
         case 2:
@@ -243,13 +241,6 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.isOn = self.sendConfirmationEnabled
                 control.addTarget(self, action: #selector(sendConfirmationChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
-            } else if indexPath.row == 15 {
-                cell.textLabel?.text = "Delayed send"
-                cell.detailTextLabel?.text = self.delayedSendSeconds == 0
-                    ? "Off"
-                    : "\(self.delayedSendSeconds) seconds • review before scheduling"
-                cell.selectionStyle = .default
-                cell.accessoryType = .disclosureIndicator
             } else {
                 cell.textLabel?.text = "Message filters"
                 cell.detailTextLabel?.text = "Local rules • add, enable, disable or delete"
@@ -291,37 +282,6 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             return
         }
         if indexPath.section == 0, indexPath.row == 15 {
-            let alert = UIAlertController(
-                title: "Delayed send",
-                message: "Schedule current text in ordinary cloud chats. Review each send; edit or cancel it in Scheduled Messages. Recordings, forwards, bots, secret chats and suggested posts use their normal send flow.",
-                preferredStyle: .actionSheet
-            )
-            for seconds in VeilgramDelayedSendPreferences.allowedDelays {
-                let title: String
-                switch seconds {
-                case 0: title = "Off"
-                case 30: title = "30 seconds"
-                case 60: title = "1 minute"
-                default: title = "5 minutes"
-                }
-                alert.addAction(UIAlertAction(title: title, style: .default, handler: { [weak self] _ in
-                    guard let self else { return }
-                    VeilgramDelayedSendPreferences.setSeconds(
-                        seconds, accountPeerId: self.accountContext.account.peerId.toInt64()
-                    )
-                    self.delayedSendSeconds = seconds
-                    self.tableView.reloadRows(at: [indexPath], with: .none)
-                }))
-            }
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-            if let popover = alert.popoverPresentationController {
-                popover.sourceView = tableView
-                popover.sourceRect = tableView.rectForRow(at: indexPath)
-            }
-            self.view.window?.rootViewController?.present(alert, animated: true)
-            return
-        }
-        if indexPath.section == 0, indexPath.row == 16 {
             self.push(VeilgramMessageFiltersController(context: self.accountContext))
             return
         }

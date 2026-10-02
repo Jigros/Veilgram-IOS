@@ -38,8 +38,9 @@ on:
       - "tools/check_veilgram_ghost_story_views.py"
       - "tools/check_veilgram_local_premium.py"
       - "tools/check_veilgram_send_confirmation.py"
+      - "tools/check_veilgram_native_scheduling.py"
+      - "submodules/TelegramUI/Components/ChatScheduleTimeController/**"
       - "tools/check_veilgram_message_shot.py"
-      - "tools/test_veilgram_delayed_send.swift"
       - "submodules/AuthorizationUI/Sources/AuthorizationSequenceController.swift"
       - "submodules/CountrySelectionUI/Sources/AuthorizationSequenceCountrySelectionController.swift"
       - "submodules/CountrySelectionUI/Sources/AuthorizationSequenceCountrySelectionControllerNode.swift"
@@ -159,15 +160,8 @@ jobs:
           xcrun swiftc -parse submodules/TelegramUI/Sources/ChatController.swift
           xcrun swiftc -parse submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift
 
-      - name: Test delayed send
-        shell: bash
-        run: |
-          set -euo pipefail
-          xcrun swiftc -warnings-as-errors \
-            submodules/VeilgramLocalFeatures/Sources/VeilgramDelayedSendPreferences.swift \
-            tools/test_veilgram_delayed_send.swift \
-            -o "$RUNNER_TEMP/test-delayed-send"
-          "$RUNNER_TEMP/test-delayed-send"
+      - name: Check native scheduling and real Premium repeat boundary
+        run: python3 tools/check_veilgram_native_scheduling.py
 
       - name: Check Message Shot
         shell: bash

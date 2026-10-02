@@ -27,16 +27,16 @@ require(
     "user-send-only",
     "sendCurrentMessage: { [weak self] silentPosting, messageEffect in" in chat
     and "VeilgramSendConfirmationPreferences.isEnabled" in chat
-    and "let performSend: (Int?) -> Void" in chat,
+    and "let performSend: () -> Void" in chat,
     "Confirmation must wrap the user-initiated current-message send entry point.",
 )
 require(
     "confirmation-before-enqueue",
-    "let performSend: (Int?) -> Void" in chat
+    "let performSend: () -> Void" in chat
     and "VeilgramSendConfirmationPreferences.isEnabled" in chat
     and 'title: "Send"' in chat
-    and "action: sendNow" in chat
-    and "} else {\n                sendNow()\n            }" in chat,
+    and "action: performSend" in chat
+    and "} else {\n                performSend()\n            }" in chat,
     "The enqueue closure must only be invoked by confirm or the disabled-preference fast path.",
 )
 
