@@ -104,11 +104,12 @@ enum VeilgramLocalCoreIntegrationTests {
             eligibility: ordinary
         )
         precondition(didAppendNewerMessage)
-        precondition(!VeilgramMessageArchiveEngine.append(
+        let didAppendStaleMessage = try VeilgramMessageArchiveEngine.append(
             document: &messages,
             message: staleMessage,
             eligibility: ordinary
-        ))
+        )
+        precondition(!didAppendStaleMessage)
         precondition(messages.messages.first?.text == "newer")
 
         let ineligibleMessage = VeilgramArchivedMessage(
@@ -119,11 +120,12 @@ enum VeilgramLocalCoreIntegrationTests {
             entities: [],
             hadMedia: false
         )
-        precondition(!VeilgramMessageArchiveEngine.append(
+        let didAppendIneligibleMessage = try VeilgramMessageArchiveEngine.append(
             document: &messages,
             message: ineligibleMessage,
             eligibility: ephemeral
-        ))
+        )
+        precondition(!didAppendIneligibleMessage)
         precondition(messages.messages.count == 1)
 
         let encodedMessages = try VeilgramMessageArchiveEngine.encode(messages)
@@ -157,12 +159,13 @@ enum VeilgramLocalCoreIntegrationTests {
             eligibility: ordinary
         )
         precondition(didAppendLaterRevision)
-        precondition(!VeilgramEditHistoryEngine.append(
+        let didAppendStaleRevision = try VeilgramEditHistoryEngine.append(
             document: &edits,
             key: key,
             revision: staleRevision,
             eligibility: ordinary
-        ))
+        )
+        precondition(!didAppendStaleRevision)
         let didAppendSameSecondRevision = try VeilgramEditHistoryEngine.append(
             document: &edits,
             key: key,
@@ -173,12 +176,13 @@ enum VeilgramLocalCoreIntegrationTests {
         precondition(edits.records.first?.revisions.map(\.text).suffix(2) == ["later", "same-second-different"])
 
         let beforeIneligibleRevisionCount = edits.records.first?.revisions.count
-        precondition(!VeilgramEditHistoryEngine.append(
+        let didAppendIneligibleRevision = try VeilgramEditHistoryEngine.append(
             document: &edits,
             key: key,
             revision: VeilgramEditRevision(timestamp: 31, text: "ephemeral-edit", entities: []),
             eligibility: ephemeral
-        ))
+        )
+        precondition(!didAppendIneligibleRevision)
         precondition(edits.records.first?.revisions.count == beforeIneligibleRevisionCount)
 
         let encodedEdits = try VeilgramEditHistoryEngine.encode(edits)
