@@ -758,8 +758,14 @@ extension ChatControllerImpl {
             }
             
             let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: transformedMessages)
-            |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] messageIds in
                 if let strongSelf = self, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
+                    let hasScheduleAttribute = transformedMessages.contains { message in
+                        message.attributes.contains { $0 is OutgoingScheduleInfoMessageAttribute }
+                    }
+                    if !hasScheduleAttribute, scheduleTime == nil, messageIds.contains(where: { $0 != nil }) {
+                        strongSelf.chatDisplayNode.historyNode.readVisibleMessagesOnSendInteraction()
+                    }
                     strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                 }
             })

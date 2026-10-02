@@ -47,6 +47,7 @@ on:
       - "submodules/TelegramCore/Sources/State/ManagedSynchronizeConsumeMessageContentsOperations.swift"
       - "submodules/TelegramUI/Sources/ChatHistoryListNode.swift"
       - "submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift"
+      - "submodules/TelegramUI/Sources/Chat/ChatControllerMediaRecording.swift"
       - "tools/check_veilgram_local_premium.py"
       - "tools/check_veilgram_send_confirmation.py"
       - "tools/check_veilgram_native_scheduling.py"
@@ -159,7 +160,7 @@ jobs:
           python3 tools/check_veilgram_ghost_receipts.py
           xcrun swiftc -warnings-as-errors submodules/VeilgramLocalFeatures/Sources/VeilgramGhostModeRuntimePreferences.swift tools/test_veilgram_ghost_receipts.swift -o "$RUNNER_TEMP/test-ghost-receipts"
           "$RUNNER_TEMP/test-ghost-receipts"
-          xcrun swiftc -parse submodules/TelegramCore/Sources/State/AccountViewTracker.swift submodules/TelegramCore/Sources/State/ManagedConsumePersonalMessagesActions.swift submodules/TelegramCore/Sources/State/ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift submodules/TelegramCore/Sources/TelegramEngine/Messages/ApplyMaxReadIndexInteractively.swift submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkAllChatsAsRead.swift submodules/TelegramCore/Sources/TelegramEngine/Messages/ReplyThreadHistory.swift submodules/TelegramCore/Sources/State/ManagedSynchronizeConsumeMessageContentsOperations.swift submodules/TelegramUI/Sources/ChatHistoryListNode.swift submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift
+          xcrun swiftc -parse submodules/TelegramCore/Sources/State/AccountViewTracker.swift submodules/TelegramCore/Sources/State/ManagedConsumePersonalMessagesActions.swift submodules/TelegramCore/Sources/State/ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift submodules/TelegramCore/Sources/TelegramEngine/Messages/ApplyMaxReadIndexInteractively.swift submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkAllChatsAsRead.swift submodules/TelegramCore/Sources/TelegramEngine/Messages/ReplyThreadHistory.swift submodules/TelegramCore/Sources/State/ManagedSynchronizeConsumeMessageContentsOperations.swift submodules/TelegramUI/Sources/ChatHistoryListNode.swift submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift submodules/TelegramUI/Sources/Chat/ChatControllerMediaRecording.swift
 
       - name: Check Local Premium presentation boundary
         shell: bash

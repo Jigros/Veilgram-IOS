@@ -40,3 +40,11 @@ assert all_chats.index("suppressReadReceipts") < all_chats.index("channels.readH
 print("PASS: mention/reaction completion, six forum RPCs, live-location and bulk read boundaries")
 assert bulk.count("let signal: Signal<Void, Bool> = deferred") == 2
 print("PASS: bulk reaction/poll retry subscriptions recheck live Ghost state")
+
+recording = (root / "submodules/TelegramUI/Sources/Chat/ChatControllerMediaRecording.swift").read_text()
+audio_send = recording[recording.index("func sendMediaRecording("):recording.index("case .video:", recording.index("func sendMediaRecording("))]
+assert audio_send.index("enqueueMessages(account:") < audio_send.index("hasScheduleAttribute")
+assert "messageIds.contains(where: { $0 != nil })" in audio_send
+assert "!hasScheduleAttribute, scheduleTime == nil" in audio_send
+assert "readVisibleMessagesOnSendInteraction()" in audio_send
+print("PASS: accepted immediate audio-draft interaction; canceled/rejected/scheduled paths excluded")
