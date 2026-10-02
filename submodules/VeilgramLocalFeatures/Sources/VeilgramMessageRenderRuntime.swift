@@ -77,16 +77,6 @@ public enum VeilgramMessageRenderRuntime {
             defaults: defaults
         )
 
-        if adOptions.enabled && isOfficialSponsored {
-            let collapse = adOptions.collapseEnabled
-                && !isRevealed(accountId: accountId, message: message)
-            return VeilgramMessageRenderDecision(
-                label: "Sponsored message",
-                shouldCollapse: collapse,
-                isAdvertisement: true
-            )
-        }
-
         let adDecision = VeilgramChannelAdClassifier.classify(
             VeilgramChannelAdInput(
                 text: text,
@@ -98,18 +88,19 @@ public enum VeilgramMessageRenderRuntime {
             options: adOptions
         )
 
+        let adLabel = isOfficialSponsored ? "Sponsored message" : "Likely channel ad"
         switch adDecision.action {
         case .keep:
             return nil
         case .label:
             return VeilgramMessageRenderDecision(
-                label: "Likely channel ad",
+                label: adLabel,
                 shouldCollapse: false,
                 isAdvertisement: true
             )
         case .collapse:
             return VeilgramMessageRenderDecision(
-                label: "Likely channel ad",
+                label: adLabel,
                 shouldCollapse: !isRevealed(accountId: accountId, message: message),
                 isAdvertisement: true
             )
