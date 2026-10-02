@@ -267,7 +267,7 @@ public final class AccountContextImpl: AccountContext {
     public private(set) var audioTranscriptionTrial: AudioTranscription.TrialState
     
     public private(set) var isPremium: Bool
-    private var serverIsPremium: Bool = false
+    public private(set) var isPremiumPresentation: Bool
     private var localPremiumObserver: NSObjectProtocol?
     
     private var isFrozenDisposable: Disposable?
@@ -286,7 +286,8 @@ public final class AccountContextImpl: AccountContext {
         self.userLimits = EngineConfiguration.UserLimits(UserLimitsConfiguration.defaultValue)
         self.peerNameColors = PeerNameColors.with(availableReplyColors: availableReplyColors, availableProfileColors: availableProfileColors)
         self.audioTranscriptionTrial = AudioTranscription.TrialState.defaultValue
-        self.isPremium = VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+        self.isPremium = false
+        self.isPremiumPresentation = VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
             serverIsPremium: false,
             accountPeerId: account.peerId.toInt64()
         )
@@ -302,8 +303,8 @@ public final class AccountContextImpl: AccountContext {
                   accountValue.int64Value == self.account.peerId.toInt64() else {
                 return
             }
-            self.isPremium = VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
-                serverIsPremium: self.serverIsPremium,
+            self.isPremiumPresentation = VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+                serverIsPremium: self.isPremium,
                 accountPeerId: self.account.peerId.toInt64()
             )
         }
@@ -471,8 +472,8 @@ public final class AccountContextImpl: AccountContext {
             guard let self = self else {
                 return
             }
-            self.serverIsPremium = isPremium
-            self.isPremium = VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+            self.isPremium = isPremium
+            self.isPremiumPresentation = VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
                 serverIsPremium: isPremium,
                 accountPeerId: self.account.peerId.toInt64()
             )
