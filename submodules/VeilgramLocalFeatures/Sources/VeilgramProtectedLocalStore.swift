@@ -124,6 +124,18 @@ struct VeilgramProtectedLocalStore {
         return FileManager.default.fileExists(atPath: fileURL.path)
     }
 
+    func existingFileURL(fileName: String) throws -> URL? {
+        let fileURL = try url(for: fileName)
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            return nil
+        }
+        let values = try fileURL.resourceValues(forKeys: [.isRegularFileKey])
+        guard values.isRegularFile == true else {
+            return nil
+        }
+        return fileURL
+    }
+
     private func applyProtection(to fileURL: URL) throws {
         try FileManager.default.setAttributes(
             [.posixPermissions: NSNumber(value: 0o600)],
