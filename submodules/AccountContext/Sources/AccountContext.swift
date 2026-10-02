@@ -1750,7 +1750,11 @@ public protocol AccountContext: AnyObject {
     var availableReactions: Signal<AvailableReactions?, NoError> { get }
     var availableMessageEffects: Signal<AvailableMessageEffects?, NoError> { get }
     
+    /// Real Telegram Premium entitlement reported by the account peer.
     var isPremium: Bool { get }
+    /// Presentation-only effective state. Veilgram may locally enable this for
+    /// client-side visuals without changing server entitlements or limits.
+    var isPremiumPresentation: Bool { get }
     var isFrozen: Bool { get }
     var userLimits: EngineConfiguration.UserLimits { get }
     var peerNameColors: PeerNameColors { get }
