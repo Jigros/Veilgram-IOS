@@ -297,7 +297,7 @@ func infoItems(
                 
                 if let note = cachedData.note, !note.text.isEmpty {
                     var entities = note.entities
-                    if context.isPremium {
+                    if context.isPremiumPresentation {
                         entities = generateTextEntities(note.text, enabledTypes: [.mention, .hashtag, .allUrl], currentEntities: entities)
                     }
                     items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: ItemNote, label: presentationData.strings.PeerInfo_Notes, rightLabel: presentationData.strings.PeerInfo_NotesInfo, text: note.text, entities: entities, handleSpoilers: true, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: []), action: nil, linkItemAction: bioLinkAction, button: nil, contextAction: noteContextAction, requestLayout: { animated in

@@ -8,6 +8,7 @@ context = (ROOT / "submodules/TelegramUI/Sources/AccountContext.swift").read_tex
 settings = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift").read_text(encoding="utf-8")
 account_context_protocol = (ROOT / "submodules/AccountContext/Sources/AccountContext.swift").read_text(encoding="utf-8")
 theme_settings = (ROOT / "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift").read_text(encoding="utf-8")
+profile_items = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift").read_text(encoding="utf-8")
 
 checks = []
 
@@ -63,6 +64,15 @@ require(
     and "context.account.testingEnvironment" in theme_settings
     and "requestSetAlternateIconName" in theme_settings,
     "Premium app icons must react to local presentation state while preserving test-environment gating.",
+)
+
+profile_note = profile_items[profile_items.index("if let note = cachedData.note"):profile_items.index("if let botInfo = user.botInfo", profile_items.index("if let note = cachedData.note"))]
+require(
+    "local-note-link-formatting",
+    "if context.isPremiumPresentation {" in profile_note
+    and "if context.isPremium {" not in profile_note
+    and "user.isPremium ? enabledPublicBioEntities" in profile_items,
+    "Local Premium may enable link parsing in account-local peer notes while public bio retains server Premium.",
 )
 
 failed = [x for x in checks if not x[1]]

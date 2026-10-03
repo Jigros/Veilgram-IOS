@@ -28,6 +28,7 @@ on:
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalArchiveController.swift"
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalArchiveDetailController.swift"
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalTransferController.swift"
+      - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift"
       - "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift"
       - "tools/test_veilgram_archive_runtime_batch.swift"
       - "tools/test_veilgram_channel_ad_classifier.swift"
@@ -170,6 +171,7 @@ jobs:
           xcrun swiftc -parse submodules/AccountContext/Sources/AccountContext.swift
           xcrun swiftc -parse submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift
           xcrun swiftc -parse submodules/TelegramUI/Sources/AccountContext.swift
+          xcrun swiftc -parse submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift
 
       - name: Check send confirmation path
         shell: bash
