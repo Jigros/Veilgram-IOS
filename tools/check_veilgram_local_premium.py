@@ -66,7 +66,8 @@ require(
     "Premium app icons must react to local presentation state while preserving test-environment gating.",
 )
 
-profile_note = profile_items[profile_items.index("if let note = cachedData.note"):profile_items.index("if let botInfo = user.botInfo", profile_items.index("if let note = cachedData.note"))]
+note_start = profile_items.index("if let note = cachedData.note, !note.text.isEmpty {\n                    var entities = note.entities")
+profile_note = profile_items[note_start:profile_items.index("if let botInfo = user.botInfo", note_start)]
 require(
     "local-note-link-formatting",
     "if context.isPremiumPresentation {" in profile_note
