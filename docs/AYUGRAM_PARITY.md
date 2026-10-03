@@ -20,7 +20,7 @@ This table tracks technical implementation state in the Veilgram runtime branch.
 | Hide blocked users/reactions/typing/member list | NOT_STARTED | No unified Veilgram implementation yet. |
 | Restricted/deleted forwarding helpers | NOT_STARTED | No Veilgram-specific forwarding implementation yet. |
 | Remove/collapse ads and sponsored posts | IMPLEMENTED | Shared render decision unifies classifier/sponsored collapse and reveal; stable grouping/scroll tests pass. Real-account ad-object verification remains open. |
-| Local Premium UI | IMPLEMENTED_PARTIAL | Per-account presentation state now drives live theme and alternate-icon availability updates. Other local visual components and usable alternate icon artwork remain open (#11); real entitlement is preserved. |
+| Local Premium UI | IMPLEMENTED_PARTIAL | Per-account presentation state drives live theme and alternate-icon availability, account-local note links and self-profile badge/title styling. Other visual components, animated self-avatars and usable alternate icon artwork remain open (#11); real entitlement is preserved. |
 | Peek Online | IMPLEMENTED | Temporary online presence is available from Ghost Mode settings. |
 | Banned/kicked chat cache | NOT_STARTED | No Veilgram implementation yet. |
 | Expire button / capture controls | RESEARCHING | Platform-specific behavior still needs integration work. |

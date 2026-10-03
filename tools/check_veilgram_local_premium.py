@@ -9,6 +9,7 @@ settings = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sou
 account_context_protocol = (ROOT / "submodules/AccountContext/Sources/AccountContext.swift").read_text(encoding="utf-8")
 theme_settings = (ROOT / "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift").read_text(encoding="utf-8")
 profile_items = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift").read_text(encoding="utf-8")
+profile_header = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift").read_text(encoding="utf-8")
 
 checks = []
 
@@ -74,6 +75,14 @@ require(
     and "if context.isPremium {" not in profile_note
     and "user.isPremium ? enabledPublicBioEntities" in profile_items,
     "Local Premium may enable link parsing in account-local peer notes while public bio retains server Premium.",
+)
+
+require(
+    "local-self-premium-profile-badge",
+    "peer.isPremium && !premiumConfiguration.isPremiumDisabled" in profile_header
+    and "peer.id == self.context.account.peerId && !peer.isPremium && self.context.isPremiumPresentation" in profile_header
+    and "isPremium = peer.isPremium || (peer.id == self.context.account.peerId && self.context.isPremiumPresentation)" in profile_header,
+    "Local Premium must affect only the account's own profile badge and title styling; real peer Premium remains authoritative.",
 )
 
 failed = [x for x in checks if not x[1]]
