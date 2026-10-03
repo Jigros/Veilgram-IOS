@@ -1,0 +1,14 @@
+{
+  "bundle_id": "org.example.Veilgram",
+  "api_id": "{! obtain your own at https://my.telegram.org/apps !}",
+  "api_hash": "{! obtain your own at https://my.telegram.org/apps !}",
+  "team_id": "AAAAAAAAAA",
+  "app_center_id": "0",
+  "is_internal_build": "true",
+  "is_appstore_build": "false",
+  "appstore_id": "0",
+  "app_specific_url_scheme": "veilgram",
+  "premium_iap_product_id": "",
+  "enable_siri": false,
+  "enable_icloud": false
+}

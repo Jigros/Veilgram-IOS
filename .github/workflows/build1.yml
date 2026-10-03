@@ -19,7 +19,6 @@ jobs:
       - name: Checkout branded product source
         uses: actions/checkout@v4
         with:
-          ref: cleanup/remove-project-policy-guards
           submodules: false
           fetch-depth: 0
           persist-credentials: false

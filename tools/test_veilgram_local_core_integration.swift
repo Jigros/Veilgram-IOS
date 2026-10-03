@@ -1,0 +1,435 @@
+import Foundation
+
+@main
+enum VeilgramLocalCoreIntegrationTests {
+    static func main() throws {
+        var checks = 0
+
+        let preferenceSuite = "veilgram-runtime-prefs-\(UUID().uuidString)"
+        let preferenceDefaults = UserDefaults(suiteName: preferenceSuite)!
+        defer { preferenceDefaults.removePersistentDomain(forName: preferenceSuite) }
+        let preferenceAccount: Int64 = 99
+        precondition(!VeilgramArchiveRuntimePreferences.messageArchiveEnabled(
+            accountPeerId: preferenceAccount,
+            defaults: preferenceDefaults
+        ))
+        precondition(!VeilgramArchiveRuntimePreferences.editHistoryEnabled(
+            accountPeerId: preferenceAccount,
+            defaults: preferenceDefaults
+        ))
+        VeilgramArchiveRuntimePreferences.setMessageArchiveEnabled(
+            true,
+            accountPeerId: preferenceAccount,
+            defaults: preferenceDefaults
+        )
+        precondition(VeilgramArchiveRuntimePreferences.messageArchiveEnabled(
+            accountPeerId: preferenceAccount,
+            defaults: preferenceDefaults
+        ))
+        precondition(!VeilgramArchiveRuntimePreferences.editHistoryEnabled(
+            accountPeerId: preferenceAccount,
+            defaults: preferenceDefaults
+        ))
+        VeilgramArchiveRuntimePreferences.setEditHistoryEnabled(
+            true,
+            accountPeerId: preferenceAccount,
+            defaults: preferenceDefaults
+        )
+        precondition(VeilgramArchiveRuntimePreferences.editHistoryEnabled(
+            accountPeerId: preferenceAccount,
+            defaults: preferenceDefaults
+        ))
+        checks += 5
+
+        let premiumSuite = "veilgram-local-premium-\(UUID().uuidString)"
+        let premiumDefaults = UserDefaults(suiteName: premiumSuite)!
+        defer { premiumDefaults.removePersistentDomain(forName: premiumSuite) }
+        let premiumAccount: Int64 = 101
+
+        precondition(!VeilgramLocalPremiumRuntimePreferences.isEnabled(
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(!VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+            serverIsPremium: false,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+            serverIsPremium: true,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+
+        VeilgramLocalPremiumRuntimePreferences.setEnabled(
+            true,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        )
+        precondition(VeilgramLocalPremiumRuntimePreferences.isEnabled(
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+            serverIsPremium: false,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+
+        VeilgramLocalPremiumRuntimePreferences.setEnabled(
+            false,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        )
+        precondition(!VeilgramLocalPremiumRuntimePreferences.isEnabled(
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(!VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+            serverIsPremium: false,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+            serverIsPremium: true,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+        checks += 8
+
+        let sendConfirmationSuite = "veilgram-send-confirmation-\(UUID().uuidString)"
+        let sendConfirmationDefaults = UserDefaults(suiteName: sendConfirmationSuite)!
+        defer { sendConfirmationDefaults.removePersistentDomain(forName: sendConfirmationSuite) }
+        let sendConfirmationAccount: Int64 = 202
+        precondition(!VeilgramSendConfirmationPreferences.isEnabled(
+            accountPeerId: sendConfirmationAccount,
+            defaults: sendConfirmationDefaults
+        ))
+        VeilgramSendConfirmationPreferences.setEnabled(
+            true,
+            accountPeerId: sendConfirmationAccount,
+            defaults: sendConfirmationDefaults
+        )
+        precondition(VeilgramSendConfirmationPreferences.isEnabled(
+            accountPeerId: sendConfirmationAccount,
+            defaults: sendConfirmationDefaults
+        ))
+        VeilgramSendConfirmationPreferences.setEnabled(
+            false,
+            accountPeerId: sendConfirmationAccount,
+            defaults: sendConfirmationDefaults
+        )
+        precondition(!VeilgramSendConfirmationPreferences.isEnabled(
+            accountPeerId: sendConfirmationAccount,
+            defaults: sendConfirmationDefaults
+        ))
+        checks += 3
+
+        let ordinary = VeilgramArchiveEligibility(
+            isCloudMessage: true,
+            isSecretChat: false,
+            isViewOnce: false,
+            hasSelfDestructTimeout: false
+        )
+        precondition(ordinary.isEligibleForLocalRetention)
+        checks += 1
+
+        let ephemeral = VeilgramArchiveEligibility(
+            isCloudMessage: true,
+            isSecretChat: false,
+            isViewOnce: true,
+            hasSelfDestructTimeout: true
+        )
+        precondition(!ephemeral.isEligibleForLocalRetention)
+        checks += 1
+
+        let key = VeilgramMessageKey(peerId: 42, namespace: 0, id: 7)
+        let entity = VeilgramTextEntity(offset: 0, length: 4, kind: "bold")
+        let message = VeilgramArchivedMessage(
+            key: key,
+            messageTimestamp: 10,
+            archivedAt: 20,
+            text: "test",
+            entities: [entity],
+            hadMedia: false
+        )
+        var messages = VeilgramMessageArchiveDocument()
+        let didAppendMessage = try VeilgramMessageArchiveEngine.append(
+            document: &messages,
+            message: message,
+            eligibility: ordinary
+        )
+        precondition(didAppendMessage)
+        let didAppendDuplicateMessage = try VeilgramMessageArchiveEngine.append(
+            document: &messages,
+            message: message,
+            eligibility: ordinary
+        )
+        precondition(!didAppendDuplicateMessage)
+        let newerMessage = VeilgramArchivedMessage(
+            key: key,
+            messageTimestamp: 10,
+            archivedAt: 30,
+            text: "newer",
+            entities: [],
+            hadMedia: false
+        )
+        let staleMessage = VeilgramArchivedMessage(
+            key: key,
+            messageTimestamp: 10,
+            archivedAt: 25,
+            text: "stale",
+            entities: [],
+            hadMedia: false
+        )
+        let didAppendNewerMessage = try VeilgramMessageArchiveEngine.append(
+            document: &messages,
+            message: newerMessage,
+            eligibility: ordinary
+        )
+        precondition(didAppendNewerMessage)
+        let didAppendStaleMessage = try VeilgramMessageArchiveEngine.append(
+            document: &messages,
+            message: staleMessage,
+            eligibility: ordinary
+        )
+        precondition(!didAppendStaleMessage)
+        precondition(messages.messages.first?.text == "newer")
+
+        let ineligibleMessage = VeilgramArchivedMessage(
+            key: VeilgramMessageKey(peerId: 42, namespace: 0, id: 8),
+            messageTimestamp: 11,
+            archivedAt: 31,
+            text: "ephemeral",
+            entities: [],
+            hadMedia: false
+        )
+        let didAppendIneligibleMessage = try VeilgramMessageArchiveEngine.append(
+            document: &messages,
+            message: ineligibleMessage,
+            eligibility: ephemeral
+        )
+        precondition(!didAppendIneligibleMessage)
+        precondition(messages.messages.count == 1)
+
+        let encodedMessages = try VeilgramMessageArchiveEngine.encode(messages)
+        let decodedMessages = try VeilgramMessageArchiveEngine.decode(encodedMessages)
+        precondition(decodedMessages == messages)
+        checks += 8
+
+        var edits = VeilgramEditHistoryDocument()
+        let revision = VeilgramEditRevision(timestamp: 21, text: "test", entities: [entity])
+        let didAppendRevision = try VeilgramEditHistoryEngine.append(
+            document: &edits,
+            key: key,
+            revision: revision,
+            eligibility: ordinary
+        )
+        precondition(didAppendRevision)
+        let didAppendDuplicateRevision = try VeilgramEditHistoryEngine.append(
+            document: &edits,
+            key: key,
+            revision: revision,
+            eligibility: ordinary
+        )
+        precondition(!didAppendDuplicateRevision)
+        let laterRevision = VeilgramEditRevision(timestamp: 30, text: "later", entities: [])
+        let staleRevision = VeilgramEditRevision(timestamp: 29, text: "stale", entities: [])
+        let sameSecondRevision = VeilgramEditRevision(timestamp: 30, text: "same-second-different", entities: [])
+        let didAppendLaterRevision = try VeilgramEditHistoryEngine.append(
+            document: &edits,
+            key: key,
+            revision: laterRevision,
+            eligibility: ordinary
+        )
+        precondition(didAppendLaterRevision)
+        let didAppendStaleRevision = try VeilgramEditHistoryEngine.append(
+            document: &edits,
+            key: key,
+            revision: staleRevision,
+            eligibility: ordinary
+        )
+        precondition(!didAppendStaleRevision)
+        let didAppendSameSecondRevision = try VeilgramEditHistoryEngine.append(
+            document: &edits,
+            key: key,
+            revision: sameSecondRevision,
+            eligibility: ordinary
+        )
+        precondition(didAppendSameSecondRevision)
+        precondition(edits.records.first?.revisions.map(\.text).suffix(2) == ["later", "same-second-different"])
+
+        let beforeIneligibleRevisionCount = edits.records.first?.revisions.count
+        let didAppendIneligibleRevision = try VeilgramEditHistoryEngine.append(
+            document: &edits,
+            key: key,
+            revision: VeilgramEditRevision(timestamp: 31, text: "ephemeral-edit", entities: []),
+            eligibility: ephemeral
+        )
+        precondition(!didAppendIneligibleRevision)
+        precondition(edits.records.first?.revisions.count == beforeIneligibleRevisionCount)
+
+        let encodedEdits = try VeilgramEditHistoryEngine.encode(edits)
+        let decodedEdits = try VeilgramEditHistoryEngine.decode(encodedEdits)
+        precondition(decodedEdits == edits)
+        checks += 9
+
+        let mediaKey = VeilgramMediaKey(
+            peerId: 42,
+            messageNamespace: 0,
+            messageId: 7,
+            mediaIndex: 0
+        )
+        let media = VeilgramMediaItem(
+            key: mediaKey,
+            relativePath: "media/item.bin",
+            byteCount: 100,
+            archivedAt: 20,
+            lastAccessedAt: 20,
+            availability: .available
+        )
+        var mediaDocument = VeilgramMediaArchiveDocument()
+        let mediaEligibility = VeilgramMediaEligibility(
+            archiveEligibility: ordinary,
+            bytesAreLocallyAvailable: true
+        )
+        let didAppendMedia = try VeilgramMediaArchiveEngine.appendAvailable(
+            document: &mediaDocument,
+            item: media,
+            eligibility: mediaEligibility
+        )
+        precondition(didAppendMedia)
+        precondition(VeilgramMediaArchiveEngine.totalAvailableBytes(mediaDocument) == 100)
+        let evicted = VeilgramMediaArchiveEngine.enforceQuota(
+            document: &mediaDocument,
+            maximumBytes: 0
+        )
+        precondition(evicted == [media] && mediaDocument.items.isEmpty)
+        checks += 3
+
+        var unavailableDocument = VeilgramMediaArchiveDocument()
+        let didAppendUnavailable = try VeilgramMediaArchiveEngine.upsertUnavailable(
+            document: &unavailableDocument,
+            key: mediaKey,
+            archivedAt: 30
+        )
+        precondition(didAppendUnavailable)
+        precondition(unavailableDocument.items.count == 1)
+        precondition(unavailableDocument.items[0].availability == .unavailable)
+        precondition(unavailableDocument.items[0].relativePath == nil)
+        precondition(unavailableDocument.items[0].byteCount == 0)
+        checks += 5
+
+        let suite = "veilgram-local-core-\(UUID().uuidString)"
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+
+        let store = VeilgramProtectedLocalStore(rootURL: base)
+        let archiveStore = VeilgramArchiveStoreAPI(store: store)
+
+        let sourceMedia = base.appendingPathComponent("source-media.bin")
+        try Data(repeating: 0x5a, count: 4096).write(to: sourceMedia)
+        let copiedMedia = try archiveStore.copyMediaFile(
+            sourcePath: sourceMedia.path,
+            key: mediaKey,
+            preferredExtension: "dat",
+            maximumBytes: 1024 * 1024
+        )
+        precondition(copiedMedia.relativePath == "media-item-42-0-7-0.dat")
+        precondition(copiedMedia.byteCount == 4096)
+        let copiedURL = base.appendingPathComponent(copiedMedia.relativePath)
+        precondition(FileManager.default.fileExists(atPath: copiedURL.path))
+        let copiedAttributes = try FileManager.default.attributesOfItem(atPath: copiedURL.path)
+        if let permissions = copiedAttributes[.posixPermissions] as? NSNumber {
+            precondition(permissions.intValue == 0o600)
+        } else {
+            preconditionFailure("missing media file permissions")
+        }
+
+        try Data(repeating: 0x33, count: 2048).write(to: sourceMedia)
+        let replacedMedia = try archiveStore.copyMediaFile(
+            sourcePath: sourceMedia.path,
+            key: mediaKey,
+            preferredExtension: "dat",
+            maximumBytes: 1024 * 1024
+        )
+        precondition(replacedMedia.relativePath == copiedMedia.relativePath)
+        precondition(replacedMedia.byteCount == 2048)
+        let replacedBytes = try Data(contentsOf: copiedURL)
+        precondition(replacedBytes.count == 2048)
+        precondition(replacedBytes.first == 0x33)
+        checks += 8
+
+        let storedMediaItem = VeilgramMediaItem(
+            key: mediaKey,
+            relativePath: replacedMedia.relativePath,
+            byteCount: replacedMedia.byteCount,
+            archivedAt: 40,
+            lastAccessedAt: 40,
+            availability: .available
+        )
+        var storedMediaDocument = VeilgramMediaArchiveDocument()
+        let didStoreMedia = try VeilgramMediaArchiveEngine.appendAvailable(
+            document: &storedMediaDocument,
+            item: storedMediaItem,
+            eligibility: mediaEligibility
+        )
+        precondition(didStoreMedia)
+        try archiveStore.saveMedia(storedMediaDocument)
+
+        let reopenedStore = VeilgramArchiveStoreAPI(
+            store: VeilgramProtectedLocalStore(rootURL: base)
+        )
+        let reopenedMedia = try reopenedStore.loadMedia()
+        precondition(reopenedMedia == storedMediaDocument)
+        let reopenedURL = try reopenedStore.archivedMediaURL(for: storedMediaItem)
+        precondition(reopenedURL == copiedURL)
+        checks += 3
+
+        try archiveStore.saveMessages(messages)
+        try archiveStore.saveEdits(edits)
+        let rootValues = try base.resourceValues(forKeys: [.isExcludedFromBackupKey])
+        precondition(rootValues.isExcludedFromBackup == true)
+        let messageFile = base.appendingPathComponent("message-archive-v1.json")
+        let fileValues = try messageFile.resourceValues(forKeys: [.isExcludedFromBackupKey])
+        precondition(fileValues.isExcludedFromBackup == true)
+        checks += 2
+        let loadedMessages = try archiveStore.loadMessages()
+        let loadedEdits = try archiveStore.loadEdits()
+        precondition(loadedMessages == messages)
+        precondition(loadedEdits == edits)
+        let messageExport = try archiveStore.exportMessages(createdAt: 100)
+        let editExport = try archiveStore.exportEdits(createdAt: 100)
+        let mediaExport = try archiveStore.exportMediaMetadata(createdAt: 100)
+
+        try archiveStore.removeAll()
+        let emptiedMessages = try archiveStore.loadMessages()
+        precondition(emptiedMessages.messages.isEmpty)
+        precondition(!FileManager.default.fileExists(atPath: copiedURL.path))
+        checks += 1
+
+        try archiveStore.importMessages(messageExport)
+        try archiveStore.importEdits(editExport)
+        try archiveStore.importMediaMetadata(mediaExport)
+        let importedMessages = try archiveStore.loadMessages()
+        let importedEdits = try archiveStore.loadEdits()
+        let importedMedia = try archiveStore.loadMedia()
+        precondition(importedMessages == messages)
+        precondition(importedEdits == edits)
+        precondition(importedMedia.items.count == 1)
+        precondition(importedMedia.items[0].key == mediaKey)
+        precondition(importedMedia.items[0].availability == .unavailable)
+        precondition(importedMedia.items[0].relativePath == nil)
+        precondition(importedMedia.items[0].byteCount == 0)
+
+        do {
+            try archiveStore.importEdits(messageExport)
+            preconditionFailure("wrong archive envelope kind was accepted")
+        } catch {
+        }
+        checks += 15
+
+        print("PASS: \(checks) shared local archive/edit/media integration checks")
+    }
+}
