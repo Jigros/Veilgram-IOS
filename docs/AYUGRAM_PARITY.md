@@ -2,6 +2,8 @@
 
 This table tracks technical implementation state in the Veilgram runtime branch. Release/distribution policy is intentionally tracked separately and does not change whether a feature is implemented.
 
+The opt-in local archive can attempt to copy already-complete view-once and timed cloud image/file resources observed during a deletion update. It does not retain ephemeral message text, secret chats, copy-protected media, expired bytes that are no longer locally accessible, or media not yet fully downloaded. Telegram consumption, expiry, receipts and server state are unchanged. A copied file persists locally beyond Telegram's timer until archive clearing or quota eviction; successful device capture is not yet verified. The publicly available AyuGram4A sources do not include its proprietary media-mapping implementation, so equivalent view-once behavior cannot be inferred from that project.
+
 | Feature | Veilgram status | Current Veilgram implementation |
 |---|---|---|
 | Suppress message read receipts | IMPLEMENTED | `SynchronizePeerReadState.swift` consults `VeilgramGhostModeRuntimePreferences` for ordinary cloud chats. |
