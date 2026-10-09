@@ -440,7 +440,7 @@ enum VeilgramLocalCoreIntegrationTests {
         let reopenedEphemeralMedia = try reopenedStore.loadMedia()
         precondition(reopenedEphemeralMedia == storedMediaDocument)
         let reopenedEphemeralURL = try reopenedStore.archivedMediaURL(for: ephemeralItem)
-        precondition(reopenedEphemeralURL.path == base.appendingPathComponent(ephemeralCopy.relativePath).path)
+        precondition(reopenedEphemeralURL?.path == base.appendingPathComponent(ephemeralCopy.relativePath).path)
         checks += 6
 
         try archiveStore.saveMessages(messages)
