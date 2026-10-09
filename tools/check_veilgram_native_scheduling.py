@@ -13,4 +13,8 @@ assert "isLocked: !component.context.isPremium" in picker
 assert "if component.context.isPremium {" in picker
 assert "isPremiumPresentation" not in picker
 assert "requestEditMessage" in chat and "scheduleRepeatPeriod" in chat
-print("PASS: native schedule routing, real Premium repeat boundary, no custom delay modal")
+send_now = chat[chat.index("sendScheduledMessagesNow: {"):chat.index("editScheduledMessagesTime: {", chat.index("sendScheduledMessagesNow: {"))]
+assert "for messageId in messageIds where sentMessageIds.insert(messageId).inserted" in send_now
+assert "sendScheduledMessageNowInteractively(messageId: messageId)" in send_now
+assert "messageIds.first!" not in send_now
+print("PASS: native schedule routing, real Premium repeat boundary, group send-now")

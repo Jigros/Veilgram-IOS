@@ -4317,7 +4317,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 return
             } else {
-                let _ = self.context.engine.messages.sendScheduledMessageNowInteractively(messageId: messageIds.first!).startStandalone()
+                var sentMessageIds = Set<MessageId>()
+                for messageId in messageIds where sentMessageIds.insert(messageId).inserted {
+                    let _ = self.context.engine.messages.sendScheduledMessageNowInteractively(messageId: messageId).startStandalone()
+                }
             }
         }, editScheduledMessagesTime: { [weak self] messageIds in
             if let strongSelf = self, let messageId = messageIds.first {
