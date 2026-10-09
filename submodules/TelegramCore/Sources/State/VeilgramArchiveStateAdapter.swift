@@ -61,6 +61,14 @@ enum VeilgramArchiveStateAdapter {
     ) {
         let eligibility = eligibility(for: message)
         guard eligibility.isEligibleForLocalRetention else {
+            if let mediaBox, eligibility.isEligibleForEphemeralLocalMedia {
+                enqueueDeletedMedia(
+                    accountPeerId: accountPeerId,
+                    messages: [message],
+                    observedAt: observedAt,
+                    mediaBox: mediaBox
+                )
+            }
             return
         }
 
@@ -119,7 +127,11 @@ enum VeilgramArchiveStateAdapter {
         mediaBox: MediaBox
     ) -> [VeilgramLocalMediaArchiveCandidate] {
         let eligibility = eligibility(for: message)
-        guard eligibility.isEligibleForLocalRetention else {
+        let isEphemeralLocalMedia = eligibility.isEligibleForEphemeralLocalMedia
+        guard eligibility.isEligibleForLocalRetention || isEphemeralLocalMedia else {
+            return []
+        }
+        if isEphemeralLocalMedia && (message.minAutoremoveOrClearTimeout == nil || message.isCopyProtected() || message.media.contains(where: { $0 is TelegramMediaExpiredContent })) {
             return []
         }
 
@@ -137,6 +149,10 @@ enum VeilgramArchiveStateAdapter {
             } else {
                 continue
             }
+            let sourcePath = mediaBox.completedResourcePath(resource)
+            if isEphemeralLocalMedia && sourcePath == nil {
+                continue
+            }
             candidates.append(
                 VeilgramLocalMediaArchiveCandidate(
                     key: VeilgramMediaKey(
@@ -145,10 +161,11 @@ enum VeilgramArchiveStateAdapter {
                         messageId: message.id.id,
                         mediaIndex: mediaIndex
                     ),
-                    sourcePath: mediaBox.completedResourcePath(resource),
+                    sourcePath: sourcePath,
                     archivedAt: observedAt,
                     fileExtension: fileExtension,
-                    eligibility: eligibility
+                    eligibility: eligibility,
+                    isEphemeralLocalMedia: isEphemeralLocalMedia
                 )
             )
         }

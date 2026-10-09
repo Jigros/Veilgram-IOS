@@ -26,6 +26,23 @@ required_adapter_contract = [
 for symbol in required_adapter_contract:
     assert symbol in adapter, f"missing archive eligibility contract: {symbol}"
 
+runtime = Path("submodules/VeilgramLocalFeatures/Sources/VeilgramArchiveRuntimeWriter.swift").read_text()
+media = adapter[adapter.index("static func localMediaCandidates("):adapter.index("private static func preferredExtension(")]
+assert "message.minAutoremoveOrClearTimeout == nil || message.isCopyProtected()" in media
+assert "message.media.contains(where: { $0 is TelegramMediaExpiredContent })" in media
+assert "isEphemeralLocalMedia && sourcePath == nil" in media
+assert "mediaBox.completedResourcePath(resource)" in media
+assert "isEphemeralLocalMedia: isEphemeralLocalMedia" in media
+assert "candidate.isEphemeralLocalMedia" in runtime
+assert "candidate.eligibility.isEligibleForEphemeralLocalMedia" in runtime
+assert "VeilgramArchiveRuntimePreferences.ephemeralLocalMediaEnabled" in runtime
+assert "isEphemeralLocalMedia: candidate.isEphemeralLocalMedia" in runtime
+expiry = Path("submodules/TelegramCore/Sources/State/ManagedAutoremoveMessageOperations.swift").read_text()
+assert expiry.count("VeilgramArchiveStateAdapter.enqueueDeletedMessage(") == 2
+assert expiry.index("VeilgramArchiveStateAdapter.enqueueDeletedMessage(") < expiry.index("_internal_deleteMessages(transaction:")
+snapshot = adapter[adapter.index("static func enqueueDeletedMessage("):adapter.index("static func enqueueDeletedMedia(")]
+assert snapshot.index("guard eligibility.isEligibleForLocalRetention") < snapshot.index("let snapshot = VeilgramArchivedMessage(")
+
 print(
     "PASS: Veilgram archive hooks preserve pre-delete ordering and use the shared "
     f"eligibility contract ({delete_hook_count} delete hooks, {edit_hook_count} edit hooks)"

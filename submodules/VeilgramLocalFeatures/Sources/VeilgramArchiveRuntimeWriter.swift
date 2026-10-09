@@ -156,19 +156,22 @@ public struct VeilgramLocalMediaArchiveCandidate: Equatable {
     public var archivedAt: Int32
     public var fileExtension: String?
     public var eligibility: VeilgramArchiveEligibility
+    public var isEphemeralLocalMedia: Bool
 
     public init(
         key: VeilgramMediaKey,
         sourcePath: String?,
         archivedAt: Int32,
         fileExtension: String? = nil,
-        eligibility: VeilgramArchiveEligibility
+        eligibility: VeilgramArchiveEligibility,
+        isEphemeralLocalMedia: Bool = false
     ) {
         self.key = key
         self.sourcePath = sourcePath
         self.archivedAt = archivedAt
         self.fileExtension = fileExtension
         self.eligibility = eligibility
+        self.isEphemeralLocalMedia = isEphemeralLocalMedia
     }
 }
 
@@ -249,9 +252,16 @@ public enum VeilgramArchiveRuntimeWriter {
         candidates: [VeilgramLocalMediaArchiveCandidate],
         completion: (() -> Void)? = nil
     ) {
-        let eligibleCandidates = candidates.filter { $0.eligibility.isEligibleForLocalRetention }
-        guard !eligibleCandidates.isEmpty,
-              VeilgramArchiveRuntimePreferences.messageArchiveEnabled(accountPeerId: accountPeerId) else {
+        let eligibleCandidates = candidates.filter { candidate in
+            if candidate.isEphemeralLocalMedia {
+                return candidate.eligibility.isEligibleForEphemeralLocalMedia
+                    && candidate.sourcePath != nil
+                    && VeilgramArchiveRuntimePreferences.ephemeralLocalMediaEnabled(accountPeerId: accountPeerId)
+            }
+            return candidate.eligibility.isEligibleForLocalRetention
+                && VeilgramArchiveRuntimePreferences.messageArchiveEnabled(accountPeerId: accountPeerId)
+        }
+        guard !eligibleCandidates.isEmpty else {
             if let completion {
                 queue.async(execute: completion)
             }
@@ -271,6 +281,9 @@ public enum VeilgramArchiveRuntimeWriter {
                 var changed = false
 
                 for candidate in eligibleCandidates {
+                    if candidate.isEphemeralLocalMedia && !VeilgramArchiveRuntimePreferences.ephemeralLocalMediaEnabled(accountPeerId: accountPeerId) {
+                        continue
+                    }
                     if let existing = document.items.first(where: { $0.key == candidate.key }),
                        existing.availability == .available {
                         if (try? store.archivedMediaURL(for: existing)) != nil {
@@ -327,14 +340,15 @@ public enum VeilgramArchiveRuntimeWriter {
                             item: item,
                             eligibility: VeilgramMediaEligibility(
                                 archiveEligibility: candidate.eligibility,
-                                bytesAreLocallyAvailable: true
+                                bytesAreLocallyAvailable: true,
+                                isEphemeralLocalMedia: candidate.isEphemeralLocalMedia
                             )
                         ) {
                             changed = true
                         }
                     } catch {
                         VeilgramArchiveRuntimeDiagnostics.record(error)
-                        if try VeilgramMediaArchiveEngine.upsertUnavailable(
+                        if !candidate.isEphemeralLocalMedia, try VeilgramMediaArchiveEngine.upsertUnavailable(
                             document: &document,
                             key: candidate.key,
                             archivedAt: candidate.archivedAt

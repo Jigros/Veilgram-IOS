@@ -141,7 +141,32 @@ enum VeilgramLocalCoreIntegrationTests {
             hasSelfDestructTimeout: true
         )
         precondition(!ephemeral.isEligibleForLocalRetention)
-        checks += 1
+        precondition(ephemeral.isEligibleForEphemeralLocalMedia)
+        let timed = VeilgramArchiveEligibility(
+            isCloudMessage: true,
+            isSecretChat: false,
+            isViewOnce: false,
+            hasSelfDestructTimeout: true
+        )
+        let secret = VeilgramArchiveEligibility(
+            isCloudMessage: false,
+            isSecretChat: true,
+            isViewOnce: true,
+            hasSelfDestructTimeout: true
+        )
+        precondition(timed.isEligibleForEphemeralLocalMedia)
+        precondition(!ordinary.isEligibleForEphemeralLocalMedia)
+        precondition(!secret.isEligibleForEphemeralLocalMedia)
+        checks += 5
+
+        let ephemeralSuite = "veilgram-ephemeral-\(UUID().uuidString)"
+        let ephemeralDefaults = UserDefaults(suiteName: ephemeralSuite)!
+        defer { ephemeralDefaults.removePersistentDomain(forName: ephemeralSuite) }
+        precondition(!VeilgramArchiveRuntimePreferences.ephemeralLocalMediaEnabled(accountPeerId: 42, defaults: ephemeralDefaults))
+        VeilgramArchiveRuntimePreferences.setEphemeralLocalMediaEnabled(true, accountPeerId: 42, defaults: ephemeralDefaults)
+        precondition(VeilgramArchiveRuntimePreferences.ephemeralLocalMediaEnabled(accountPeerId: 42, defaults: ephemeralDefaults))
+        precondition(!VeilgramArchiveRuntimePreferences.ephemeralLocalMediaEnabled(accountPeerId: 43, defaults: ephemeralDefaults))
+        checks += 3
 
         let key = VeilgramMessageKey(peerId: 42, namespace: 0, id: 7)
         let entity = VeilgramTextEntity(offset: 0, length: 4, kind: "bold")
@@ -386,6 +411,37 @@ enum VeilgramLocalCoreIntegrationTests {
         let reopenedURL = try reopenedStore.archivedMediaURL(for: storedMediaItem)
         precondition(reopenedURL == copiedURL)
         checks += 3
+
+        let ephemeralMediaKey = VeilgramMediaKey(peerId: 42, messageNamespace: 0, messageId: 8, mediaIndex: 0)
+        let ephemeralCopy = try archiveStore.copyMediaFile(
+            sourcePath: sourceMedia.path,
+            key: ephemeralMediaKey,
+            preferredExtension: "dat",
+            maximumBytes: 1024 * 1024
+        )
+        let ephemeralItem = VeilgramMediaItem(
+            key: ephemeralMediaKey,
+            relativePath: ephemeralCopy.relativePath,
+            byteCount: ephemeralCopy.byteCount,
+            archivedAt: 41,
+            lastAccessedAt: 41,
+            availability: .available
+        )
+        precondition(!VeilgramMediaArchiveEngine.isEligible(VeilgramMediaEligibility(archiveEligibility: ephemeral, bytesAreLocallyAvailable: true)))
+        precondition(!VeilgramMediaArchiveEngine.isEligible(VeilgramMediaEligibility(archiveEligibility: ephemeral, bytesAreLocallyAvailable: false, isEphemeralLocalMedia: true)))
+        precondition(VeilgramMediaArchiveEngine.isEligible(VeilgramMediaEligibility(archiveEligibility: ephemeral, bytesAreLocallyAvailable: true, isEphemeralLocalMedia: true)))
+        let didStoreEphemeral = try VeilgramMediaArchiveEngine.appendAvailable(
+            document: &storedMediaDocument,
+            item: ephemeralItem,
+            eligibility: VeilgramMediaEligibility(archiveEligibility: ephemeral, bytesAreLocallyAvailable: true, isEphemeralLocalMedia: true)
+        )
+        precondition(didStoreEphemeral)
+        try archiveStore.saveMedia(storedMediaDocument)
+        let reopenedEphemeralMedia = try reopenedStore.loadMedia()
+        precondition(reopenedEphemeralMedia == storedMediaDocument)
+        let reopenedEphemeralURL = try reopenedStore.archivedMediaURL(for: ephemeralItem)
+        precondition(reopenedEphemeralURL.path == base.appendingPathComponent(ephemeralCopy.relativePath).path)
+        checks += 6
 
         try archiveStore.saveMessages(messages)
         try archiveStore.saveEdits(edits)

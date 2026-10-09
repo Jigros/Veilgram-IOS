@@ -37,7 +37,7 @@ private final class ManagedAutoremoveMessageOperationsHelper {
     }
 }
 
-func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRemove: Bool) -> Signal<Void, NoError> {
+func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, accountPeerId: PeerId, isRemove: Bool) -> Signal<Void, NoError> {
     return Signal { _ in
         let helper = Atomic(value: ManagedAutoremoveMessageOperationsHelper())
         
@@ -83,8 +83,25 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
 
                     if let message = transaction.getMessage(entry.messageId) {
                         if message.id.peerId.namespace == Namespaces.Peer.SecretChat || isRemove {
+                            if message.id.peerId.namespace != Namespaces.Peer.SecretChat,
+                               VeilgramArchiveStateAdapter.eligibility(for: message).isEligibleForEphemeralLocalMedia {
+                                VeilgramArchiveStateAdapter.enqueueDeletedMessage(
+                                    accountPeerId: accountPeerId,
+                                    message: message,
+                                    observedAt: Int32(Date().timeIntervalSince1970),
+                                    mediaBox: postbox.mediaBox
+                                )
+                            }
                             _internal_deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [entry.messageId])
                         } else {
+                            if VeilgramArchiveStateAdapter.eligibility(for: message).isEligibleForEphemeralLocalMedia {
+                                VeilgramArchiveStateAdapter.enqueueDeletedMessage(
+                                    accountPeerId: accountPeerId,
+                                    message: message,
+                                    observedAt: Int32(Date().timeIntervalSince1970),
+                                    mediaBox: postbox.mediaBox
+                                )
+                            }
                             transaction.updateMessage(message.id, update: { currentMessage in
                                 var storeForwardInfo: StoreMessageForwardInfo?
                                 if let forwardInfo = currentMessage.forwardInfo {

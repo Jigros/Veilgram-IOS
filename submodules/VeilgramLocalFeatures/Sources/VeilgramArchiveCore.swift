@@ -45,6 +45,10 @@ public struct VeilgramArchiveEligibility: Equatable {
     public var isEligibleForLocalRetention: Bool {
         return isCloudMessage && !isSecretChat && !isViewOnce && !hasSelfDestructTimeout
     }
+
+    public var isEligibleForEphemeralLocalMedia: Bool {
+        return isCloudMessage && !isSecretChat && (isViewOnce || hasSelfDestructTimeout)
+    }
 }
 
 public struct VeilgramArchivedMessage: Codable, Equatable {
@@ -378,10 +382,12 @@ public struct VeilgramMediaArchiveDocument: Codable, Equatable {
 public struct VeilgramMediaEligibility: Equatable {
     public var archiveEligibility: VeilgramArchiveEligibility
     public var bytesAreLocallyAvailable: Bool
+    public var isEphemeralLocalMedia: Bool
 
-    public init(archiveEligibility: VeilgramArchiveEligibility, bytesAreLocallyAvailable: Bool) {
+    public init(archiveEligibility: VeilgramArchiveEligibility, bytesAreLocallyAvailable: Bool, isEphemeralLocalMedia: Bool = false) {
         self.archiveEligibility = archiveEligibility
         self.bytesAreLocallyAvailable = bytesAreLocallyAvailable
+        self.isEphemeralLocalMedia = isEphemeralLocalMedia
     }
 }
 
@@ -398,7 +404,9 @@ public enum VeilgramMediaArchiveEngine {
     public static let maximumDocumentBytes = 16 * 1024 * 1024
 
     public static func isEligible(_ value: VeilgramMediaEligibility) -> Bool {
-        return value.archiveEligibility.isEligibleForLocalRetention && value.bytesAreLocallyAvailable
+        return value.bytesAreLocallyAvailable && (value.isEphemeralLocalMedia
+            ? value.archiveEligibility.isEligibleForEphemeralLocalMedia
+            : value.archiveEligibility.isEligibleForLocalRetention)
     }
 
     public static func validate(_ item: VeilgramMediaItem) throws {
