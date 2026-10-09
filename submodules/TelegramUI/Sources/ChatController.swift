@@ -9060,9 +9060,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: self.transformEnqueueMessages(messages, postpone: postpone))
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] messageIds in
                     if let strongSelf = self, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
-                        if isImmediateInteraction {
+                        if isImmediateInteraction && messageIds.contains(where: { $0 != nil }) {
                             strongSelf.chatDisplayNode.historyNode.readVisibleMessagesOnSendInteraction()
                         }
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
