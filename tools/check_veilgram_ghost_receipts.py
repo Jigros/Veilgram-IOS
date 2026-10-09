@@ -15,6 +15,11 @@ assert "!shouldDivert && scheduleTime == nil && messageIds.contains" in send
 controller = (root / "submodules/TelegramUI/Sources/ChatController.swift").read_text()
 generic_send = controller[controller.index("func sendMessages(_ messages: [EnqueueMessage]"):controller.index("func enqueueMediaMessages(", controller.index("func sendMessages(_ messages: [EnqueueMessage]"))]
 assert "if isImmediateInteraction && messageIds.contains(where: { $0 != nil })" in generic_send
+interaction = history[history.index("func readVisibleMessagesOnSendInteraction()"):history.index("public func disconnect()", history.index("func readVisibleMessagesOnSendInteraction()"))]
+callback = interaction[interaction.index("startStandalone(next:"):]
+assert callback.index("self.canReadHistoryValue") < callback.index("self.context.applyMaxReadIndex")
+assert callback.index("VeilgramGhostModeRuntimePreferences.readOnInteractionOnly") < callback.index("self.context.applyMaxReadIndex")
+assert callback.index("!VeilgramGhostModeRuntimePreferences.suppressReadReceipts") < callback.index("self.context.applyMaxReadIndex")
 print("PASS: receipt queue filtering and automatic/immediate-send read paths")
 thread = (root / "submodules/TelegramCore/Sources/TelegramEngine/Messages/ReplyThreadHistory.swift").read_text()
 apply = thread[thread.index("func applyMaxReadIndex(messageIndex:"):thread.index("public class ReplyThreadHistoryContext")]

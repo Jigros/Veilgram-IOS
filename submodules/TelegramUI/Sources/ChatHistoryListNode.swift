@@ -4685,7 +4685,14 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         let _ = (self.maxVisibleIncomingMessageIndex.get()
         |> take(1)
         |> deliverOnMainQueue).startStandalone(next: { [weak self] index in
-            guard let self else { return }
+            guard let self,
+                self.canReadHistoryValue,
+                self.subject != .scheduledMessages,
+                !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory,
+                VeilgramGhostModeRuntimePreferences.readOnInteractionOnly(accountPeerId: self.context.account.peerId.toInt64()),
+                !VeilgramGhostModeRuntimePreferences.suppressReadReceipts(accountPeerId: self.context.account.peerId.toInt64()) else {
+                return
+            }
             self.context.applyMaxReadIndex(for: self.chatLocation, contextHolder: self.chatLocationContextHolder, messageIndex: index)
         })
     }
