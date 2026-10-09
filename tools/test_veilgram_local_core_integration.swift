@@ -473,11 +473,9 @@ enum VeilgramLocalCoreIntegrationTests {
         let importedMedia = try archiveStore.loadMedia()
         precondition(importedMessages == messages)
         precondition(importedEdits == edits)
-        precondition(importedMedia.items.count == 1)
-        precondition(importedMedia.items[0].key == mediaKey)
-        precondition(importedMedia.items[0].availability == .unavailable)
-        precondition(importedMedia.items[0].relativePath == nil)
-        precondition(importedMedia.items[0].byteCount == 0)
+        precondition(importedMedia.items.count == 2)
+        precondition(Set(importedMedia.items.map { $0.key }) == Set([mediaKey, ephemeralMediaKey]))
+        precondition(importedMedia.items.allSatisfy { $0.availability == .unavailable && $0.relativePath == nil && $0.byteCount == 0 })
 
         do {
             try archiveStore.importEdits(messageExport)
