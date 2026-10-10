@@ -10,14 +10,14 @@ checks = []
 def require(name, condition, detail):
     checks.append((name, condition, detail))
 
-merge_start = item.find("public func mergedWithItems")
+merge_start = item.find("public func merged(with neighbors:")
 merge_end = item.find("public func updateNode", merge_start)
 merge_body = item[merge_start:merge_end] if merge_start >= 0 and merge_end > merge_start else ""
 
 require(
     "grouping-identity-unchanged",
     "veilgramRenderDecision" not in merge_body
-    and "messagesShouldBeMerged" in merge_body,
+    and "chatMessageMerge(upper:" in merge_body,
     "Ad collapse must not alter Telegram's message grouping/merge identity.",
 )
 require(
