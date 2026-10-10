@@ -2660,6 +2660,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         doSend(nil)
                     }
+                }
                 })
             }
             if VeilgramSendConfirmationPreferences.isEnabled(accountPeerId: strongSelf.context.account.peerId.toInt64()) {
