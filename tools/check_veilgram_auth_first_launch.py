@@ -42,6 +42,13 @@ require(
     and "self.searchTableView.reloadData()" in node,
     "Country search must remain coherent when a late server list replaces the fallback.",
 )
+lookup = countries[countries.index("public static func lookupCountryIdByNumber("):countries.index("public static func lookupCountryIdByCode(")]
+require(
+    "preferred-country-prefix-results",
+    "currentResults.append(country)\n                        results = currentResults" in lookup
+    and "for (country, code) in results" in lookup,
+    "Preferred-country lookup must search all accumulated country-code matches.",
+)
 require(
     "country-bootstrap-diagnostics",
     "Loaded bundled countries count=" in countries

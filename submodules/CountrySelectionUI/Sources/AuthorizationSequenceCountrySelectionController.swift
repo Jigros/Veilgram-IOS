@@ -274,6 +274,7 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
                         break
                     } else {
                         currentResults.append(country)
+                        results = currentResults
                     }
                 } else {
                     results = [country]
