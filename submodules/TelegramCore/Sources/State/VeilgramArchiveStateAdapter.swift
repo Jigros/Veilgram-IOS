@@ -296,6 +296,8 @@ enum VeilgramArchiveStateAdapter {
             return "underline"
         case .BankCard:
             return "bankCard"
+        case .TonAddress:
+            return "tonAddress"
         case .Spoiler:
             return "spoiler"
         case .CustomEmoji:
