@@ -1452,7 +1452,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         })))
                     }
 
-                    if let messageNode {
+                    if let messageNode, (!selectAll || messages.count == 1), !chatPresentationInterfaceState.myCopyProtectionEnabled, !message.containsSecretMedia, message.id.peerId.namespace != Namespaces.Peer.SecretChat {
                         actions.append(.action(ContextMenuActionItem(
                             text: "Message Shot",
                             icon: { theme in
@@ -1463,7 +1463,16 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             },
                             action: { [weak messageNode] controller, completion in
                                 controller?.dismiss(completion: {
-                                    guard let messageNode else {
+                                    guard let messageNode,
+                                          let currentMessage = messageNode.messages().first,
+                                          currentMessage.id == message.id,
+                                          !chatPresentationInterfaceState.copyProtectionEnabled,
+                                          !chatPresentationInterfaceState.myCopyProtectionEnabled,
+                                          !currentMessage.isCopyProtected(),
+                                          !currentMessage.containsSecretMedia,
+                                          currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat,
+                                          currentMessage.activeEphemeralReplacementMessage == nil,
+                                          !currentMessage.effectiveMedia.contains(where: { $0 is TelegramMediaExpiredContent }) else {
                                         return
                                     }
                                     let view = messageNode.view

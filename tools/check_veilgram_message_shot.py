@@ -21,6 +21,20 @@ require(
     "Message Shot must stay inside the existing non-copy-protected branch.",
 )
 require(
+    "group-action-boundary",
+    "(!selectAll || messages.count == 1)" in source
+    and "!chatPresentationInterfaceState.myCopyProtectionEnabled" in source,
+    "Group context menus must not silently export only the pressed message or protected content.",
+)
+require(
+    "live-node-boundary",
+    "currentMessage.id == message.id" in source
+    and "!currentMessage.containsSecretMedia" in source
+    and "currentMessage.activeEphemeralReplacementMessage == nil" in source
+    and "currentMessage.effectiveMedia.contains(where: { $0 is TelegramMediaExpiredContent })" in source,
+    "The live node must still represent the requested unprotected, unexpired message at capture time.",
+)
+require(
     "local-render",
     "UIGraphicsImageRenderer" in source
     and "drawHierarchy" in source
