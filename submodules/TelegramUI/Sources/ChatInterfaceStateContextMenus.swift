@@ -1254,7 +1254,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             })))
         }
         
-        if data.messageActions.options.contains(.editScheduledTime) {
+        if data.messageActions.options.contains(.editScheduledTime) && (!selectAll || messages.count == 1) {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_EditTime, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Schedule"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in

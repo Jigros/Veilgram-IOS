@@ -3860,14 +3860,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         f(.dismissWithoutContent)
                     })))
-                    actions.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ScheduledMessages_EditTime, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Schedule"), color: theme.actionSheet.primaryTextColor)
-                    }, action: { [weak self] _, f in
-                        if let strongSelf = self {
-                            strongSelf.controllerInteraction?.editScheduledMessagesTime(messages.map { $0.id })
-                        }
-                        f(.dismissWithoutContent)
-                    })))
+                    if messages.count == 1 {
+                        actions.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ScheduledMessages_EditTime, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Schedule"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { [weak self] _, f in
+                            if let strongSelf = self {
+                                strongSelf.controllerInteraction?.editScheduledMessagesTime(messages.map { $0.id })
+                            }
+                            f(.dismissWithoutContent)
+                        })))
+                    }
                     actions.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
                     }, action: { [weak self] controller, f in
