@@ -2455,11 +2455,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 shouldAnimateMessageTransition = true
             }
             
-            strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak strongSelf] postpone in
+            let performStickerSend: () -> Void = { [weak strongSelf] in
                 guard let strongSelf else {
                     return
                 }
-                
+                strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak strongSelf] postpone in
+                guard let strongSelf else {
+                    return
+                }
+
                 let addToTransitionNodeIfNeeded: () -> Void = {
                     guard let strongSelf = self else {
                         return
@@ -2656,8 +2660,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         doSend(nil)
                     }
-                }
-            })
+                })
+            }
+            if VeilgramSendConfirmationPreferences.isEnabled(accountPeerId: strongSelf.context.account.peerId.toInt64()) {
+                strongSelf.present(textAlertController(
+                    context: strongSelf.context,
+                    updatedPresentationData: strongSelf.updatedPresentationData,
+                    title: "Send sticker?",
+                    text: "Confirm sending the selected sticker.",
+                    actions: [
+                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
+                        TextAlertAction(type: .defaultAction, title: "Send", action: performStickerSend)
+                    ]
+                ), in: .window(.root))
+            } else {
+                performStickerSend()
+            }
             return true
         }, sendEmoji: { [weak self] text, attribute, immediately in
             if let strongSelf = self {
@@ -2711,8 +2729,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
-                strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
-                    guard let strongSelf = self else {
+                let performGifSend: () -> Void = { [weak strongSelf] in
+                    guard let strongSelf else {
+                        return
+                    }
+                    strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak strongSelf] postpone in
+                    guard let strongSelf else {
                         return
                     }
                     strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
@@ -2745,9 +2767,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         messages = strongSelf.transformEnqueueMessages(messages)
                         strongSelf.sendMessages(messages)
                     }
-                })
+                    })
+                }
+                if VeilgramSendConfirmationPreferences.isEnabled(accountPeerId: strongSelf.context.account.peerId.toInt64()) {
+                    strongSelf.present(textAlertController(
+                        context: strongSelf.context,
+                        updatedPresentationData: strongSelf.updatedPresentationData,
+                        title: "Send GIF?",
+                        text: "Confirm sending the selected GIF.",
+                        actions: [
+                            TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
+                            TextAlertAction(type: .defaultAction, title: "Send", action: performGifSend)
+                        ]
+                    ), in: .window(.root))
+                } else {
+                    performGifSend()
+                }
+                return true
             }
-            return true
+            return false
         }, sendBotContextResultAsGif: { [weak self] collection, result, sourceView, sourceRect, silentPosting, resetTextInputState in
             guard let strongSelf = self else {
                 return false

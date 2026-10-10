@@ -41,6 +41,18 @@ require(
     "The enqueue closure must only be invoked by confirm or the disabled-preference fast path.",
 )
 
+sticker_send = chat[chat.index("sendSticker: {"):chat.index("sendEmoji: {", chat.index("sendSticker: {"))]
+gif_send = chat[chat.index("sendGif: {"):chat.index("sendBotContextResultAsGif: {", chat.index("sendGif: {"))]
+for name, send, closure in (("sticker", sticker_send, "performStickerSend"), ("gif", gif_send, "performGifSend")):
+    require(
+        f"{name}-confirmation",
+        send.index("slowmodeState") < send.index("VeilgramSendConfirmationPreferences.isEnabled")
+        and send.index("hasBannedPermission") < send.index("VeilgramSendConfirmationPreferences.isEnabled")
+        and send.index(f"let {closure}: () -> Void") < send.index("presentPaidMessageAlertIfNeeded")
+        and f"action: {closure}" in send
+        and f"{closure}()" in send,
+        f"{name} send must reject restrictions synchronously and confirm before paid-message handling.",
+    )
 recorded_send = recording[recording.index("sendRecordedMedia: {"):recording.index("displayRestrictedInfo:", recording.index("sendRecordedMedia: {"))]
 require(
     "recorded-media-confirmation",
