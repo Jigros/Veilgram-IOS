@@ -22,17 +22,20 @@ require(
 )
 require(
     "group-action-boundary",
-    "(!selectAll || messages.count == 1)" in source
+    "messages.count <= 10" in source
+    and "Set(messageNode.messages().map { $0.id }) == Set(messages.map { $0.id })" in source
     and "!chatPresentationInterfaceState.myCopyProtectionEnabled" in source,
-    "Group context menus must not silently export only the pressed message or protected content.",
+    "Group Message Shot must only be offered when the visible node contains the whole bounded group.",
 )
 require(
     "live-node-boundary",
-    "currentMessage.id == message.id" in source
+    "nodeMessages.count == requestedIds.count" in source
+    and "Set(nodeMessages.map { $0.id }) == requestedIds" in source
+    and "nodeMessages.allSatisfy({ currentMessage in" in source
     and "!currentMessage.containsSecretMedia" in source
     and "currentMessage.activeEphemeralReplacementMessage == nil" in source
     and "currentMessage.effectiveMedia.contains(where: { $0 is TelegramMediaExpiredContent })" in source,
-    "The live node must still represent the requested unprotected, unexpired message at capture time.",
+    "All captured node messages must match the requested IDs and remain unprotected and unexpired.",
 )
 require(
     "local-render",

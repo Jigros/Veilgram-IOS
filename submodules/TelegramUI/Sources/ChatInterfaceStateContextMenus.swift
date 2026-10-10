@@ -1452,7 +1452,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         })))
                     }
 
-                    if let messageNode, (!selectAll || messages.count == 1), !chatPresentationInterfaceState.myCopyProtectionEnabled, !message.containsSecretMedia, message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                    if let messageNode, !chatPresentationInterfaceState.myCopyProtectionEnabled, !message.containsSecretMedia, message.id.peerId.namespace != Namespaces.Peer.SecretChat, !selectAll || messages.count == 1 || (messages.count <= 10 && Set(messageNode.messages().map { $0.id }) == Set(messages.map { $0.id })) {
                         actions.append(.action(ContextMenuActionItem(
                             text: "Message Shot",
                             icon: { theme in
@@ -1464,15 +1464,23 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             action: { [weak messageNode] controller, completion in
                                 controller?.dismiss(completion: {
                                     guard let messageNode,
-                                          let currentMessage = messageNode.messages().first,
-                                          currentMessage.id == message.id,
                                           !chatPresentationInterfaceState.copyProtectionEnabled,
-                                          !chatPresentationInterfaceState.myCopyProtectionEnabled,
-                                          !currentMessage.isCopyProtected(),
-                                          !currentMessage.containsSecretMedia,
-                                          currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat,
-                                          currentMessage.activeEphemeralReplacementMessage == nil,
-                                          !currentMessage.effectiveMedia.contains(where: { $0 is TelegramMediaExpiredContent }) else {
+                                          !chatPresentationInterfaceState.myCopyProtectionEnabled else {
+                                        return
+                                    }
+                                    let nodeMessages = messageNode.messages()
+                                    let requestedIds = selectAll ? Set(messages.map { $0.id }) : Set([message.id])
+                                    guard !nodeMessages.isEmpty,
+                                          nodeMessages.count <= 10,
+                                          nodeMessages.count == requestedIds.count,
+                                          Set(nodeMessages.map { $0.id }) == requestedIds,
+                                          nodeMessages.allSatisfy({ currentMessage in
+                                              !currentMessage.isCopyProtected()
+                                                  && !currentMessage.containsSecretMedia
+                                                  && currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat
+                                                  && currentMessage.activeEphemeralReplacementMessage == nil
+                                                  && !currentMessage.effectiveMedia.contains(where: { $0 is TelegramMediaExpiredContent })
+                                          }) else {
                                         return
                                     }
                                     let view = messageNode.view
