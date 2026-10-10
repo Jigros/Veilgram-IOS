@@ -2436,12 +2436,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             reactionSourceMessage = .single(nil)
         }
 
+        let localPremiumPresentation: Signal<Bool, NoError> = self.peerId == context.account.peerId
+            ? context.isPremiumPresentationSignal
+            : .single(false)
         self.dataDisposable = combineLatest(
             queue: Queue.mainQueue(),
             screenData,
             self.forceIsContactPromise.get(),
-            reactionSourceMessage
-        ).startStrict(next: { [weak self] data, forceIsContact, reactionSourceMessage in
+            reactionSourceMessage,
+            localPremiumPresentation
+        ).startStrict(next: { [weak self] data, forceIsContact, reactionSourceMessage, _ in
             guard let strongSelf = self else {
                 return
             }

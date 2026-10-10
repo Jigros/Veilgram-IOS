@@ -10,6 +10,7 @@ account_context_protocol = (ROOT / "submodules/AccountContext/Sources/AccountCon
 theme_settings = (ROOT / "submodules/SettingsUI/Sources/Themes/ThemeSettingsController.swift").read_text(encoding="utf-8")
 profile_items = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift").read_text(encoding="utf-8")
 profile_header = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift").read_text(encoding="utf-8")
+profile_screen = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift").read_text(encoding="utf-8")
 
 checks = []
 
@@ -83,6 +84,14 @@ require(
     and "peer.id == self.context.account.peerId && !peer.isPremium && self.context.isPremiumPresentation" in profile_header
     and "isPremium = peer.isPremium || (peer.id == self.context.account.peerId && self.context.isPremiumPresentation)" in profile_header,
     "Local Premium must affect only the account's own profile badge and title styling; real peer Premium remains authoritative.",
+)
+
+require(
+    "live-self-profile-refresh",
+    "self.peerId == context.account.peerId" in profile_screen
+    and "context.isPremiumPresentationSignal" in profile_screen
+    and "reactionSourceMessage,\n            localPremiumPresentation" in profile_screen,
+    "Only the account's own open profile must refresh when local Premium presentation changes.",
 )
 
 failed = [x for x in checks if not x[1]]
