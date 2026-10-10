@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 prefs = (ROOT / "submodules/VeilgramLocalFeatures/Sources/VeilgramSendConfirmationPreferences.swift").read_text(encoding="utf-8")
 settings = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift").read_text(encoding="utf-8")
 chat = (ROOT / "submodules/TelegramUI/Sources/ChatController.swift").read_text(encoding="utf-8")
+recording = (ROOT / "submodules/TelegramUI/Sources/Chat/ChatControllerLoadDisplayNode.swift").read_text(encoding="utf-8")
 
 checks = []
 
@@ -38,6 +39,17 @@ require(
     and "action: performSend" in chat
     and "} else {\n                performSend()\n            }" in chat,
     "The enqueue closure must only be invoked by confirm or the disabled-preference fast path.",
+)
+
+recorded_send = recording[recording.index("sendRecordedMedia: {"):recording.index("displayRestrictedInfo:", recording.index("sendRecordedMedia: {"))]
+require(
+    "recorded-media-confirmation",
+    "VeilgramSendConfirmationPreferences.isEnabled(accountPeerId:" in recorded_send
+    and 'title: "Send recording?"' in recorded_send
+    and "TextAlertAction(type: .genericAction" in recorded_send
+    and "action: performSend" in recorded_send
+    and "self?.sendMediaRecording(silentPosting: silentPosting, viewOnce: viewOnce, postpone: postpone)" in recorded_send,
+    "Recorded voice/video send must confirm before the paid-message prompt and preserve view-once and silent options.",
 )
 
 failed = [x for x in checks if not x[1]]

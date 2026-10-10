@@ -94,6 +94,7 @@ import ICloudResources
 import StoryContainerScreen
 import MoreHeaderButton
 import VolumeButtons
+import VeilgramLocalFeatures
 import ChatAvatarNavigationNode
 import ChatContextQuery
 import PeerReportScreen
@@ -2837,9 +2838,29 @@ extension ChatControllerImpl {
         }, deleteRecordedMedia: { [weak self] in
             self?.deleteMediaRecording()
         }, sendRecordedMedia: { [weak self] silentPosting, viewOnce in
-            self?.presentPaidMessageAlertIfNeeded(count: 1, completion: { [weak self] postpone in
-                self?.sendMediaRecording(silentPosting: silentPosting, viewOnce: viewOnce, postpone: postpone)
-            })
+            guard let self else {
+                return
+            }
+            let performSend: () -> Void = { [weak self] in
+                self?.presentPaidMessageAlertIfNeeded(count: 1, completion: { [weak self] postpone in
+                    self?.sendMediaRecording(silentPosting: silentPosting, viewOnce: viewOnce, postpone: postpone)
+                })
+            }
+            if VeilgramSendConfirmationPreferences.isEnabled(accountPeerId: self.context.account.peerId.toInt64()) {
+                let alertController = textAlertController(
+                    context: self.context,
+                    updatedPresentationData: self.updatedPresentationData,
+                    title: "Send recording?",
+                    text: "Confirm sending the current recording.",
+                    actions: [
+                        TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}),
+                        TextAlertAction(type: .defaultAction, title: "Send", action: performSend)
+                    ]
+                )
+                self.present(alertController, in: .window(.root))
+            } else {
+                performSend()
+            }
         }, displayRestrictedInfo: { [weak self] subject, displayType in
             guard let strongSelf = self else {
                 return
