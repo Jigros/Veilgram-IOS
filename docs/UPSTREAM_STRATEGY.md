@@ -11,6 +11,8 @@
 - Product-history parent: `46684b07b9ef112b47c21cd331a8892ce01747be`
 - Exact upstream parent: `6ad963e5b62d354da79040f388ae2b9132fb17b8`
 
+As checked against the official upstream on 2026-10-09, this working tree is **not** on the latest Telegram iOS source: `release-13.0.0` and `master` point to `f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838` (`versions.json` app `13.0`, Xcode `26.6`, Bazel `9.2.0`). The pinned 12.9.2 import is 829 upstream commits behind that commit. Do not identify this branch as Telegram 13.0 or update `versions.json` without the actual history-preserving upstream import and clean BUILD-0 described below.
+
 The import is a two-parent merge. It preserves upstream commit history and submodule gitlinks; it is not a flattened archive. At the import commit, comparison with the exact upstream tree contains only the Veilgram root `README.md` and the relocated official README at `docs/UPSTREAM_BUILD.md`.
 
 This standalone repository is not represented by GitHub as a network fork. The preserved merge topology and the documented upstream remote are the maintainable synchronization mechanism.
