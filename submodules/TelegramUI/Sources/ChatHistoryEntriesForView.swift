@@ -238,7 +238,7 @@ func chatHistoryEntriesForView(
             ),
             options: veilgramAdOptions
         )
-        let veilgramLikelyChannelAd = veilgramDecision.action != .keep
+        let veilgramLikelyChannelAd = message.adAttribute == nil && veilgramDecision.action != .keep
         
         var contentTypeHint: ChatMessageEntryContentType = .generic
         

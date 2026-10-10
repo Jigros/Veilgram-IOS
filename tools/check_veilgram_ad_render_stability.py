@@ -4,6 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 item = (ROOT / "submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift").read_text(encoding="utf-8")
 view = (ROOT / "submodules/TelegramUI/Components/Chat/ChatMessageItemView/Sources/ChatMessageItemView.swift").read_text(encoding="utf-8")
+history = (ROOT / "submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift").read_text(encoding="utf-8")
 
 checks = []
 
@@ -19,6 +20,12 @@ require(
     "veilgramRenderDecision" not in merge_body
     and "chatMessageMerge(upper:" in merge_body,
     "Ad collapse must not alter Telegram's message grouping/merge identity.",
+)
+require(
+    "official-ad-not-heuristic",
+    "isOfficialSponsoredMessage: message.adAttribute != nil" in history
+    and "let veilgramLikelyChannelAd = message.adAttribute == nil && veilgramDecision.action != .keep" in history,
+    "Official sponsored messages must not receive the heuristic Possible ad badge.",
 )
 require(
     "collapsed-layout-only",
