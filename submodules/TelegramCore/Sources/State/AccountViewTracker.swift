@@ -405,7 +405,7 @@ public final class AccountViewTracker {
     }
     
     private func updatePendingWebpages(viewId: Int32, threadId: Int64?, messageIds: Set<MessageId>, localWebpages: [MessageId: (MediaId, String)]) {
-        self.queue.async {
+        self.queue.async { [self] in
             var addedMessageIds: [MessageId] = []
             var removedMessageIds: [MessageId] = []
             
@@ -601,7 +601,7 @@ public final class AccountViewTracker {
     }
     
     private func updateVisibleCallListHoles(viewId: Int32, holeIds: Set<MessageIndex>) {
-        self.queue.async {
+        self.queue.async { [self] in
             var addedHoleIds: [MessageIndex] = []
             var removedHoleIds: [MessageIndex] = []
             
@@ -705,7 +705,7 @@ public final class AccountViewTracker {
     }
     
     public func updateViewCountForMessageIds(messageIds: Set<MessageId>, clientId: Int32) {
-        self.queue.async {
+        self.queue.async { [self] in
             var addedMessageIds: [MessageId] = []
             let updatedState = ViewCountContextState(timestamp: Int32(CFAbsoluteTimeGetCurrent()), clientId: clientId, result: nil)
             for messageId in messageIds {
@@ -847,7 +847,7 @@ public final class AccountViewTracker {
     }
     
     public func updateReactionsForMessageIds(messageIds: Set<MessageId>, force: Bool = false) {
-        self.queue.async {
+        self.queue.async { [self] in
             var addedMessageIds: [MessageId] = []
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for messageId in messageIds {
@@ -949,7 +949,7 @@ public final class AccountViewTracker {
     }
     
     public func updateSeenLiveLocationForMessageIds(messageIds: Set<MessageId>) {
-        self.queue.async {
+        self.queue.async { [self] in
             if self.veilgramSuppressReadReceipts {
                 return
             }
@@ -1011,7 +1011,7 @@ public final class AccountViewTracker {
     }
     
     public func updatedExtendedMediaForMessageIds(messageIds: Set<MessageId>) {
-        self.queue.async {
+        self.queue.async { [self] in
             var addedMessageIds: [MessageId] = []
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for messageId in messageIds {
@@ -1064,7 +1064,7 @@ public final class AccountViewTracker {
     }
     
     public func updateUnsupportedMediaForMessageIds(messageIds: Set<MessageAndThreadId>) {
-        self.queue.async {
+        self.queue.async { [self] in
             var addedMessageIds: [MessageAndThreadId] = []
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for messageId in messageIds {
@@ -1165,7 +1165,7 @@ public final class AccountViewTracker {
     }
     
     public func refreshSecretMediaMediaForMessageIds(messageIds: Set<MessageId>) {
-        self.queue.async {
+        self.queue.async { [self] in
             var addedMessageIds: [MessageId] = []
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for messageId in messageIds {
@@ -1258,7 +1258,7 @@ public final class AccountViewTracker {
     }
     
     public func refreshStoriesForMessageIds(messageIds: Set<MessageId>) {
-        self.queue.async {
+        self.queue.async { [self] in
             var addedMessageIds: [MessageId] = []
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for messageId in messageIds {
@@ -1338,7 +1338,7 @@ public final class AccountViewTracker {
     }
     
     public func refreshInlineGroupCallsForMessageIds(messageIds: Set<MessageId>) {
-        self.queue.async {
+        self.queue.async { [self] in
             var addedMessageIds: [MessageId] = []
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for messageId in messageIds {
@@ -1418,7 +1418,7 @@ public final class AccountViewTracker {
     }
     
     private func internalRefreshStoryStatsForPeerIds(peerIds: [PeerId]) {
-        self.queue.async {
+        self.queue.async { [self] in
             var addedPeerIds: [PeerId] = []
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for peerId in peerIds {
@@ -1520,7 +1520,7 @@ public final class AccountViewTracker {
     }
     
     private func internalRefreshCanSendMessagesStatsForPeerIds(peerIds: [PeerId]) {
-        self.queue.async {
+        self.queue.async { [self] in
             var addedPeerIds: [PeerId] = []
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for peerId in peerIds {
@@ -1803,7 +1803,7 @@ public final class AccountViewTracker {
     }
     
     public func forceUpdateCachedPeerData(peerId: PeerId) {
-        self.queue.async {
+        self.queue.async { [self] in
             let context: PeerCachedDataContext
             if let existingContext = self.cachedDataContexts[peerId] {
                 context = existingContext
@@ -1832,7 +1832,7 @@ public final class AccountViewTracker {
     }
     
     private func updateCachedPeerData(peerId: PeerId, accountPeerId: PeerId, viewId: Int32, hasCachedData: Bool) {
-        self.queue.async {
+        self.queue.async { [self] in
             let context: PeerCachedDataContext
             var dataUpdated = false
             if let existingContext = self.cachedDataContexts[peerId] {
@@ -2201,6 +2201,14 @@ public final class AccountViewTracker {
             return (mappedView, update, initialData)
         }
         return signal
+    }
+
+    public func welcomeMessagesViewForLocation(peerId: PeerId) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+        guard let account = self.account else {
+            return .never()
+        }
+        let chatLocation: ChatLocationInput = .peer(peerId: peerId, threadId: nil)
+        return account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: .upperBound, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), count: 20, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .just(Namespaces.Message.allWelcomeMessages), orderStatistics: [], additionalData: [])
     }
     
     public func aroundMessageOfInterestHistoryViewForLocation(_ chatLocation: ChatLocationInput, ignoreMessagesInTimestampRange: ClosedRange<Int32>? = nil, ignoreMessageIds: Set<MessageId> = Set(), count: Int, trackHoles: Bool = true, tag: HistoryViewInputTag? = nil, appendMessagesFromTheSameGroup: Bool = false, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = [], useRootInterfaceStateForThread: Bool = false) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {

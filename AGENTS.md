@@ -4,7 +4,7 @@
 
 - `Jigros/Veilgram-IOS` is the sole product source of truth.
 - `Jigros/Veilgram-Build` is CI-only and must not become a product-source mirror.
-- The current upstream base is Telegram-iOS 12.9.2 at `6ad963e5b62d354da79040f388ae2b9132fb17b8`.
+- The original upstream base is Telegram-iOS 12.9.2 at `6ad963e5b62d354da79040f388ae2b9132fb17b8`; the separate 13.0 integration candidate targets `f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838` and requires its own build and runtime acceptance.
 - Preserve upstream history, submodule gitlinks, copyright notices and file-specific licenses. Do not replace an upstream merge with a flat source snapshot.
 
 ## Development policy

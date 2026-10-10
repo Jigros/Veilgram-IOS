@@ -21,8 +21,9 @@ public struct ChatMessageEntryAttributes: Equatable {
     public var displayContinueThreadFooter: Bool
     public var pinToTop: Bool
     public var veilgramLikelyChannelAd: Bool
-    
-    public init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool, isCentered: Bool, authorStoryStats: EnginePeerStoryStats?, displayContinueThreadFooter: Bool, pinToTop: Bool, veilgramLikelyChannelAd: Bool = false) {
+    public var isGiftMessageComposerPreview: Bool
+
+    public init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool, isCentered: Bool, authorStoryStats: EnginePeerStoryStats?, displayContinueThreadFooter: Bool, pinToTop: Bool, veilgramLikelyChannelAd: Bool = false, isGiftMessageComposerPreview: Bool = false) {
         self.rank = rank
         self.isContact = isContact
         self.contentTypeHint = contentTypeHint
@@ -33,6 +34,7 @@ public struct ChatMessageEntryAttributes: Equatable {
         self.displayContinueThreadFooter = displayContinueThreadFooter
         self.pinToTop = pinToTop
         self.veilgramLikelyChannelAd = veilgramLikelyChannelAd
+        self.isGiftMessageComposerPreview = isGiftMessageComposerPreview
     }
     
     public init() {
@@ -46,6 +48,7 @@ public struct ChatMessageEntryAttributes: Equatable {
         self.displayContinueThreadFooter = false
         self.pinToTop = false
         self.veilgramLikelyChannelAd = false
+        self.isGiftMessageComposerPreview = false
     }
 }
 

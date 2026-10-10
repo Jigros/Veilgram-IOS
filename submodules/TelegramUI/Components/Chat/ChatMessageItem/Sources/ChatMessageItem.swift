@@ -90,20 +90,6 @@ public enum ChatMessageItemAdditionalContent {
     case eventLogGroupedMessages([EngineRawMessage], Bool)
 }
 
-public enum ChatMessageMerge: Int32 {
-    case none = 0
-    case fullyMerged = 1
-    case semanticallyMerged = 2
-    
-    public var merged: Bool {
-        if case .none = self {
-            return false
-        } else {
-            return true
-        }
-    }
-}
-
 public struct ChatMessageHeaderSpec: Equatable {
     public var hasDate: Bool
     public var hasTopic: Bool
@@ -123,7 +109,20 @@ public protocol ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     func updateAvatarIsHidden(isHidden: Bool, transition: ContainedViewLayoutTransition)
 }
 
-public protocol ChatMessageItem: ListViewItem {
+/// An item that publishes floating headers — a date separator, a gutter avatar.
+///
+/// `ListViewImpl` reads headers off the NODE (`ListViewItemNode.headers()`), which is enough when a
+/// node exists by the time headers matter. `CoreListChatHistoryBackend` needs them from the ITEM:
+/// CoreList computes attachment runs over the item collection, before any row view is built.
+///
+/// Every item BETWEEN messages must publish its headers, not just message items. An item that
+/// publishes no key breaks the run, so an unread separator sitting mid-day would split that day into
+/// two runs and float two pills for one date.
+public protocol ChatHistoryItemWithHeaders {
+    var headers: [ListViewItemHeader] { get }
+}
+
+public protocol ChatMessageItem: ListViewItem, ChatHistoryItemWithHeaders {
     var presentationData: ChatPresentationData { get }
     var context: AccountContext { get }
     var chatLocation: ChatLocation { get }
@@ -134,8 +133,6 @@ public protocol ChatMessageItem: ListViewItem {
     var effectiveAuthorId: EnginePeer.Id? { get }
     var additionalContent: ChatMessageItemAdditionalContent? { get }
 
-    var headers: [ListViewItemHeader] { get }
-    
     var message: EngineRawMessage { get }
     var read: Bool { get }
     var unsent: Bool { get }
@@ -143,7 +140,7 @@ public protocol ChatMessageItem: ListViewItem {
     var failed: Bool { get }
     var veilgramRenderDecision: VeilgramMessageRenderDecision? { get }
     
-    func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?, isRotated: Bool) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: ChatMessageHeaderSpec)
+    func merged(with neighbors: ChatHistoryItemNeighbors, isRotated: Bool) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: ChatMessageHeaderSpec)
 }
 
 public func hasCommentButton(item: ChatMessageItem) -> Bool {
