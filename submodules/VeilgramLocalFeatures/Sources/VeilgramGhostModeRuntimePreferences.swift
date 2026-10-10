@@ -4,6 +4,9 @@ public enum VeilgramGhostModeRuntimePreferences {
     public static let peekOnlineNotification = Notification.Name(
         "org.veilgram.ghost.peek-online"
     )
+    public static let onlinePresenceDidChangeNotification = Notification.Name(
+        "org.veilgram.ghost.online-presence-changed"
+    )
 
     private static func prefix(accountPeerId: Int64) -> String {
         return "veilgram.ghost.runtime.v1.\(accountPeerId)"
@@ -80,7 +83,11 @@ public enum VeilgramGhostModeRuntimePreferences {
         accountPeerId: Int64,
         defaults: UserDefaults = .standard
     ) {
+        let wasSuppressingOnlinePresence = suppressOnlinePresence(accountPeerId: accountPeerId, defaults: defaults)
         defaults.set(enabled, forKey: "\(prefix(accountPeerId: accountPeerId)).enabled")
+        if wasSuppressingOnlinePresence != suppressOnlinePresence(accountPeerId: accountPeerId, defaults: defaults) {
+            NotificationCenter.default.post(name: onlinePresenceDidChangeNotification, object: NSNumber(value: accountPeerId))
+        }
     }
 
     public static func setSuppressReadReceipts(
@@ -104,7 +111,11 @@ public enum VeilgramGhostModeRuntimePreferences {
         accountPeerId: Int64,
         defaults: UserDefaults = .standard
     ) {
+        let wasSuppressingOnlinePresence = suppressOnlinePresence(accountPeerId: accountPeerId, defaults: defaults)
         defaults.set(enabled, forKey: "\(prefix(accountPeerId: accountPeerId)).onlinePresence")
+        if wasSuppressingOnlinePresence != suppressOnlinePresence(accountPeerId: accountPeerId, defaults: defaults) {
+            NotificationCenter.default.post(name: onlinePresenceDidChangeNotification, object: NSNumber(value: accountPeerId))
+        }
     }
 
     public static func setSuppressStoryViews(

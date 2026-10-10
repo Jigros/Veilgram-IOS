@@ -18,6 +18,7 @@ private final class AccountPresenceManagerImpl {
     private let currentRequestDisposable = MetaDisposable()
     private let peekRequestDisposable = MetaDisposable()
     private var peekObserver: NSObjectProtocol?
+    private var onlinePresenceObserver: NSObjectProtocol?
     private var onlineTimer: SignalKitTimer?
     private var peekTimer: SignalKitTimer?
     
@@ -39,6 +40,27 @@ private final class AccountPresenceManagerImpl {
                 self.updatePresence(value)
             }
         })
+
+        self.onlinePresenceObserver = NotificationCenter.default.addObserver(
+            forName: VeilgramGhostModeRuntimePreferences.onlinePresenceDidChangeNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] notification in
+            guard let self,
+                  let value = notification.object as? NSNumber,
+                  value.int64Value == self.accountPeerId.toInt64() else {
+                return
+            }
+            self.queue.async { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.peekTimer?.invalidate()
+                self.peekTimer = nil
+                self.peekRequestDisposable.set(nil)
+                self.updatePresence(self.wasOnline)
+            }
+        }
 
         self.peekObserver = NotificationCenter.default.addObserver(
             forName: VeilgramGhostModeRuntimePreferences.peekOnlineNotification,
@@ -63,6 +85,9 @@ private final class AccountPresenceManagerImpl {
         self.peekRequestDisposable.dispose()
         if let peekObserver {
             NotificationCenter.default.removeObserver(peekObserver)
+        }
+        if let onlinePresenceObserver {
+            NotificationCenter.default.removeObserver(onlinePresenceObserver)
         }
         self.onlineTimer?.invalidate()
         self.peekTimer?.invalidate()

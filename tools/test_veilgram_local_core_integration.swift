@@ -41,6 +41,35 @@ enum VeilgramLocalCoreIntegrationTests {
         ))
         checks += 5
 
+        let ghostSuite = "veilgram-presence-\(UUID().uuidString)"
+        let ghostDefaults = UserDefaults(suiteName: ghostSuite)!
+        defer { ghostDefaults.removePersistentDomain(forName: ghostSuite) }
+        let ghostAccount: Int64 = 9901
+        var presenceChanges: [Int64] = []
+        let observer = NotificationCenter.default.addObserver(
+            forName: VeilgramGhostModeRuntimePreferences.onlinePresenceDidChangeNotification,
+            object: nil,
+            queue: nil
+        ) { notification in
+            if let value = notification.object as? NSNumber {
+                presenceChanges.append(value.int64Value)
+            }
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+        VeilgramGhostModeRuntimePreferences.setSuppressOnlinePresence(true, accountPeerId: ghostAccount, defaults: ghostDefaults)
+        precondition(presenceChanges.isEmpty)
+        VeilgramGhostModeRuntimePreferences.setEnabled(true, accountPeerId: ghostAccount, defaults: ghostDefaults)
+        precondition(presenceChanges == [ghostAccount])
+        VeilgramGhostModeRuntimePreferences.setEnabled(true, accountPeerId: ghostAccount, defaults: ghostDefaults)
+        VeilgramGhostModeRuntimePreferences.setSuppressOnlinePresence(false, accountPeerId: ghostAccount, defaults: ghostDefaults)
+        precondition(presenceChanges == [ghostAccount, ghostAccount])
+        VeilgramGhostModeRuntimePreferences.setSuppressOnlinePresence(false, accountPeerId: ghostAccount, defaults: ghostDefaults)
+        VeilgramGhostModeRuntimePreferences.setSuppressOnlinePresence(true, accountPeerId: ghostAccount, defaults: ghostDefaults)
+        precondition(presenceChanges == [ghostAccount, ghostAccount, ghostAccount])
+        VeilgramGhostModeRuntimePreferences.setEnabled(false, accountPeerId: ghostAccount, defaults: ghostDefaults)
+        precondition(presenceChanges == [ghostAccount, ghostAccount, ghostAccount, ghostAccount])
+        checks += 5
+
         let premiumSuite = "veilgram-local-premium-\(UUID().uuidString)"
         let premiumDefaults = UserDefaults(suiteName: premiumSuite)!
         defer { premiumDefaults.removePersistentDomain(forName: premiumSuite) }

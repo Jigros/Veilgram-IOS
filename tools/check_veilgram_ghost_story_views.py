@@ -66,6 +66,14 @@ require(
     "Ghost Mode must expose an account-scoped one-shot Peek Online signal.",
 )
 require(
+    "live-online-toggle",
+    "onlinePresenceDidChangeNotification" in prefs
+    and "self.onlinePresenceObserver = NotificationCenter.default.addObserver(" in presence
+    and "self.updatePresence(self.wasOnline)" in presence
+    and "NotificationCenter.default.removeObserver(onlinePresenceObserver)" in presence,
+    "Ghost online state changes must refresh the current account presence without waiting for a foreground transition.",
+)
+require(
     "peek-online-runtime",
     "performPeekOnline" in presence
     and "updateStatus(offline: .boolFalse)" in presence
