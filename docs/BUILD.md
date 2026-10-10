@@ -1,6 +1,16 @@
 # Build status
 
-## BUILD-0 — PASS
+## Telegram 13.0 upstream BUILD-0 — PASS
+
+The official Telegram-iOS source at `f1dd7a2dbd02cbbf513e75d5695d8d36d1cf5838` compiled as a simulator target on `macos-26` with Xcode 26.6 and Bazel 9.2.0. The CI-only configuration and simulator provisioning override are recorded in the evidence; this does not prove a signed build, simulator launch or device behavior.
+
+- CI repository SHA: `812cd9cfe1ceffe3f9648abc6d3ea7cff31c2659`; [run 38038740372](https://github.com/Jigros/Veilgram-Build/actions/runs/38038740372), [build0 job](https://github.com/Jigros/Veilgram-Build/actions/runs/38038740372/job/114174574204).
+- [Evidence artifact 11665654313](https://github.com/Jigros/Veilgram-Build/actions/runs/38038740372/artifacts/11665654313); uploaded ZIP SHA256 `97eabae044c187dd999123b963b6476f03a4e7a59dcb10fa92d2003289f06452`.
+- Recorded exit code `0`; Bazel reported `Build completed successfully, 7712 total actions`.
+- `build0-simulator.ipa` SHA256 `4b450d2729780b5fc5fa07bf3b34e3e74845948bdd7f3f0a5c29f8d64ebd79dd`; `build0.log` SHA256 `bfe5c7045b95bbb001a332d03cc3de585202baac5a3959173f67135a0d1b3aa4`.
+- Veilgram 13.0 candidate `f42e07291206a55f387b11b9f9ce20d885ef8bb4` independently passed [source tests and full simulator compile](https://github.com/Jigros/Veilgram-IOS/actions/runs/38042658752). Runtime and physical-device acceptance remain open.
+
+## Telegram 12.9.2 upstream BUILD-0 — PASS
 
 BUILD-0 compiled the unchanged official Telegram-iOS simulator target from exact upstream commit `6ad963e5b62d354da79040f388ae2b9132fb17b8`.
 
