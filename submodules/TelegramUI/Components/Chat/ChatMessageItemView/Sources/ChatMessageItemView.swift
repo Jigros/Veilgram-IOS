@@ -714,21 +714,6 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                 id: item.message.id.id
             )
         )
-        let editBadgeNode: ASTextNode?
-        if revisionCount > 0 {
-            let badge = ASTextNode()
-            badge.isUserInteractionEnabled = false
-            badge.attributedText = NSAttributedString(
-                string: "Edited • \(revisionCount) saved version\(revisionCount == 1 ? "" : "s")",
-                attributes: [
-                    .font: UIFont.systemFont(ofSize: 11.0, weight: .medium),
-                    .foregroundColor: UIColor.secondaryLabel
-                ]
-            )
-            editBadgeNode = badge
-        } else {
-            editBadgeNode = nil
-        }
         if item.message.veilgramIsLocallyRetainedDeletedMessage {
             let badgeNode: ASTextNode
             if let current = self.veilgramDeletedBadgeNode {
