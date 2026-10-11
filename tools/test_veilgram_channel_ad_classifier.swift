@@ -139,7 +139,7 @@ enum VeilgramChannelAdClassifierTests {
         let neighborDecision = VeilgramMessageRenderRuntime.evaluate(
             accountId: runtimeAccount,
             message: neighboringKey,
-            text: "Sponsored",
+            text: "ordinary message",
             peerId: neighboringKey.peerId,
             hasLink: false,
             isForwarded: false,
