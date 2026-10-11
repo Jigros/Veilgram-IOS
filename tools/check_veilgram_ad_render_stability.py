@@ -42,7 +42,7 @@ require(
     "sponsored-preference-default-and-change",
     "showSponsoredPreferenceKey" in settings
     and "object(forKey: self.showSponsoredPreferenceKey) == nil ? true" in settings
-    and "ChatHistoryListNodeImpl.showSponsoredMessagesDidChange" in settings,
+    and 'Notification.Name("org.veilgram.ads.show-sponsored-changed")' in settings,
     "Sponsored surfaces must remain visible by default and use an account-scoped live setting.",
 )
 require(

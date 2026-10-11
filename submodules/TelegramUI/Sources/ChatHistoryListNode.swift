@@ -509,7 +509,7 @@ private var nextClientId: Int32 = 1
 
 public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, ChatHistoryListNode {
     static let fixedAdMessageStableId: UInt32 = UInt32.max - 5000
-    public static let showSponsoredMessagesDidChange = Notification.Name("org.veilgram.ads.show-sponsored-changed")
+    static let showSponsoredMessagesDidChange = Notification.Name("org.veilgram.ads.show-sponsored-changed")
 
     private let listView: ChatHistoryListViewBackend
     public let rotated: Bool

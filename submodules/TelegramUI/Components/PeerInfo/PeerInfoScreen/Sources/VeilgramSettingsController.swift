@@ -433,14 +433,9 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         self.showSponsoredMessages = sender.isOn
         UserDefaults.standard.set(sender.isOn, forKey: self.showSponsoredPreferenceKey)
         NotificationCenter.default.post(
-            name: ChatHistoryListNodeImpl.showSponsoredMessagesDidChange,
+            name: Notification.Name("org.veilgram.ads.show-sponsored-changed"),
             object: NSNumber(value: self.accountContext.account.id.int64)
         )
-        if let navigationController = self.navigationController as? NavigationController {
-            for controller in navigationController.viewControllers {
-                (controller as? ChatControllerImpl)?.refreshSponsoredMessageVisibility()
-            }
-        }
     }
 
     @objc private func adCollapseChanged(_ sender: UISwitch) {
