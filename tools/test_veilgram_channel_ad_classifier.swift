@@ -168,6 +168,7 @@ enum VeilgramChannelAdClassifierTests {
         )
         precondition(neighborDecision == nil)
 
+        runtimeDefaults.set(false, forKey: "veilgram.settings.v1.\(runtimeAccount + 1).showSponsoredMessages")
         let otherAccountDecision = VeilgramMessageRenderRuntime.evaluate(
             accountId: runtimeAccount + 1,
             message: sponsoredKey,
