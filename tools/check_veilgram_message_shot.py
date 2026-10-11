@@ -17,12 +17,14 @@ require(
     and "self.adTimer?.invalidate()" in video_gallery
     and "self.adTimer = nil" in video_gallery
     and "showSponsoredPreferenceKey" in video_gallery
-    and "showSponsoredMessagesDidChange" in video_gallery
-    and     "override func animateOut(nextContentNode:" in video_gallery
+    and 'Notification.Name("org.veilgram.ads.show-sponsored-changed")' in video_gallery
+    and "override func animateOut(nextContentNode:" in video_gallery
     and "self.isActive = false\n        self.updateAdTimerState()" in video_gallery
     and "guard self.isActive, self.adState != nil" in video_gallery
     and "self.adTimer?.invalidate()\n            self.adTimer = nil" in video_gallery
     and "override func updateLayout(size: CGSize" in video_gallery
+    and video_gallery.count("override func animateIn(previousContentNode:") == 1
+    and video_gallery.count("override func animateOut(nextContentNode:") == 1
     and "self.isActive = true\n        self.updateAdTimerState()" in video_gallery,
     "The fullscreen channel-video sponsored overlay must stop its timer and gate callbacks after dismissal.",
 )

@@ -252,7 +252,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         self.context = context
         if self.sponsoredPreferenceObserver == nil {
             self.sponsoredPreferenceObserver = NotificationCenter.default.addObserver(
-                forName: ChatHistoryListNodeImpl.showSponsoredMessagesDidChange,
+                forName: Notification.Name("org.veilgram.ads.show-sponsored-changed"),
                 object: nil,
                 queue: .main
             ) { [weak self] notification in
@@ -359,18 +359,6 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
     var isAnimatingOut = false
     var reportedMessages = Set<Data>()
     
-    override func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {
-        super.animateIn(previousContentNode: previousContentNode, transition: transition)
-        self.isActive = true
-        self.updateAdTimerState()
-    }
-
-    override func animateOut(nextContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
-        self.isActive = false
-        self.updateAdTimerState()
-        super.animateOut(nextContentNode: nextContentNode, transition: transition, completion: completion)
-    }
-
     private var isActive = false
 
     private func updateAdTimerState() {
@@ -497,13 +485,18 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
     }
     
     override func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {
+        super.animateIn(previousContentNode: previousContentNode, transition: transition)
+        self.isActive = true
+        self.updateAdTimerState()
         if let livePhotoButton = self.livePhotoButton {
             livePhotoButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
         }
     }
     
     override func animateOut(nextContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
-        
+        self.isActive = false
+        self.updateAdTimerState()
+        super.animateOut(nextContentNode: nextContentNode, transition: transition, completion: completion)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
