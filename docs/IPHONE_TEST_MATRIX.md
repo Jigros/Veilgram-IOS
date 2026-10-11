@@ -1,6 +1,6 @@
 # Veilgram iPhone beta acceptance protocol
 
-**Device compilation is verified; real iPhone installation/login is not yet executed.** The current candidate has passed ARM64/iOS compile validation with fixture credentials. Real Telegram credentials stay local, and the user—not GitHub Actions—signs the candidate with their personal certificate using ESign/Feather.
+**Device-platform compilation is verified; real iPhone installation/login is not yet executed.** Current integration candidate: `43584f7f981292d1a8e4f6c80ac3fd895e2b602c` (Telegram iOS 13.0), Xcode 26.6/Bazel 9.2.0. Public CI uses fixture credentials; the private ARM64 build uses encrypted API inputs and emits an encrypted IPA. Real Telegram credentials stay private, and the user—not GitHub Actions—signs the candidate with their personal certificate using ESign/Feather.
 
 ## Artifact validation before handing off
 

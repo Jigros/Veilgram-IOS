@@ -51,6 +51,14 @@ class PrivateDeviceBuildTests(unittest.TestCase):
         ):
             self.assertEqual(private_build.validate_repo_state(), expected)
 
+    def test_private_toolchain_matches_pinned_product_versions(self):
+        import json
+
+        versions = json.loads((private_build.REPO_ROOT / "versions.json").read_text())
+        self.assertEqual(private_build.REQUIRED_XCODE, f"Xcode {versions['xcode']}")
+        self.assertEqual(private_build.REQUIRED_BAZEL, versions["bazel"].split(":", 1)[0])
+        self.assertEqual(private_build.REQUIRED_MACOS_MAJOR, versions["macos"])
+
     def test_non_macos_build_is_rejected(self):
         with mock.patch.object(private_build.platform, "system", return_value="Linux"):
             with self.assertRaises(SystemExit):
@@ -61,9 +69,9 @@ class PrivateDeviceBuildTests(unittest.TestCase):
             if args[:2] == ["sw_vers", "-productVersion"]:
                 return "26.0"
             if args[:2] == ["xcodebuild", "-version"]:
-                return "Xcode 26.2\nBuild version 17C52"
+                return "Xcode 26.6\nBuild version 17F113"
             if args[-1] == "--version":
-                return "bazel 8.4.2"
+                return "bazel 9.2.0"
             raise AssertionError(args)
 
         with (
@@ -78,9 +86,9 @@ class PrivateDeviceBuildTests(unittest.TestCase):
             if args[:2] == ["sw_vers", "-productVersion"]:
                 return "26.0"
             if args[:2] == ["xcodebuild", "-version"]:
-                return "Xcode 26.2\nBuild version 17C52"
+                return "Xcode 26.6\nBuild version 17F113"
             if args[-1] == "--version":
-                return "bazel 8.5.0"
+                return "bazel 9.2.0-rc1"
             raise AssertionError(args)
 
         with (
