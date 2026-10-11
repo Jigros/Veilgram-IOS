@@ -104,6 +104,9 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             namespace: message.id.namespace,
             id: message.id.id
         )
+        guard message.adAttribute == nil else {
+            return nil
+        }
         return VeilgramMessageRenderRuntime.evaluate(
             accountId: self.context.account.id.int64,
             message: key,

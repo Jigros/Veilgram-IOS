@@ -13,10 +13,12 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     private let roadmapPreferenceKey: String
     private let adFilterPreferenceKey: String
     private let adCollapsePreferenceKey: String
+    private let showSponsoredPreferenceKey: String
     private let tableView = UITableView(frame: .zero, style: .insetGrouped)
     private var showRoadmap: Bool
     private var adFilterEnabled: Bool
     private var adCollapseEnabled: Bool
+    private var showSponsoredMessages: Bool
     private var ghostModeEnabled: Bool
     private var ghostReadReceiptsEnabled: Bool
     private var ghostTypingEnabled: Bool
@@ -34,9 +36,11 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         self.roadmapPreferenceKey = "\(accountPrefix).showRoadmap"
         self.adFilterPreferenceKey = "\(accountPrefix).channelAdFilterEnabled"
         self.adCollapsePreferenceKey = "\(accountPrefix).channelAdCollapseEnabled"
+        self.showSponsoredPreferenceKey = "veilgram.settings.v1.\(context.account.id.int64).showSponsoredMessages"
         self.showRoadmap = UserDefaults.standard.bool(forKey: self.roadmapPreferenceKey)
         self.adFilterEnabled = UserDefaults.standard.bool(forKey: self.adFilterPreferenceKey)
         self.adCollapseEnabled = UserDefaults.standard.bool(forKey: self.adCollapsePreferenceKey)
+        self.showSponsoredMessages = UserDefaults.standard.object(forKey: self.showSponsoredPreferenceKey) == nil ? true : UserDefaults.standard.bool(forKey: self.showSponsoredPreferenceKey)
         let accountPeerId = context.account.peerId.toInt64()
         VeilgramGhostModeRuntimePreferences.initializeDefaultsIfNeeded(accountPeerId: accountPeerId)
         self.ghostModeEnabled = VeilgramGhostModeRuntimePreferences.isEnabled(accountPeerId: accountPeerId)
@@ -85,7 +89,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
         case 0:
-            return 16
+            return 17
         case 1:
             return 3
         case 2:
@@ -127,7 +131,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         if indexPath.section == 0 {
             if indexPath.row == 0 {
                 cell.textLabel?.text = "Version"
-                cell.detailTextLabel?.text = "Research build • Telegram-iOS 12.9.2 foundation"
+                cell.detailTextLabel?.text = "Research build • Telegram-iOS 13.0 foundation"
             } else if indexPath.row == 1 {
                 cell.textLabel?.text = "Show development roadmap"
                 let control = UISwitch()
@@ -221,20 +225,27 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.addTarget(self, action: #selector(adCollapseChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
             } else if indexPath.row == 12 {
+                cell.textLabel?.text = "Show Telegram sponsored messages"
+                cell.detailTextLabel?.text = "Hide sponsored messages and bot pinned ad panels in chats"
+                let control = UISwitch()
+                control.isOn = self.showSponsoredMessages
+                control.addTarget(self, action: #selector(showSponsoredMessagesChanged(_:)), for: .valueChanged)
+                cell.accessoryView = control
+            } else if indexPath.row == 13 {
                 cell.textLabel?.text = "Local Premium UI"
                 cell.detailTextLabel?.text = "Enable Veilgram-owned premium-style presentation"
                 let control = UISwitch()
                 control.isOn = self.localPremiumUIEnabled
                 control.addTarget(self, action: #selector(localPremiumChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
-            } else if indexPath.row == 13 {
+            } else if indexPath.row == 14 {
                 cell.textLabel?.text = "Hide during screen capture"
                 cell.detailTextLabel?.text = "Cover Veilgram while iOS reports active screen recording or mirroring"
                 let control = UISwitch()
                 control.isOn = self.capturePrivacyEnabled
                 control.addTarget(self, action: #selector(capturePrivacyChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
-            } else if indexPath.row == 14 {
+            } else if indexPath.row == 15 {
                 cell.textLabel?.text = "Confirm before sending"
                 cell.detailTextLabel?.text = "Ask before sending the current text or recorded message"
                 let control = UISwitch()
@@ -281,21 +292,21 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             }
             return
         }
-        if indexPath.section == 0, indexPath.row == 15 {
+        if indexPath.section == 0, indexPath.row == 16 {
             self.push(VeilgramMessageFiltersController(context: self.accountContext))
             return
         }
         if indexPath.section == 1 {
-            let focus: VeilgramLocalArchiveController.Focus
+            let mode: VeilgramLocalArchiveDetailController.Mode
             switch indexPath.row {
             case 0:
-                focus = .messages
+                mode = .messages
             case 1:
-                focus = .edits
+                mode = .edits
             default:
-                focus = .media
+                mode = .media
             }
-            self.push(VeilgramLocalArchiveController(context: self.accountContext, focus: focus))
+            self.push(VeilgramLocalArchiveDetailController(context: self.accountContext, mode: mode))
         }
         if indexPath.section == 2 {
             self.push(VeilgramLocalTransferController(context: self.accountContext))
@@ -407,6 +418,15 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             UserDefaults.standard.set(false, forKey: self.adCollapsePreferenceKey)
         }
         self.tableView.reloadRows(at: [IndexPath(row: 11, section: 0)], with: .none)
+    }
+
+    @objc private func showSponsoredMessagesChanged(_ sender: UISwitch) {
+        self.showSponsoredMessages = sender.isOn
+        UserDefaults.standard.set(sender.isOn, forKey: self.showSponsoredPreferenceKey)
+        NotificationCenter.default.post(
+            name: ChatHistoryListNodeImpl.showSponsoredMessagesDidChange,
+            object: NSNumber(value: self.accountContext.account.id.int64)
+        )
     }
 
     @objc private func adCollapseChanged(_ sender: UISwitch) {

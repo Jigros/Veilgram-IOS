@@ -4,6 +4,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 item = (ROOT / "submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift").read_text(encoding="utf-8")
 view = (ROOT / "submodules/TelegramUI/Components/Chat/ChatMessageItemView/Sources/ChatMessageItemView.swift").read_text(encoding="utf-8")
+settings = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift").read_text(encoding="utf-8")
+render_runtime = (ROOT / "submodules/VeilgramLocalFeatures/Sources/VeilgramMessageRenderRuntime.swift").read_text(encoding="utf-8")
+node = (ROOT / "submodules/TelegramUI/Sources/ChatControllerNode.swift").read_text(encoding="utf-8")
+menu = (ROOT / "submodules/TelegramUI/Sources/Chat/ChatControllerOpenMessageContextMenu.swift").read_text(encoding="utf-8")
 history = (ROOT / "submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift").read_text(encoding="utf-8")
 
 checks = []
@@ -22,7 +26,23 @@ require(
     "Ad collapse must not alter Telegram's message grouping/merge identity.",
 )
 require(
-    "official-ad-not-heuristic",
+    "sponsored-surfaces-hidden",
+    "hideAdPanel = VeilgramChannelAdClassifier.options" in node
+    and "if !hideTopPanels, !hideAdPanel, let _ = self.chatPresentationInterfaceState.adMessage" in node
+    and "if message.adAttribute != nil && veilgramAdOptions.enabled {\n                    continue" in history
+    and "if !veilgramAdOptions.enabled && view.laterId == nil && !view.isLoading" in history
+    and "disableScreenshots: isSecret" in menu,
+    "Opt-in ad hiding must remove bot header and trailing sponsored entries while retaining Telegram copy protection.",
+)
+require(
+    "sponsored-preference-default-and-change",
+    "showSponsoredPreferenceKey" in settings
+    and "object(forKey: self.showSponsoredPreferenceKey) == nil ? true" in settings
+    and "ChatHistoryListNodeImpl.showSponsoredMessagesDidChange" in settings,
+    "Sponsored surfaces must remain visible by default and use an account-scoped live setting.",
+)
+require(
+    "heuristic-badge-boundary",
     "isOfficialSponsoredMessage: message.adAttribute != nil" in history
     and "let veilgramLikelyChannelAd = message.adAttribute == nil && veilgramDecision.action != .keep" in history,
     "Official sponsored messages must not receive the heuristic Possible ad badge.",

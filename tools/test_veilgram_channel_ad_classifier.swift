@@ -107,6 +107,20 @@ enum VeilgramChannelAdClassifierTests {
         )
         precondition(decision?.shouldCollapse == false)
 
+        let hiddenSponsoredRuntime = VeilgramMessageRenderRuntime.evaluate(
+            accountId: runtimeAccount,
+            message: sponsoredKey,
+            text: "Sponsored",
+            peerId: sponsoredKey.peerId,
+            hasLink: false,
+            isForwarded: false,
+            isBroadcastChannel: true,
+            isOfficialSponsored: true,
+            isServiceMessage: false,
+            defaults: runtimeDefaults
+        )
+        precondition(hiddenSponsoredRuntime == nil)
+
         let neighboringKey = VeilgramMessageKey(peerId: 9001, namespace: 0, id: 102)
         let neighborDecision = VeilgramMessageRenderRuntime.evaluate(
             accountId: runtimeAccount,

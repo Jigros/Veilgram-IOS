@@ -1452,61 +1452,88 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         })))
                     }
 
-                    if let messageNode, !chatPresentationInterfaceState.myCopyProtectionEnabled, !message.containsSecretMedia, message.id.peerId.namespace != Namespaces.Peer.SecretChat, !selectAll || messages.count == 1 || (messages.count <= 10 && Set(messageNode.messages().map { $0.id }) == Set(messages.map { $0.id })) {
-                        actions.append(.action(ContextMenuActionItem(
-                            text: "Message Shot",
-                            icon: { theme in
-                                return generateTintedImage(
-                                    image: UIImage(bundleImageName: "Chat/Context Menu/Share"),
-                                    color: theme.actionSheet.primaryTextColor
-                                )
-                            },
-                            action: { [weak messageNode] controller, completion in
-                                controller?.dismiss(completion: {
+                let shouldOfferMessageShot = !isCopyProtected
+                    && !message.containsSecretMedia
+                    && message.id.peerId.namespace != Namespaces.Peer.SecretChat
+                    && (!selectAll || messages.count == 1 || (messages.count <= 10 && Set(messageNode?.messages().map { $0.id } ?? []) == Set(messages.map { $0.id })))
+                if let messageNode, shouldOfferMessageShot {
+                    actions.append(.action(ContextMenuActionItem(
+                        text: "Message Shot",
+                        icon: { theme in
+                            return generateTintedImage(
+                                image: UIImage(bundleImageName: "Chat/Context Menu/Share"),
+                                color: theme.actionSheet.primaryTextColor
+                            )
+                        },
+                        action: { [weak messageNode] controller, completion in
+                                guard let controller else {
+                                    completion(.default)
+                                    return
+                                }
+                                controller.dismiss(completion: {
                                     guard let messageNode,
                                           !chatPresentationInterfaceState.copyProtectionEnabled,
                                           !chatPresentationInterfaceState.myCopyProtectionEnabled else {
+                                        completion(.default)
                                         return
                                     }
-                                    let nodeMessages = messageNode.messages()
-                                    let requestedIds = selectAll ? Set(messages.map { $0.id }) : Set([message.id])
-                                    guard !nodeMessages.isEmpty,
-                                          nodeMessages.count <= 10,
-                                          nodeMessages.count == requestedIds.count,
-                                          Set(nodeMessages.map { $0.id }) == requestedIds,
-                                          nodeMessages.allSatisfy({ currentMessage in
-                                              !currentMessage.isCopyProtected()
-                                                  && !currentMessage.containsSecretMedia
-                                                  && currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat
-                                                  && currentMessage.activeEphemeralReplacementMessage == nil
-                                                  && !currentMessage.effectiveMedia.contains(where: { $0 is TelegramMediaExpiredContent })
-                                          }) else {
-                                        return
+                                let nodeMessages = messageNode.messages()
+                                let requestedIds = selectAll ? Set(messages.map { $0.id }) : Set([message.id])
+                                guard                                           !nodeMessages.isEmpty,
+                                      nodeMessages.count <= 10,
+                                      nodeMessages.count == requestedIds.count,
+                                      Set(nodeMessages.map { $0.id }) == requestedIds,
+                                      nodeMessages.allSatisfy({ currentMessage in
+                                          !currentMessage.isCopyProtected()
+                                              && !currentMessage.containsSecretMedia
+                                              && currentMessage.id.peerId.namespace != Namespaces.Peer.SecretChat
+                                              && currentMessage.activeEphemeralReplacementMessage == nil
+                                              && !currentMessage.effectiveMedia.contains(where: { $0 is TelegramMediaExpiredContent })
+                                      }) else {
+                                    completion(.default)
+                                    return
+                                }
+                                let view = messageNode.view
+                                let bounds = view.bounds.integral
+                                guard bounds.width > 0.0, bounds.height > 0.0 else {
+                                    return
+                                }
+                                let renderer = UIGraphicsImageRenderer(bounds: bounds)
+                                let image = renderer.image { context in
+                                    if !view.drawHierarchy(in: bounds, afterScreenUpdates: true) {
+                                        view.layer.render(in: context.cgContext)
                                     }
-                                    let view = messageNode.view
-                                    let bounds = view.bounds.integral
-                                    guard bounds.width > 0.0, bounds.height > 0.0 else {
-                                        return
-                                    }
-                                    let renderer = UIGraphicsImageRenderer(bounds: bounds)
-                                    let image = renderer.image { context in
-                                        if !view.drawHierarchy(in: bounds, afterScreenUpdates: true) {
-                                            view.layer.render(in: context.cgContext)
-                                        }
-                                    }
-                                    let activityController = UIActivityViewController(
-                                        activityItems: [image],
-                                        applicationActivities: nil
+                                }
+                                guard image.cgImage != nil else {
+                                    return
+                                }
+                                guard let presenter = controllerInteraction.navigationController(),
+                                      presenter.viewIfLoaded?.window != nil,
+                                      presenter.presentedViewController == nil else {
+                                    return
+                                }
+                                let activityController = UIActivityViewController(
+                                    activityItems: [image],
+                                    applicationActivities: nil
+                                )
+                                activityController.completionWithItemsHandler = { _, _, _, _ in
+                                    completion(.default)
+                                }
+                                if let popover = activityController.popoverPresentationController {
+                                    popover.sourceView = presenter.view
+                                    popover.sourceRect = CGRect(
+                                        x: presenter.view.bounds.midX,
+                                        y: presenter.view.bounds.maxY,
+                                        width: 0.0,
+                                        height: 0.0
                                     )
-                                    controllerInteraction.navigationController()?.present(
-                                        activityController,
-                                        animated: true
-                                    )
-                                })
+                                }
+                                presenter.present(activityController, animated: true)
                                 completion(.default)
-                            }
-                        )))
-                    }
+                            })
+                        }
+                    )))
+                }
                 }
                 
                 var showTranslateIfTopical = false
@@ -1619,17 +1646,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        if (loggingSettings.logToFile || loggingSettings.logToConsole) && !downloadableMediaResourceInfos.isEmpty {
-            actions.append(.action(ContextMenuActionItem(text: "Send Logs", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                triggerDebugSendLogsUI(context: context, additionalInfo: "User has requested download logs for \(downloadableMediaResourceInfos)", pushController: { c in
-                    controllerInteraction.navigationController()?.pushViewController(c)
-                })
-                f(.default)
-            })))
-        }
-        
+
         var threadId: Int64?
         var threadMessageCount: Int = 0
         if case .peer = chatPresentationInterfaceState.chatLocation, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .group = channel.info {

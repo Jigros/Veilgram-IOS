@@ -3,6 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 source = (ROOT / "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift").read_text(encoding="utf-8")
+settings = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift").read_text(encoding="utf-8")
 
 checks = []
 
@@ -23,7 +24,8 @@ require(
 require(
     "group-action-boundary",
     "messages.count <= 10" in source
-    and "Set(messageNode.messages().map { $0.id }) == Set(messages.map { $0.id })" in source
+    and "messageNode?.messages().map { $0.id } ?? []" in source
+    and "(!selectAll || messages.count == 1 || (messages.count <= 10" in source
     and "!chatPresentationInterfaceState.myCopyProtectionEnabled" in source,
     "Group Message Shot must only be offered when the visible node contains the whole bounded group.",
 )
@@ -47,8 +49,33 @@ require(
 require(
     "system-share",
     "UIActivityViewController" in source
-    and "activityItems: [image]" in source,
-    "Generated image must be handed to the system share sheet.",
+    and "activityItems: [image]" in source
+    and "activityController.completionWithItemsHandler" in source,
+    "Generated image must be handed to the system share sheet with dismissal completion handling.",
+)
+require(
+    "presentation-safety",
+    "guard let controller else" in source
+    and "presenter.presentedViewController == nil" in source
+    and "popover.sourceView = presenter.view" in source,
+    "Message Shot must avoid presenting from a missing or already occupied presenter and anchor its popover.",
+)
+
+require(
+    "send-logs-not-offered",
+    'text: "Send Logs"' not in source,
+    "The per-media debug-log action must not appear in message context menus.",
+)
+require(
+    "foundation-version",
+    "Telegram-iOS 13.0 foundation" in settings
+    and "12.9.2 foundation" not in settings,
+    "Veilgram settings must report the imported Telegram foundation version.",
+)
+require(
+    "archive-shortcut-routing",
+    "VeilgramLocalArchiveDetailController(context: self.accountContext, mode: mode)" in settings,
+    "Message/edit/media shortcuts must open their distinct archive detail modes directly.",
 )
 
 failed = [x for x in checks if not x[1]]

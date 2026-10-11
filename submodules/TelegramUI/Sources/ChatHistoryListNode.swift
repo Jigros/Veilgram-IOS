@@ -509,6 +509,7 @@ private var nextClientId: Int32 = 1
 
 public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, ChatHistoryListNode {
     static let fixedAdMessageStableId: UInt32 = UInt32.max - 5000
+    public static let showSponsoredMessagesDidChange = Notification.Name("org.veilgram.ads.show-sponsored-changed")
 
     private let listView: ChatHistoryListViewBackend
     public let rotated: Bool
@@ -908,6 +909,24 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         self.prefetchManager = InChatPrefetchManager(context: context)
         
         self.adMessagesContext = adMessagesContext
+        let showSponsoredPreferenceKey = "veilgram.settings.v1.\(context.account.id.int64).showSponsoredMessages"
+        let showSponsoredMessages: Signal<Bool, NoError> = Signal { subscriber in
+            let currentValue = Atomic<Bool>(value: UserDefaults.standard.object(forKey: showSponsoredPreferenceKey) == nil ? true : UserDefaults.standard.bool(forKey: showSponsoredPreferenceKey))
+            subscriber.putNext(currentValue.with { $0 })
+            let observer = NotificationCenter.default.addObserver(forName: Self.showSponsoredMessagesDidChange, object: nil, queue: nil) { notification in
+                guard let accountId = notification.object as? NSNumber, accountId.int64Value == context.account.id.int64 else {
+                    return
+                }
+                let value = UserDefaults.standard.bool(forKey: showSponsoredPreferenceKey)
+                let shouldEmit = currentValue.swap(value) != value
+                if shouldEmit {
+                    subscriber.putNext(value)
+                }
+            }
+            return ActionDisposable {
+                NotificationCenter.default.removeObserver(observer)
+            }
+        }
         var adMessages: Signal<(interPostInterval: Int32?, messages: [Message], startDelay: Int32?, betweenDelay: Int32?), NoError>
         if case .bubbles = mode, let adMessagesContext {
             let peerId = adMessagesContext.peerId
@@ -915,10 +934,10 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                 adMessages = .single((nil, [], nil, nil))
             } else {
                 if context.sharedContext.immediateExperimentalUISettings.fakeAds {
-                    adMessages = context.engine.data.get(
+                    adMessages = combineLatest(showSponsoredMessages, context.engine.data.get(
                         TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
-                    )
-                    |> map { peer -> (interPostInterval: Int32?, messages: [Message], startDelay: Int32?, betweenDelay: Int32?) in
+                    ))
+                    |> map { shouldShowSponsored, peer -> (interPostInterval: Int32?, messages: [Message], startDelay: Int32?, betweenDelay: Int32?) in
                         let fakeAdMessages: [Message] = (0 ..< 10).map { i -> Message in
                             var attributes: [MessageAttribute] = []
                             
@@ -992,10 +1011,19 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                                 associatedStories: [:]
                             )
                         }
-                        return (10, fakeAdMessages, nil, nil)
+                        return shouldShowSponsored
+                            ? (10, fakeAdMessages, nil, nil)
+                            : (10, [], nil, nil)
                     }
                 } else {
-                    adMessages = adMessagesContext.state
+                    adMessages = combineLatest(adMessagesContext.state, showSponsoredMessages)
+                    |> map { state, shouldShowSponsored in
+                        if shouldShowSponsored {
+                            return state
+                        } else {
+                            return (interPostInterval: state.interPostInterval, messages: [], startDelay: state.startDelay, betweenDelay: state.betweenDelay)
+                        }
+                    }
                 }
             }
         } else {
