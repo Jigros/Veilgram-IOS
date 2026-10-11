@@ -85,8 +85,25 @@ enum VeilgramChannelAdClassifierTests {
             isServiceMessage: false,
             defaults: runtimeDefaults
         )
+        precondition(decision?.isAdvertisement == true)
+        precondition(decision?.shouldCollapse == false)
+
+        runtimeDefaults.set(false, forKey: "veilgram.settings.v1.\(runtimeAccount).showSponsoredMessages")
+        decision = VeilgramMessageRenderRuntime.evaluate(
+            accountId: runtimeAccount,
+            message: sponsoredKey,
+            text: "Sponsored",
+            peerId: sponsoredKey.peerId,
+            hasLink: false,
+            isForwarded: false,
+            isBroadcastChannel: true,
+            isOfficialSponsored: true,
+            isServiceMessage: false,
+            defaults: runtimeDefaults
+        )
         precondition(decision == nil)
 
+        runtimeDefaults.set(true, forKey: "veilgram.settings.v1.\(runtimeAccount).showSponsoredMessages")
         VeilgramMessageRenderRuntime.reveal(
             accountId: runtimeAccount,
             message: sponsoredKey

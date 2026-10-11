@@ -232,6 +232,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
     
     private var adSchedule: [(Int32, Message?)] = []
     private var adTimer: SwiftSignalKit.Timer?
+    private var sponsoredPreferenceObserver: NSObjectProtocol?
 
     var performAction: ((GalleryControllerInteractionTapAction) -> Void)?
     var presentPremiumDemo: (() -> Void)?
@@ -241,11 +242,40 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         
     deinit {
         self.adTimer?.invalidate()
+        if let sponsoredPreferenceObserver {
+            NotificationCenter.default.removeObserver(sponsoredPreferenceObserver)
+        }
         self.adDisposable.dispose()
     }
 
     func setMessage(context: AccountContext, message: Message) {
         self.context = context
+        if self.sponsoredPreferenceObserver == nil {
+            self.sponsoredPreferenceObserver = NotificationCenter.default.addObserver(
+                forName: ChatHistoryListNodeImpl.showSponsoredMessagesDidChange,
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                guard let self,
+                      let accountId = notification.object as? NSNumber,
+                      accountId.int64Value == context.account.id.int64 else {
+                    return
+                }
+                let key = "veilgram.settings.v1.\(accountId.int64Value).showSponsoredMessages"
+                let isEnabled = UserDefaults.standard.object(forKey: key) == nil || UserDefaults.standard.bool(forKey: key)
+                if !isEnabled {
+                    self.adState = nil
+                    self.adSchedule = []
+                    self.adTimer?.invalidate()
+                    self.adTimer = nil
+                    self.adDisposable.set(nil)
+                    self.adView.view?.removeFromSuperview()
+                    if let validLayout = self.validLayout {
+                        self.updateLayout(size: validLayout.size, metrics: validLayout.metrics, insets: validLayout.insets, isHidden: validLayout.isHidden, transition: .immediate)
+                    }
+                }
+            }
+        }
         guard self.message?.id != message.id else {
             return
         }
@@ -259,6 +289,17 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
                 return
             }
             if !state.messages.isEmpty {
+                let showSponsoredPreferenceKey = "veilgram.settings.v1.\(context.account.id.int64).showSponsoredMessages"
+                guard UserDefaults.standard.object(forKey: showSponsoredPreferenceKey) == nil || UserDefaults.standard.bool(forKey: showSponsoredPreferenceKey) else {
+                    self.adState = nil
+                    self.adSchedule = []
+                    self.adTimer?.invalidate()
+                    self.adTimer = nil
+                    if let validLayout = self.validLayout {
+                        self.updateLayout(size: validLayout.size, metrics: validLayout.metrics, insets: validLayout.insets, isHidden: validLayout.isHidden, transition: .immediate)
+                    }
+                    return
+                }
                 self.adState = (state.startDelay, state.betweenDelay, state.messages)
                 
                 var startTime = Int32(CFAbsoluteTimeGetCurrent()) + (state.startDelay ?? 0)
@@ -354,7 +395,6 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
     override func updateLayout(size: CGSize, metrics: LayoutMetrics, insets: UIEdgeInsets, isHidden: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, metrics, insets, isHidden)
         self.updateAdTimerState()
-
 
         if let livePhotoButton = self.livePhotoButton {
             let livePhotoButtonSize = livePhotoButton.update(isPlaying: self.livePhotoButtonIsPlaying)

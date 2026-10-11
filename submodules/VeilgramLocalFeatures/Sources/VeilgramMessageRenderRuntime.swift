@@ -56,6 +56,14 @@ public enum VeilgramMessageRenderRuntime {
         defaults: UserDefaults = .standard
     ) -> VeilgramMessageRenderDecision? {
         if isOfficialSponsored {
+            let key = "veilgram.settings.v1.\(accountId).showSponsoredMessages"
+            if defaults.object(forKey: key) == nil || defaults.bool(forKey: key) {
+                return VeilgramMessageRenderDecision(
+                    label: "Sponsored message",
+                    shouldCollapse: false,
+                    isAdvertisement: true
+                )
+            }
             return nil
         }
 
