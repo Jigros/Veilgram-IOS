@@ -20,6 +20,10 @@ callback = interaction[interaction.index("startStandalone(next:"):]
 assert callback.index("self.canReadHistoryValue") < callback.index("self.context.applyMaxReadIndex")
 assert callback.index("VeilgramGhostModeRuntimePreferences.readOnInteractionOnly") < callback.index("self.context.applyMaxReadIndex")
 assert callback.index("!VeilgramGhostModeRuntimePreferences.suppressReadReceipts") < callback.index("self.context.applyMaxReadIndex")
+receipt_tests = (root / "tools/test_veilgram_ghost_receipts.swift").read_text()
+assert "let mixedReceipts = [" in receipt_tests
+assert "retainedReceipts.map(\\.id) == [2, 3]" in receipt_tests
+assert "requiresProtocolReceipt: $0.requiresProtocol" in receipt_tests
 print("PASS: receipt queue filtering and automatic/immediate-send read paths")
 thread = (root / "submodules/TelegramCore/Sources/TelegramEngine/Messages/ReplyThreadHistory.swift").read_text()
 apply = thread[thread.index("func applyMaxReadIndex(messageIndex:"):thread.index("public class ReplyThreadHistoryContext")]
