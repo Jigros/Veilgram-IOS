@@ -706,14 +706,6 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     open func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
         self.item = item
         
-        let revisionCount = VeilgramArchiveRuntimeIndex.editRevisionCount(
-            accountId: item.context.account.peerId.toInt64(),
-            key: VeilgramMessageKey(
-                peerId: item.message.id.peerId.toInt64(),
-                namespace: item.message.id.namespace,
-                id: item.message.id.id
-            )
-        )
         if item.message.veilgramIsLocallyRetainedDeletedMessage {
             let badgeNode: ASTextNode
             if let current = self.veilgramDeletedBadgeNode {
