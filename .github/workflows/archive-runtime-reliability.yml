@@ -21,6 +21,7 @@ on:
       - "submodules/TelegramUI/Sources/AppDelegate.swift"
       - "submodules/TelegramUI/Sources/ChatController.swift"
       - "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift"
+      - "submodules/TelegramUI/Sources/ChatController.swift"
       - "submodules/TelegramUI/Sources/ChatControllerNode.swift"
       - "submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift"
       - "submodules/TelegramUI/Sources/ChatHistoryListNode.swift"
