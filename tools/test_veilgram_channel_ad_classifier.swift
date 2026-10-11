@@ -105,9 +105,10 @@ enum VeilgramChannelAdClassifierTests {
         )
         precondition(decision == nil)
 
+        let hiddenChannelAdKey = VeilgramMessageKey(peerId: 9001, namespace: 0, id: 103)
         let hiddenChannelAdRuntime = VeilgramMessageRenderRuntime.evaluate(
             accountId: runtimeAccount,
-            message: sponsoredKey,
+            message: hiddenChannelAdKey,
             text: "#реклама erid:abcdef123 https://example.org",
             peerId: sponsoredKey.peerId,
             hasLink: true,
