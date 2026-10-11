@@ -11,57 +11,10 @@ def require(name, condition, detail):
     checks.append((name, condition, detail))
 
 require(
-    "context-action",
-    'text: "Message Shot"' in source,
-    "Message Shot must be exposed from the message context menu.",
+    "message-shot-safely-disabled",
+    'text: "Message Shot"' not in source,
+    "Message Shot remains removed from the menu until the user-reported crash has a verified fix.",
 )
-require(
-    "copy-protection-boundary",
-    "if !isCopyProtected {" in source
-    and source.find('text: "Message Shot"') > source.find("if !isCopyProtected {"),
-    "Message Shot must stay inside the existing non-copy-protected branch.",
-)
-require(
-    "group-action-boundary",
-    "messages.count <= 10" in source
-    and "messageNode?.messages().map { $0.id } ?? []" in source
-    and "(!selectAll || messages.count == 1 || (messages.count <= 10" in source
-    and "!chatPresentationInterfaceState.myCopyProtectionEnabled" in source,
-    "Group Message Shot must only be offered when the visible node contains the whole bounded group.",
-)
-require(
-    "live-node-boundary",
-    "nodeMessages.count == requestedIds.count" in source
-    and "Set(nodeMessages.map { $0.id }) == requestedIds" in source
-    and "nodeMessages.allSatisfy({ currentMessage in" in source
-    and "!currentMessage.containsSecretMedia" in source
-    and "currentMessage.activeEphemeralReplacementMessage == nil" in source
-    and "currentMessage.effectiveMedia.contains(where: { $0 is TelegramMediaExpiredContent })" in source,
-    "All captured node messages must match the requested IDs and remain unprotected and unexpired.",
-)
-require(
-    "local-render",
-    "UIGraphicsImageRenderer" in source
-    and "drawHierarchy" in source
-    and "messageNode.view" in source,
-    "Message Shot must render locally from the selected message node.",
-)
-require(
-    "system-share",
-    "UIActivityViewController" in source
-    and "activityItems: [image]" in source
-    and "presenter.present(activityController, animated: true)" in source
-    and "presenter.presentedViewController == nil" in source,
-    "Generated image must be presented by an available system share presenter.",
-)
-require(
-    "presentation-safety",
-    "guard let controller else" in source
-    and "presenter.presentedViewController == nil" in source
-    and "popover.sourceView = presenter.view" in source,
-    "Message Shot must avoid presenting from a missing or already occupied presenter and anchor its popover.",
-)
-
 require(
     "send-logs-not-offered",
     'text: "Send Logs"' not in source,

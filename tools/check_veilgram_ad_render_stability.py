@@ -27,8 +27,8 @@ require(
 )
 require(
     "sponsored-surfaces-hidden",
-    "hideAdPanel = VeilgramChannelAdClassifier.options" in node
-    and "if !hideTopPanels, !hideAdPanel, let _ = self.chatPresentationInterfaceState.adMessage" in node
+    'showSponsoredPreferenceKey = "veilgram.settings.v1.\\(self.context.account.id.int64).showSponsoredMessages"' in node
+    and "if !hideTopPanels, showSponsoredMessages, let _ = self.chatPresentationInterfaceState.adMessage" in node
     and 'if message.adAttribute != nil && !UserDefaults.standard.bool(forKey: "veilgram.settings.v1.\\(context.account.id.int64).showSponsoredMessages")' in history
     and "if !veilgramAdOptions.enabled && view.laterId == nil && !view.isLoading" in history
     and "disableScreenshots: isSecret" in menu,

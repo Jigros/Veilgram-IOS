@@ -1571,8 +1571,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         var displayAdPanel = false
-        let hideAdPanel = VeilgramChannelAdClassifier.options(accountId: self.context.account.id.int64).enabled
-        if !hideTopPanels, !hideAdPanel, let _ = self.chatPresentationInterfaceState.adMessage {
+        let showSponsoredPreferenceKey = "veilgram.settings.v1.\(self.context.account.id.int64).showSponsoredMessages"
+        let showSponsoredMessages = UserDefaults.standard.object(forKey: showSponsoredPreferenceKey) == nil
+            ? true
+            : UserDefaults.standard.bool(forKey: showSponsoredPreferenceKey)
+        if !hideTopPanels, showSponsoredMessages, let _ = self.chatPresentationInterfaceState.adMessage {
             if let chatHistoryState = self.chatPresentationInterfaceState.chatHistoryState, case .loaded(false, _) = chatHistoryState {
                 if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil && !self.chatPresentationInterfaceState.peerIsBlocked && self.chatPresentationInterfaceState.hasAtLeast3Messages {
                     displayAdPanel = true
