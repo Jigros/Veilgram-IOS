@@ -148,7 +148,7 @@ enum VeilgramChannelAdClassifierTests {
             isServiceMessage: false,
             defaults: runtimeDefaults
         )
-        precondition(neighborDecision?.shouldCollapse == false)
+        precondition(neighborDecision == nil)
 
         let otherAccountDecision = VeilgramMessageRenderRuntime.evaluate(
             accountId: runtimeAccount + 1,
