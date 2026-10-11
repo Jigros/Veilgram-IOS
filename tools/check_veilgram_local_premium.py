@@ -11,6 +11,7 @@ theme_settings = (ROOT / "submodules/SettingsUI/Sources/Themes/ThemeSettingsCont
 profile_items = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift").read_text(encoding="utf-8")
 profile_header = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift").read_text(encoding="utf-8")
 profile_screen = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoScreen.swift").read_text(encoding="utf-8")
+core_tests = (ROOT / "tools/test_veilgram_local_core_integration.swift").read_text(encoding="utf-8")
 
 checks = []
 
@@ -86,6 +87,14 @@ require(
     "Local Premium must affect only the account's own profile badge and title styling; real peer Premium remains authoritative.",
 )
 
+require(
+    "per-account-persistence-and-isolation",
+    "secondPremiumAccount" in core_tests
+    and "reopenedPremiumDefaults" in core_tests
+    and "effectivePresentationPremium(\n            serverIsPremium: true" in core_tests
+    and "serverIsPremium: false,\n            accountPeerId: secondPremiumAccount" in core_tests,
+    "Local Premium must persist independently per account and never replace real server Premium.",
+)
 require(
     "live-self-profile-refresh",
     "self.peerId == context.account.peerId" in profile_screen

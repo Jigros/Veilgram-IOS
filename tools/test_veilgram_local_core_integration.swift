@@ -124,7 +124,56 @@ enum VeilgramLocalCoreIntegrationTests {
             accountPeerId: premiumAccount,
             defaults: premiumDefaults
         ))
-        checks += 8
+
+        VeilgramLocalPremiumRuntimePreferences.setEnabled(
+            true,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        )
+        let secondPremiumAccount: Int64 = 102
+        precondition(!VeilgramLocalPremiumRuntimePreferences.isEnabled(
+            accountPeerId: secondPremiumAccount,
+            defaults: premiumDefaults
+        ))
+        VeilgramLocalPremiumRuntimePreferences.setEnabled(
+            true,
+            accountPeerId: secondPremiumAccount,
+            defaults: premiumDefaults
+        )
+        precondition(VeilgramLocalPremiumRuntimePreferences.isEnabled(
+            accountPeerId: secondPremiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(VeilgramLocalPremiumRuntimePreferences.isEnabled(
+            accountPeerId: premiumAccount,
+            defaults: UserDefaults(suiteName: premiumSuite)!
+        ))
+
+        let reopenedPremiumDefaults = UserDefaults(suiteName: premiumSuite)!
+        precondition(VeilgramLocalPremiumRuntimePreferences.isEnabled(
+            accountPeerId: secondPremiumAccount,
+            defaults: reopenedPremiumDefaults
+        ))
+        VeilgramLocalPremiumRuntimePreferences.setEnabled(
+            false,
+            accountPeerId: secondPremiumAccount,
+            defaults: reopenedPremiumDefaults
+        )
+        precondition(!VeilgramLocalPremiumRuntimePreferences.isEnabled(
+            accountPeerId: secondPremiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+            serverIsPremium: true,
+            accountPeerId: premiumAccount,
+            defaults: premiumDefaults
+        ))
+        precondition(!VeilgramLocalPremiumRuntimePreferences.effectivePresentationPremium(
+            serverIsPremium: false,
+            accountPeerId: secondPremiumAccount,
+            defaults: premiumDefaults
+        ))
+        checks += 15
 
         let sendConfirmationSuite = "veilgram-send-confirmation-\(UUID().uuidString)"
         let sendConfirmationDefaults = UserDefaults(suiteName: sendConfirmationSuite)!
