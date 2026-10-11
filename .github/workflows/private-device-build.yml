@@ -65,35 +65,35 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
-          test "$(xcodebuild -version | head -1)" = "Xcode 26.2"
+          sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+          test "$(xcodebuild -version | head -1)" = "Xcode 26.6"
           test "$(sw_vers -productVersion | cut -d. -f1)" = "26"
 
           brew list bazelisk >/dev/null 2>&1 || brew install bazelisk
           mkdir -p "$RUNNER_TEMP/veilgram-bin"
           ln -sf "$(brew --prefix bazelisk)/bin/bazelisk" "$RUNNER_TEMP/veilgram-bin/bazel"
           echo "$RUNNER_TEMP/veilgram-bin" >> "$GITHUB_PATH"
-          echo "USE_BAZEL_VERSION=8.4.2" >> "$GITHUB_ENV"
+          echo "USE_BAZEL_VERSION=9.2.0" >> "$GITHUB_ENV"
 
           export PATH="$RUNNER_TEMP/veilgram-bin:$PATH"
-          export USE_BAZEL_VERSION=8.4.2
-          test "$(bazel --version | awk '{print $2}')" = "8.4.2"
+          export USE_BAZEL_VERSION=9.2.0
+          test "$(bazel --version | awk '{print $2}')" = "9.2.0"
 
       - name: Restore safe public device Bazel cache
         uses: actions/cache/restore@v4
         with:
           path: ~/veilgram-public-device-bazel-cache
-          key: veilgram-public-device-macos26-xcode26.2-bazel8.4.2-private-${{ github.run_id }}
+          key: veilgram-public-device-macos26-xcode26.6-bazel9.2.0-private-${{ github.run_id }}
           restore-keys: |
-            veilgram-public-device-macos26-xcode26.2-bazel8.4.2-
+            veilgram-public-device-macos26-xcode26.6-bazel9.2.0-
 
       - name: Restore encrypted private Bazel cache
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/veilgram-private-bazel-cache.tar.enc
-          key: veilgram-private-bazel-encrypted-v1-macos26-xcode26.2-bazel8.4.2-${{ github.run_id }}
+          key: veilgram-private-bazel-encrypted-v1-macos26-xcode26.6-bazel9.2.0-${{ github.run_id }}
           restore-keys: |
-            veilgram-private-bazel-encrypted-v1-macos26-xcode26.2-bazel8.4.2-
+            veilgram-private-bazel-encrypted-v1-macos26-xcode26.6-bazel9.2.0-
 
       - name: Prepare private Bazel cache
         shell: bash
@@ -232,7 +232,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/veilgram-private-bazel-cache.tar.enc
-          key: veilgram-private-bazel-encrypted-v1-macos26-xcode26.2-bazel8.4.2-${{ github.run_id }}
+          key: veilgram-private-bazel-encrypted-v1-macos26-xcode26.6-bazel9.2.0-${{ github.run_id }}
 
       - name: Ensure plaintext IPA is not uploaded
         shell: bash
