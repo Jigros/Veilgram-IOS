@@ -49,7 +49,7 @@ require(
     "heuristic-badge-boundary",
     "isOfficialSponsoredMessage: message.adAttribute != nil" in history
     and "let veilgramLikelyChannelAd = message.adAttribute == nil && veilgramDecision.action != .keep" in history
-    and "if isOfficialSponsored {\n            return nil" not in render_runtime
+    and "if isOfficialSponsored {\n            return nil" in render_runtime
     and "precondition(decision == nil)" in (ROOT / "tools/test_veilgram_channel_ad_classifier.swift").read_text(encoding="utf-8"),
     "Official sponsored messages must not receive the heuristic Possible ad badge, while opt-in filters still apply.",
 )

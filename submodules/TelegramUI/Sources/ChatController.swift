@@ -8560,14 +8560,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.navigationBar?.additionalContentNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: 0.0, bottom: self.additionalNavigationBarHitTestSlop, right: 0.0)
     }
     
+    func refreshSponsoredMessageVisibility() {
+        self.updateChatPresentationInterfaceState(transition: .immediate, interactive: false, force: true, { state in
+            return state.updatedAdMessage(nil)
+        })
+    }
+
     func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
         self.updateChatPresentationInterfaceState(transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate, interactive: interactive, saveInterfaceState: saveInterfaceState, f, completion: completion)
     }
     
-    func refreshSponsoredMessageVisibility() {
-        self.updateChatPresentationInterfaceState(animated: false, interactive: false, force: true, { $0 })
-    }
-
     func updateChatPresentationInterfaceState(transition: ContainedViewLayoutTransition, interactive: Bool, force: Bool = false, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
         updateChatPresentationInterfaceStateImpl(
             selfController: self,

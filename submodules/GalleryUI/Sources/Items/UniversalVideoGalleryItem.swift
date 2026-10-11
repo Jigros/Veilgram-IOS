@@ -354,7 +354,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
     override func updateLayout(size: CGSize, metrics: LayoutMetrics, insets: UIEdgeInsets, isHidden: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, metrics, insets, isHidden)
         self.updateAdTimerState()
-        
+
 
         if let livePhotoButton = self.livePhotoButton {
             let livePhotoButtonSize = livePhotoButton.update(isPlaying: self.livePhotoButtonIsPlaying)

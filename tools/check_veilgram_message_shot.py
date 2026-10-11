@@ -15,9 +15,11 @@ require(
     "video-ad-timer-lifecycle",
     "private var adTimer: SwiftSignalKit.Timer?" in video_gallery
     and "self.adTimer?.invalidate()" in video_gallery
-    and "override func animateOut(nextContentNode:" in video_gallery
+    and "self.adTimer = nil" in video_gallery
+    and     "override func animateOut(nextContentNode:" in video_gallery
     and "self.isActive = false\n        self.updateAdTimerState()" in video_gallery
     and "guard self.isActive, self.adState != nil" in video_gallery
+    and "self.adTimer?.invalidate()\n            self.adTimer = nil" in video_gallery
     and "override func updateLayout(size: CGSize" in video_gallery
     and "self.isActive = true\n        self.updateAdTimerState()" in video_gallery,
     "The fullscreen channel-video sponsored overlay must stop its timer and gate callbacks after dismissal.",
