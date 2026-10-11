@@ -85,9 +85,7 @@ enum VeilgramChannelAdClassifierTests {
             isServiceMessage: false,
             defaults: runtimeDefaults
         )
-        precondition(decision?.isAdvertisement == true)
-        precondition(decision?.label == "Sponsored message")
-        precondition(decision?.shouldCollapse == true)
+        precondition(decision == nil)
 
         VeilgramMessageRenderRuntime.reveal(
             accountId: runtimeAccount,
@@ -105,7 +103,7 @@ enum VeilgramChannelAdClassifierTests {
             isServiceMessage: false,
             defaults: runtimeDefaults
         )
-        precondition(decision?.shouldCollapse == false)
+        precondition(decision == nil)
 
         let hiddenSponsoredRuntime = VeilgramMessageRenderRuntime.evaluate(
             accountId: runtimeAccount,
@@ -120,6 +118,20 @@ enum VeilgramChannelAdClassifierTests {
             defaults: runtimeDefaults
         )
         precondition(hiddenSponsoredRuntime == nil)
+
+        var heuristic = VeilgramChannelAdOptions()
+        heuristic.enabled = true
+        let ordinaryChannelDecision = VeilgramChannelAdClassifier.classify(
+            VeilgramChannelAdInput(
+                text: "#реклама erid:abcdef123",
+                isBroadcastChannel: true,
+                isOfficialSponsoredMessage: false,
+                isServiceMessage: false,
+                channelId: sponsoredKey.peerId
+            ),
+            options: heuristic
+        )
+        precondition(ordinaryChannelDecision.action == .label)
 
         let neighboringKey = VeilgramMessageKey(peerId: 9001, namespace: 0, id: 102)
         let neighborDecision = VeilgramMessageRenderRuntime.evaluate(

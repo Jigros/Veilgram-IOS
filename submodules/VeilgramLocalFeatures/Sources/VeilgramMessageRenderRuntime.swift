@@ -55,10 +55,6 @@ public enum VeilgramMessageRenderRuntime {
         isServiceMessage: Bool,
         defaults: UserDefaults = .standard
     ) -> VeilgramMessageRenderDecision? {
-        if isOfficialSponsored {
-            return nil
-        }
-
         if let filterDecision = VeilgramFilterRuntime.evaluate(
             accountId: accountId,
             text: text,

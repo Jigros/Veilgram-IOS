@@ -5,6 +5,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 detail = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalArchiveDetailController.swift").read_text(encoding="utf-8")
 chat_view = (ROOT / "submodules/TelegramUI/Components/Chat/ChatMessageItemView/Sources/ChatMessageItemView.swift").read_text(encoding="utf-8")
+adapter = (ROOT / "submodules/TelegramCore/Sources/State/VeilgramArchiveStateAdapter.swift").read_text(encoding="utf-8")
+writer = (ROOT / "submodules/VeilgramLocalFeatures/Sources/VeilgramArchiveRuntimeWriter.swift").read_text(encoding="utf-8")
 archive_overview = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramLocalArchiveController.swift").read_text(encoding="utf-8")
 settings = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift").read_text(encoding="utf-8")
 
@@ -50,8 +52,15 @@ require(
     "inline-edits",
     "veilgramEditHistoryButtonNode" in chat_view
     and "previous edit" in chat_view
+    and "VeilgramArchiveRuntimeIndex.editRevisionCount" in chat_view
     and "veilgramEditHistoryPressed" in chat_view,
     "Messages with saved revisions must expose inline edit-history navigation.",
+)
+require(
+    "live-edit-revisions",
+    "enqueuePreviousEditRevision(" in adapter
+    and "flushEditRevisions" in writer,
+    "Newly captured edits must become visible immediately in inline history and remain indexed after persistence.",
 )
 
 require(

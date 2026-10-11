@@ -89,7 +89,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
         case 0:
-            return 17
+            return 18
         case 1:
             return 3
         case 2:
@@ -225,8 +225,8 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.addTarget(self, action: #selector(adCollapseChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
             } else if indexPath.row == 12 {
-                cell.textLabel?.text = "Show Telegram sponsored messages"
-                cell.detailTextLabel?.text = "Hide sponsored messages and bot pinned ad panels in chats"
+                cell.textLabel?.text = "Hide Telegram sponsored messages"
+                cell.detailTextLabel?.text = "Hide official sponsored posts and bot ad panels"
                 let control = UISwitch()
                 control.isOn = self.showSponsoredMessages
                 control.addTarget(self, action: #selector(showSponsoredMessagesChanged(_:)), for: .valueChanged)
@@ -251,6 +251,15 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 let control = UISwitch()
                 control.isOn = self.sendConfirmationEnabled
                 control.addTarget(self, action: #selector(sendConfirmationChanged(_:)), for: .valueChanged)
+                cell.accessoryView = control
+            } else if indexPath.row == 16 {
+                cell.textLabel?.text = "Collapse likely channel ads"
+                cell.detailTextLabel?.text = self.adFilterEnabled ? "Strict text signals only • may have false positives" : "Enable local ad detection first"
+                cell.textLabel?.textColor = self.adFilterEnabled ? .label : .secondaryLabel
+                let control = UISwitch()
+                control.isEnabled = self.adFilterEnabled
+                control.isOn = self.adCollapseEnabled
+                control.addTarget(self, action: #selector(adCollapseChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
             } else {
                 cell.textLabel?.text = "Message filters"
@@ -292,7 +301,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
             }
             return
         }
-        if indexPath.section == 0, indexPath.row == 16 {
+        if indexPath.section == 0, indexPath.row == 17 {
             self.push(VeilgramMessageFiltersController(context: self.accountContext))
             return
         }

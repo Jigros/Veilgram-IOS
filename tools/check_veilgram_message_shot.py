@@ -3,6 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 source = (ROOT / "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift").read_text(encoding="utf-8")
+video_gallery = (ROOT / "submodules/GalleryUI/Sources/Items/UniversalVideoGalleryItem.swift").read_text(encoding="utf-8")
 settings = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift").read_text(encoding="utf-8")
 
 checks = []
@@ -10,6 +11,17 @@ checks = []
 def require(name, condition, detail):
     checks.append((name, condition, detail))
 
+require(
+    "video-ad-timer-lifecycle",
+    "private var adTimer: SwiftSignalKit.Timer?" in video_gallery
+    and "self.adTimer?.invalidate()" in video_gallery
+    and "override func animateOut(nextContentNode:" in video_gallery
+    and "self.isActive = false\n        self.updateAdTimerState()" in video_gallery
+    and "guard self.isActive, self.adState != nil" in video_gallery
+    and "override func updateLayout(size: CGSize" in video_gallery
+    and "self.isActive = true\n        self.updateAdTimerState()" in video_gallery,
+    "The fullscreen channel-video sponsored overlay must stop its timer and gate callbacks after dismissal.",
+)
 require(
     "message-shot-safely-disabled",
     'text: "Message Shot"' not in source,

@@ -9,6 +9,7 @@ render_runtime = (ROOT / "submodules/VeilgramLocalFeatures/Sources/VeilgramMessa
 node = (ROOT / "submodules/TelegramUI/Sources/ChatControllerNode.swift").read_text(encoding="utf-8")
 menu = (ROOT / "submodules/TelegramUI/Sources/Chat/ChatControllerOpenMessageContextMenu.swift").read_text(encoding="utf-8")
 history = (ROOT / "submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift").read_text(encoding="utf-8")
+classifier = (ROOT / "submodules/TelegramUI/Sources/VeilgramChannelAdClassifier.swift").read_text(encoding="utf-8")
 
 checks = []
 
@@ -31,8 +32,11 @@ require(
     and "if !hideTopPanels, showSponsoredMessages, let _ = self.chatPresentationInterfaceState.adMessage" in node
     and 'if message.adAttribute != nil && !UserDefaults.standard.bool(forKey: "veilgram.settings.v1.\\(context.account.id.int64).showSponsoredMessages")' in history
     and "if !veilgramAdOptions.enabled && view.laterId == nil && !view.isLoading" in history
-    and "disableScreenshots: isSecret" in menu,
-    "Opt-in ad hiding must remove bot header and trailing sponsored entries while retaining Telegram copy protection.",
+    and "disableScreenshots: isSecret" in menu
+    and "signals.contains(\"disclosure\")" in classifier
+    and "signals.contains(\"erid\")" in classifier
+    and "collapseThreshold" in classifier,
+    "Opt-in sponsored hiding must leave Telegram copy protection enabled for protected chats.",
 )
 require(
     "sponsored-preference-default-and-change",
@@ -44,8 +48,10 @@ require(
 require(
     "heuristic-badge-boundary",
     "isOfficialSponsoredMessage: message.adAttribute != nil" in history
-    and "let veilgramLikelyChannelAd = message.adAttribute == nil && veilgramDecision.action != .keep" in history,
-    "Official sponsored messages must not receive the heuristic Possible ad badge.",
+    and "let veilgramLikelyChannelAd = message.adAttribute == nil && veilgramDecision.action != .keep" in history
+    and "if isOfficialSponsored {\n            return nil" not in render_runtime
+    and "precondition(decision == nil)" in (ROOT / "tools/test_veilgram_channel_ad_classifier.swift").read_text(encoding="utf-8"),
+    "Official sponsored messages must not receive the heuristic Possible ad badge, while opt-in filters still apply.",
 )
 require(
     "collapsed-layout-only",

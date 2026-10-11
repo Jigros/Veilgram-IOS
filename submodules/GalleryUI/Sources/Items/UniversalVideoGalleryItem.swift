@@ -231,6 +231,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
     private let adDisposable = MetaDisposable()
     
     private var adSchedule: [(Int32, Message?)] = []
+    private var adTimer: SwiftSignalKit.Timer?
 
     var performAction: ((GalleryControllerInteractionTapAction) -> Void)?
     var presentPremiumDemo: (() -> Void)?
@@ -239,9 +240,10 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
     private var validLayout: (size: CGSize, metrics: LayoutMetrics, insets: UIEdgeInsets, isHidden: Bool)?
         
     deinit {
+        self.adTimer?.invalidate()
         self.adDisposable.dispose()
     }
-    
+
     func setMessage(context: AccountContext, message: Message) {
         self.context = context
         guard self.message?.id != message.id else {
@@ -276,9 +278,11 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
                 }
                 schedule.append((startTime + maxDisplayDuration, nil))
                 self.adSchedule = schedule
+                self.updateAdTimerState()
             } else {
                 self.adState = nil
-                
+                self.adTimer?.invalidate()
+                self.adTimer = nil
                 self.adSchedule = []
             }
             
@@ -310,26 +314,48 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         }
     }
 
-    var timer: SwiftSignalKit.Timer?
     var hiddenMessages = Set<MessageId>()
     var isAnimatingOut = false
     var reportedMessages = Set<Data>()
     
+    override func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {
+        super.animateIn(previousContentNode: previousContentNode, transition: transition)
+        self.isActive = true
+        self.updateAdTimerState()
+    }
+
+    override func animateOut(nextContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+        self.isActive = false
+        self.updateAdTimerState()
+        super.animateOut(nextContentNode: nextContentNode, transition: transition, completion: completion)
+    }
+
+    private var isActive = false
+
+    private func updateAdTimerState() {
+        guard self.isActive, self.adState != nil else {
+            self.adTimer?.invalidate()
+            self.adTimer = nil
+            return
+        }
+        guard self.adTimer == nil else {
+            return
+        }
+        let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
+            guard let self, self.isActive, let validLayout = self.validLayout else {
+                return
+            }
+            self.updateLayout(size: validLayout.size, metrics: validLayout.metrics, insets: validLayout.insets, isHidden: validLayout.isHidden, transition: .immediate)
+        }, queue: Queue.mainQueue())
+        self.adTimer = timer
+        timer.start()
+    }
+
     override func updateLayout(size: CGSize, metrics: LayoutMetrics, insets: UIEdgeInsets, isHidden: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, metrics, insets, isHidden)
+        self.updateAdTimerState()
         
-        if self.timer == nil && self.adState != nil {
-            self.timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] progress in
-                guard let self else {
-                    return
-                }
-                if let validLayout = self.validLayout {
-                    self.updateLayout(size: validLayout.size, metrics: validLayout.metrics, insets: validLayout.insets, isHidden: validLayout.isHidden, transition: .immediate)
-                }
-            }, queue: Queue.mainQueue())
-            self.timer?.start()
-        }
-        
+
         if let livePhotoButton = self.livePhotoButton {
             let livePhotoButtonSize = livePhotoButton.update(isPlaying: self.livePhotoButtonIsPlaying)
             if livePhotoButton.superview == nil {

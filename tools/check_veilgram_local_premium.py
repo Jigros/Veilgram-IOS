@@ -103,6 +103,15 @@ require(
     "Only the account's own open profile must refresh when local Premium presentation changes.",
 )
 
+ad_settings = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift").read_text(encoding="utf-8")
+require(
+    "strict-channel-ad-controls",
+    '"Detect channel ads locally"' in ad_settings
+    and '"Collapse likely channel ads"' in ad_settings
+    and "Strict text signals only" in ad_settings,
+    "Ordinary channel-ad filtering must be opt-in, independently collapsible and disclose heuristic false-positive risk.",
+)
+
 failed = [x for x in checks if not x[1]]
 for name, ok, detail in checks:
     print(f"{'PASS' if ok else 'FAIL'}: {name} — {detail}")
