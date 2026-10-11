@@ -105,19 +105,20 @@ enum VeilgramChannelAdClassifierTests {
         )
         precondition(decision == nil)
 
-        let hiddenSponsoredRuntime = VeilgramMessageRenderRuntime.evaluate(
+        let hiddenChannelAdRuntime = VeilgramMessageRenderRuntime.evaluate(
             accountId: runtimeAccount,
             message: sponsoredKey,
-            text: "Sponsored",
+            text: "#реклама erid:abcdef123",
             peerId: sponsoredKey.peerId,
-            hasLink: false,
+            hasLink: true,
             isForwarded: false,
             isBroadcastChannel: true,
-            isOfficialSponsored: true,
+            isOfficialSponsored: false,
             isServiceMessage: false,
             defaults: runtimeDefaults
         )
-        precondition(hiddenSponsoredRuntime == nil)
+        precondition(hiddenChannelAdRuntime?.isAdvertisement == true)
+        precondition(hiddenChannelAdRuntime?.shouldCollapse == true)
 
         var heuristic = VeilgramChannelAdOptions()
         heuristic.enabled = true
@@ -142,11 +143,11 @@ enum VeilgramChannelAdClassifierTests {
             hasLink: false,
             isForwarded: false,
             isBroadcastChannel: true,
-            isOfficialSponsored: true,
+            isOfficialSponsored: false,
             isServiceMessage: false,
             defaults: runtimeDefaults
         )
-        precondition(neighborDecision?.shouldCollapse == true)
+        precondition(neighborDecision?.shouldCollapse == false)
 
         let otherAccountDecision = VeilgramMessageRenderRuntime.evaluate(
             accountId: runtimeAccount + 1,
