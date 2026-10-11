@@ -120,7 +120,8 @@ enum VeilgramChannelAdClassifierTests {
             isServiceMessage: false,
             defaults: runtimeDefaults
         )
-        precondition(decision == nil)
+        precondition(decision?.isAdvertisement == true)
+        precondition(decision?.shouldCollapse == false)
 
         let hiddenChannelAdKey = VeilgramMessageKey(peerId: 9001, namespace: 0, id: 103)
         let hiddenChannelAdRuntime = VeilgramMessageRenderRuntime.evaluate(
