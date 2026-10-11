@@ -151,6 +151,9 @@ func chatHistoryEntriesForView(
     var count = 0
     loop: for entry in view.entries {
         var message = entry.message.withAppliedEphemeralReplacementMessage()
+        if message.adAttribute != nil && !UserDefaults.standard.bool(forKey: "veilgram.settings.v1.\(context.account.id.int64).showSponsoredMessages") {
+            continue loop
+        }
         var isRead = entry.isRead
         
         var pinToTop = false

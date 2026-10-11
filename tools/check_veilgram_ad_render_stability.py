@@ -29,7 +29,7 @@ require(
     "sponsored-surfaces-hidden",
     "hideAdPanel = VeilgramChannelAdClassifier.options" in node
     and "if !hideTopPanels, !hideAdPanel, let _ = self.chatPresentationInterfaceState.adMessage" in node
-    and "if message.adAttribute != nil && veilgramAdOptions.enabled {\n                    continue" in history
+    and 'if message.adAttribute != nil && !UserDefaults.standard.bool(forKey: "veilgram.settings.v1.\\(context.account.id.int64).showSponsoredMessages")' in history
     and "if !veilgramAdOptions.enabled && view.laterId == nil && !view.isLoading" in history
     and "disableScreenshots: isSecret" in menu,
     "Opt-in ad hiding must remove bot header and trailing sponsored entries while retaining Telegram copy protection.",

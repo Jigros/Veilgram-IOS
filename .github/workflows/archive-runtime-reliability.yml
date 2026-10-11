@@ -43,6 +43,7 @@ on:
       - "tools/check_veilgram_ad_render_stability.py"
       - "tools/test_veilgram_channel_ad_classifier.swift"
       - "tools/check_veilgram_archive_ui.py"
+      - "submodules/TelegramUI/Components/Chat/ChatMessageItemView/Sources/ChatMessageItemView.swift"
       - "tools/check_veilgram_ghost_story_views.py"
       - "tools/check_veilgram_ghost_receipts.py"
       - "submodules/TelegramCore/Sources/State/AccountViewTracker.swift"

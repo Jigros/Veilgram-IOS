@@ -50,8 +50,9 @@ require(
     "system-share",
     "UIActivityViewController" in source
     and "activityItems: [image]" in source
-    and "activityController.completionWithItemsHandler" in source,
-    "Generated image must be handed to the system share sheet with dismissal completion handling.",
+    and "presenter.present(activityController, animated: true)" in source
+    and "presenter.presentedViewController == nil" in source,
+    "Generated image must be presented by an available system share presenter.",
 )
 require(
     "presentation-safety",

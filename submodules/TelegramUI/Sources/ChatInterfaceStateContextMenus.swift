@@ -1466,20 +1466,20 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             )
                         },
                         action: { [weak messageNode] controller, completion in
-                                guard let controller else {
+                            guard let controller else {
+                                completion(.default)
+                                return
+                            }
+                            controller.dismiss(completion: {
+                                guard let messageNode,
+                                      !chatPresentationInterfaceState.copyProtectionEnabled,
+                                      !chatPresentationInterfaceState.myCopyProtectionEnabled else {
                                     completion(.default)
                                     return
                                 }
-                                controller.dismiss(completion: {
-                                    guard let messageNode,
-                                          !chatPresentationInterfaceState.copyProtectionEnabled,
-                                          !chatPresentationInterfaceState.myCopyProtectionEnabled else {
-                                        completion(.default)
-                                        return
-                                    }
                                 let nodeMessages = messageNode.messages()
                                 let requestedIds = selectAll ? Set(messages.map { $0.id }) : Set([message.id])
-                                guard                                           !nodeMessages.isEmpty,
+                                guard !nodeMessages.isEmpty,
                                       nodeMessages.count <= 10,
                                       nodeMessages.count == requestedIds.count,
                                       Set(nodeMessages.map { $0.id }) == requestedIds,
@@ -1496,6 +1496,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 let view = messageNode.view
                                 let bounds = view.bounds.integral
                                 guard bounds.width > 0.0, bounds.height > 0.0 else {
+                                    completion(.default)
                                     return
                                 }
                                 let renderer = UIGraphicsImageRenderer(bounds: bounds)
@@ -1505,20 +1506,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                     }
                                 }
                                 guard image.cgImage != nil else {
+                                    completion(.default)
                                     return
                                 }
                                 guard let presenter = controllerInteraction.navigationController(),
                                       presenter.viewIfLoaded?.window != nil,
                                       presenter.presentedViewController == nil else {
+                                    completion(.default)
                                     return
                                 }
                                 let activityController = UIActivityViewController(
                                     activityItems: [image],
                                     applicationActivities: nil
                                 )
-                                activityController.completionWithItemsHandler = { _, _, _, _ in
-                                    completion(.default)
-                                }
                                 if let popover = activityController.popoverPresentationController {
                                     popover.sourceView = presenter.view
                                     popover.sourceRect = CGRect(
@@ -1534,8 +1534,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         }
                     )))
                 }
-                }
-                
+
                 var showTranslateIfTopical = false
                 if let peer = chatPresentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, !(peer.addressName ?? "").isEmpty {
                     showTranslateIfTopical = true

@@ -225,8 +225,8 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
                 control.addTarget(self, action: #selector(adCollapseChanged(_:)), for: .valueChanged)
                 cell.accessoryView = control
             } else if indexPath.row == 12 {
-                cell.textLabel?.text = "Show Telegram sponsored messages"
-                cell.detailTextLabel?.text = "Hide sponsored messages and bot pinned ad panels in chats"
+                cell.textLabel?.text = "Hide Telegram sponsored messages"
+                cell.detailTextLabel?.text = "Hide sponsored messages and bot ad panels in chats"
                 let control = UISwitch()
                 control.isOn = self.showSponsoredMessages
                 control.addTarget(self, action: #selector(showSponsoredMessagesChanged(_:)), for: .valueChanged)
