@@ -707,7 +707,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         self.item = item
         
         let revisionCount = VeilgramArchiveRuntimeIndex.editRevisionCount(
-            accountId: self.context.account.id.int64,
+            accountId: item.context.account.peerId.toInt64(),
             key: VeilgramMessageKey(
                 peerId: item.message.id.peerId.toInt64(),
                 namespace: item.message.id.namespace,
