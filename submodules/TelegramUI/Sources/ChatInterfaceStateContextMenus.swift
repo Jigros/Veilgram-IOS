@@ -1451,7 +1451,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             f(.default)
                         })))
                     }
-
+                }
 
                 var showTranslateIfTopical = false
                 if let peer = chatPresentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, !(peer.addressName ?? "").isEmpty {
