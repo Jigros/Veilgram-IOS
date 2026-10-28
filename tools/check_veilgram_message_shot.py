@@ -4,6 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 source = (ROOT / "submodules/TelegramUI/Sources/ChatInterfaceStateContextMenus.swift").read_text(encoding="utf-8")
 video_gallery = (ROOT / "submodules/GalleryUI/Sources/Items/UniversalVideoGalleryItem.swift").read_text(encoding="utf-8")
+diagnostics = (ROOT / "submodules/TelegramUI/Sources/VeilgramDiagnostics.swift").read_text(encoding="utf-8")
 settings = (ROOT / "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/VeilgramSettingsController.swift").read_text(encoding="utf-8")
 
 checks = []
@@ -23,9 +24,11 @@ require(
     and "guard self.isActive, self.adState != nil" in video_gallery
     and "self.adTimer?.invalidate()\n            self.adTimer = nil" in video_gallery
     and "override func updateLayout(size: CGSize" in video_gallery
+    and 'guard UserDefaults.standard.object(forKey: showSponsoredPreferenceKey) == nil || UserDefaults.standard.bool(forKey: showSponsoredPreferenceKey) else {' in video_gallery
     and video_gallery.count("override func animateIn(previousContentNode:") == 1
     and video_gallery.count("override func animateOut(nextContentNode:") == 1
-    and "self.isActive = true\n        self.updateAdTimerState()" in video_gallery,
+    and "self.isActive = true\n        self.updateAdTimerState()" in video_gallery
+    and 'VeilgramDiagnostics.recordError(error, context: "gallery.picture-in-picture")' in video_gallery,
     "The fullscreen channel-video sponsored overlay must stop its timer and gate callbacks after dismissal.",
 )
 require(

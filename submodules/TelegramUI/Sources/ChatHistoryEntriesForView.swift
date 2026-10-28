@@ -12,6 +12,7 @@ import TextFormat
 import Markdown
 import Display
 import TelegramStringFormatting
+import VeilgramLocalFeatures
 
 struct ChatHistoryEntriesForViewState {
     private var messageStableIdToLocalId: [UInt32: Int64] = [:]
@@ -152,6 +153,7 @@ func chatHistoryEntriesForView(
     loop: for entry in view.entries {
         var message = entry.message.withAppliedEphemeralReplacementMessage()
         if message.adAttribute != nil && !UserDefaults.standard.bool(forKey: "veilgram.settings.v1.\(context.account.id.int64).showSponsoredMessages") {
+            TelegramCore.VeilgramDiagnostics.recordEvent("official-sponsored-filter", context: "chat.history", outcome: "hidden")
             continue loop
         }
         var isRead = entry.isRead
@@ -231,6 +233,9 @@ func chatHistoryEntriesForView(
         }
         
         let veilgramIsServiceMessage = message.media.contains(where: { $0 is TelegramMediaAction })
+        if message.adAttribute != nil {
+            TelegramCore.VeilgramDiagnostics.recordEvent("official-sponsored-filter", context: "chat.history", outcome: "shown")
+        }
         let veilgramDecision = VeilgramChannelAdClassifier.classify(
             VeilgramChannelAdInput(
                 text: message.text,
@@ -241,6 +246,18 @@ func chatHistoryEntriesForView(
             ),
             options: veilgramAdOptions
         )
+        if message.adAttribute == nil && veilgramIsBroadcastChannel && veilgramAdOptions.enabled {
+            let actionName: String
+            switch veilgramDecision.action {
+            case .keep:
+                actionName = "keep"
+            case .label:
+                actionName = "label"
+            case .collapse:
+                actionName = "collapse"
+            }
+            TelegramCore.VeilgramDiagnostics.recordEvent("channel-ad-classifier", context: "chat.history", outcome: "\(actionName)-score-\(veilgramDecision.score)-signals-\(veilgramDecision.signals.count)")
+        }
         let veilgramLikelyChannelAd = message.adAttribute == nil && veilgramDecision.action != .keep
         
         var contentTypeHint: ChatMessageEntryContentType = .generic

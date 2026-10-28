@@ -67,6 +67,7 @@ swift_library(
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/TelegramNotices:TelegramNotices",
+        "//submodules/VeilgramLocalFeatures:VeilgramLocalFeatures",
         "//submodules/TelegramCallsUI:TelegramCallsUI",
         "//submodules/TextFormat:TextFormat",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
