@@ -1,6 +1,9 @@
 name: Private Veilgram iPhone build
 
 on:
+  push:
+    branches:
+      - upstream/telegram-13.0.0
   workflow_dispatch:
     inputs:
       source_ref:
@@ -21,13 +24,14 @@ concurrency:
 
 jobs:
   private-device:
+    if: github.repository == 'Jigros/Veilgram-IOS'
     runs-on: macos-26
     timeout-minutes: 360
     steps:
       - name: Checkout requested source
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.source_ref }}
+          ref: ${{ github.event.inputs.source_ref || github.sha }}
           submodules: false
           fetch-depth: 1
           persist-credentials: false
@@ -151,7 +155,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/private_device_build.py \
-            --build-number "${{ inputs.build_number }}" \
+            --build-number "${{ github.event.inputs.build_number || github.run_number }}" \
             --cache-dir "$HOME/veilgram-private-device-bazel-cache"
           ipa="$(find .veilgram-private/artifacts -maxdepth 1 -type f -name '*.ipa' -print -quit)"
           test -n "$ipa"
