@@ -13,7 +13,7 @@ public enum VeilgramDiagnostics {
     public static func recordEvent(_ event: String, context: String, outcome: String) {
         guard let event = Event(rawValue: event),
               let context = Context(rawValue: context),
-              let outcome = event.outcomes.contains(outcome) else {
+              event.outcomes.contains(outcome) else {
             return
         }
         logAllowed("event=\(event.rawValue) context=\(context.rawValue) outcome=\(outcome)")
