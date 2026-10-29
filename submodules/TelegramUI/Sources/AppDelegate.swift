@@ -796,7 +796,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         logger.logToFile = isDebugConfiguration || buildConfig.isInternalBuild
         logger.logToConsole = isDebugConfiguration || buildConfig.isInternalBuild
         Logger.setSharedLogger(logger)
-        TelegramCore.VeilgramDiagnostics.installCrashHandlers()
+        VeilgramDiagnostics.installCrashHandlers()
 
         setManagedAudioSessionLogger({ s in
             Logger.shared.log("ManagedAudioSession", s)

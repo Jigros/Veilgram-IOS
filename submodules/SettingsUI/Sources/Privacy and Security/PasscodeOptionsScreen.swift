@@ -18,7 +18,7 @@ import ViewControllerComponent
 import MultilineTextComponent
 import ListSectionComponent
 import ListActionItemComponent
-import VeilgramLocalFeatures
+import TelegramCore
 
 private struct PasscodeOptionsScreenData: Equatable {
     var accessChallenge: PostboxAccessChallengeData

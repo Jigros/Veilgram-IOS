@@ -153,7 +153,7 @@ func chatHistoryEntriesForView(
     loop: for entry in view.entries {
         var message = entry.message.withAppliedEphemeralReplacementMessage()
         if message.adAttribute != nil && !UserDefaults.standard.bool(forKey: "veilgram.settings.v1.\(context.account.id.int64).showSponsoredMessages") {
-            TelegramCore.VeilgramDiagnostics.recordEvent("official-sponsored-filter", context: "chat.history", outcome: "hidden")
+            VeilgramDiagnostics.recordEvent("official-sponsored-filter", context: "chat.history", outcome: "hidden")
             continue loop
         }
         var isRead = entry.isRead
@@ -234,7 +234,7 @@ func chatHistoryEntriesForView(
         
         let veilgramIsServiceMessage = message.media.contains(where: { $0 is TelegramMediaAction })
         if message.adAttribute != nil {
-            TelegramCore.VeilgramDiagnostics.recordEvent("official-sponsored-filter", context: "chat.history", outcome: "shown")
+            VeilgramDiagnostics.recordEvent("official-sponsored-filter", context: "chat.history", outcome: "shown")
         }
         let veilgramDecision = VeilgramChannelAdClassifier.classify(
             VeilgramChannelAdInput(
@@ -256,7 +256,7 @@ func chatHistoryEntriesForView(
             case .collapse:
                 actionName = "collapse"
             }
-            TelegramCore.VeilgramDiagnostics.recordEvent("channel-ad-classifier", context: "chat.history", outcome: actionName)
+            VeilgramDiagnostics.recordEvent("channel-ad-classifier", context: "chat.history", outcome: actionName)
         }
         let veilgramLikelyChannelAd = message.adAttribute == nil && veilgramDecision.action != .keep
         
