@@ -930,7 +930,7 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
     }
 
     public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, failedToStartPictureInPictureWithError error: Error) {
-        print(error)
+        TelegramCore.VeilgramDiagnostics.recordError(error, context: "gallery.picture-in-picture")
     }
 
     public func pictureInPictureControllerWillStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {

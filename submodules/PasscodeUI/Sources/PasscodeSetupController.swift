@@ -11,6 +11,7 @@ import PresentationDataUtils
 import TelegramUIPreferences
 import LocalAuth
 import ContextUI
+import TelegramCore
 
 private final class PasscodeModeContextSource: ContextReferenceContentSource {
     private let sourceNode: HighlightableButtonNode
@@ -398,6 +399,7 @@ public func applicationPasscodeSetupController(
             switch result {
             case let .success((reference, session)):
                 if Task.isCancelled { session?.invalidate() }
+                TelegramCore.VeilgramDiagnostics.recordEvent("passcode-setup", context: "passcode.setup", outcome: "credential-committed")
                 authorizationSession?.invalidate()
                 // A committed credential must reach AccountManager even after UI cancellation.
                 let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in
@@ -412,6 +414,7 @@ public func applicationPasscodeSetupController(
                     completion(reference)
                 })
             case let .failure(error):
+                TelegramCore.VeilgramDiagnostics.recordError(error, context: "passcode.setup")
                 DispatchQueue.main.async { [weak controller] in
                     guard lifecycle.accepts(generation: generation) else { return }
                     savingTask = nil

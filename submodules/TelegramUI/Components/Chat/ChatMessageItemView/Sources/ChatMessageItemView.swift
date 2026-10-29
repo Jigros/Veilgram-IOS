@@ -663,9 +663,9 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     open var awaitingAppliedReaction: (MessageReaction.Reaction?, () -> Void)?
     
     private var fetchEffectDisposable: Disposable?
-    private var veilgramDeletedBadgeNode: ASTextNode?
+    private var veilgramDeletedBadgeNode: ASImageNode?
     private var veilgramEditHistoryButtonNode: ASButtonNode?
-    private var veilgramRenderLabelNode: ASTextNode?
+    private var veilgramRenderLabelNode: ASDisplayNode?
     private var veilgramCollapseButtonNode: ASButtonNode?
     
     public var playedEffectAnimation: Bool = false
@@ -707,23 +707,16 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         self.item = item
         
         if item.message.veilgramIsLocallyRetainedDeletedMessage {
-            let badgeNode: ASTextNode
-            if let current = self.veilgramDeletedBadgeNode {
-                badgeNode = current
-            } else {
-                badgeNode = ASTextNode()
+            if self.veilgramDeletedBadgeNode == nil {
+                let badgeNode = ASImageNode()
                 badgeNode.isUserInteractionEnabled = false
+                badgeNode.image = UIImage(systemName: "arrow.uturn.backward.circle.fill")
+                badgeNode.tintColor = .secondaryLabel
+                badgeNode.contentMode = .scaleAspectFit
                 self.veilgramDeletedBadgeNode = badgeNode
                 self.addSubnode(badgeNode)
             }
-            badgeNode.attributedText = NSAttributedString(
-                string: "Deleted",
-                attributes: [
-                    .font: UIFont.systemFont(ofSize: 11.0, weight: .semibold),
-                    .foregroundColor: UIColor.systemRed
-                ]
-            )
-            self.alpha = 0.82
+            self.alpha = 1.0
         } else {
             self.alpha = 1.0
             self.veilgramDeletedBadgeNode?.removeFromSupernode()
@@ -753,10 +746,13 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                 self.veilgramEditHistoryButtonNode = buttonNode
                 self.addSubnode(buttonNode)
             }
+            let editIcon = UIImage(systemName: "pencil.circle")?.withRenderingMode(.alwaysTemplate)
+            buttonNode.setImage(editIcon, for: [])
+            buttonNode.imageNode.tintColor = .secondaryLabel
             buttonNode.setTitle(
-                editCount == 1 ? "1 previous edit" : "\(editCount) previous edits",
-                with: UIFont.systemFont(ofSize: 11.0, weight: .semibold),
-                with: UIColor.systemBlue,
+                "Edited · \(editCount)",
+                with: UIFont.systemFont(ofSize: 11.0, weight: .regular),
+                with: UIColor.secondaryLabel,
                 for: []
             )
         } else {
@@ -778,11 +774,12 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                 buttonNode.cornerRadius = 10.0
                 buttonNode.layer.zPosition = 1000.0
                 buttonNode.setTitle(
-                    "Hidden: \(renderDecision.label)  •  Reveal",
-                    with: UIFont.systemFont(ofSize: 13.0, weight: .semibold),
+                    "Ad hidden · Tap to view",
+                    with: UIFont.systemFont(ofSize: 13.0, weight: .medium),
                     with: UIColor.label,
                     for: []
                 )
+                TelegramCore.VeilgramDiagnostics.recordEvent("channel-ad-render", context: "message.item", outcome: "collapsed")
                 buttonNode.addTarget(
                     self,
                     action: #selector(self.veilgramRevealFilteredMessagePressed),
@@ -791,18 +788,32 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                 self.veilgramCollapseButtonNode = buttonNode
                 self.addSubnode(buttonNode)
             } else {
+                let badgeNode = ASDisplayNode()
+                badgeNode.backgroundColor = UIColor.secondarySystemBackground.withAlphaComponent(0.92)
+                badgeNode.cornerRadius = 9.0
+                badgeNode.isUserInteractionEnabled = false
+                let iconNode = ASImageNode()
+                iconNode.image = UIImage(systemName: renderDecision.isAdvertisement ? "megaphone.fill" : "line.3.horizontal.decrease.circle.fill")?.withRenderingMode(.alwaysTemplate)
+                iconNode.tintColor = .secondaryLabel
+                iconNode.contentMode = .scaleAspectFit
                 let labelNode = ASTextNode()
                 labelNode.isUserInteractionEnabled = false
                 labelNode.attributedText = NSAttributedString(
-                    string: renderDecision.isAdvertisement ? renderDecision.label : "Filter: \(renderDecision.label)",
+                    string: renderDecision.isAdvertisement ? "Ad" : "Filtered",
                     attributes: [
-                        .font: UIFont.systemFont(ofSize: 10.0, weight: .semibold),
-                        .foregroundColor: renderDecision.isAdvertisement ? UIColor.systemOrange : UIColor.systemPurple
+                        .font: UIFont.systemFont(ofSize: 10.0, weight: .medium),
+                        .foregroundColor: UIColor.secondaryLabel
                     ]
                 )
-                labelNode.layer.zPosition = 900.0
-                self.veilgramRenderLabelNode = labelNode
-                self.addSubnode(labelNode)
+                badgeNode.addSubnode(iconNode)
+                badgeNode.addSubnode(labelNode)
+                badgeNode.frame = .zero
+                iconNode.frame = CGRect(x: 6.0, y: 4.0, width: 10.0, height: 10.0)
+                labelNode.frame = CGRect(x: 19.0, y: 3.0, width: 36.0, height: 12.0)
+                badgeNode.layer.zPosition = 900.0
+                TelegramCore.VeilgramDiagnostics.recordEvent("channel-ad-render", context: "message.item", outcome: "labeled")
+                self.veilgramRenderLabelNode = badgeNode
+                self.addSubnode(badgeNode)
             }
         }
         self.setNeedsLayout()
@@ -810,34 +821,35 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     
     override open func layout() {
         super.layout()
-        if let badgeNode = self.veilgramDeletedBadgeNode {
-            let maxWidth = max(0.0, self.bounds.width - 24.0)
-            let size = badgeNode.measure(CGSize(width: maxWidth, height: 18.0))
-            badgeNode.frame = CGRect(
-                x: max(12.0, self.bounds.width - size.width - 12.0),
-                y: 4.0,
-                width: size.width,
-                height: size.height
-            )
-        }
+        let horizontalInset: CGFloat = 12.0
+        let topInset: CGFloat = 2.0
+        let availableWidth = max(0.0, self.bounds.width - horizontalInset * 2.0)
+        var indicatorX = horizontalInset
+        let deletedBadgeSize: CGFloat = self.veilgramDeletedBadgeNode == nil ? 0.0 : 14.0
+        let trailingInset = horizontalInset + deletedBadgeSize + (deletedBadgeSize > 0.0 ? 8.0 : 0.0)
         if let buttonNode = self.veilgramEditHistoryButtonNode {
-            let maxWidth = max(0.0, self.bounds.width - 24.0)
-            let size = buttonNode.measure(CGSize(width: maxWidth, height: 22.0))
-            buttonNode.frame = CGRect(
-                x: 12.0,
-                y: 2.0,
-                width: size.width,
-                height: max(22.0, size.height)
-            )
+            let buttonSize = buttonNode.measure(CGSize(width: availableWidth, height: 22.0))
+            let buttonWidth = min(availableWidth, buttonSize.width)
+            buttonNode.frame = CGRect(x: indicatorX, y: topInset, width: buttonWidth, height: 22.0)
+            indicatorX += buttonWidth + 8.0
         }
         if let labelNode = self.veilgramRenderLabelNode {
-            let maxWidth = max(0.0, self.bounds.width - 24.0)
-            let size = labelNode.measure(CGSize(width: maxWidth, height: 18.0))
-            labelNode.frame = CGRect(
-                x: 12.0,
-                y: 22.0,
-                width: size.width,
-                height: size.height
+            if let childLabel = labelNode.subnodes?.compactMap({ $0 as? ASTextNode }).first {
+                let labelSize = childLabel.measure(CGSize(width: max(0.0, self.bounds.width - indicatorX - trailingInset - 22.0), height: 18.0))
+                let badgeWidth = min(self.bounds.width - indicatorX - trailingInset, labelSize.width + 31.0)
+                labelNode.frame = CGRect(x: indicatorX, y: topInset + 1.0, width: badgeWidth, height: 18.0)
+                childLabel.frame = CGRect(x: 19.0, y: 3.0, width: max(0.0, badgeWidth - 23.0), height: 12.0)
+                if let iconNode = labelNode.subnodes?.compactMap({ $0 as? ASImageNode }).first {
+                    iconNode.frame = CGRect(x: 6.0, y: 4.0, width: 10.0, height: 10.0)
+                }
+            }
+        }
+        if let badgeNode = self.veilgramDeletedBadgeNode {
+            badgeNode.frame = CGRect(
+                x: max(horizontalInset, self.bounds.width - horizontalInset - deletedBadgeSize),
+                y: topInset + 2.0,
+                width: deletedBadgeSize,
+                height: deletedBadgeSize
             )
         }
         if let buttonNode = self.veilgramCollapseButtonNode {

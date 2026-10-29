@@ -39,6 +39,9 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
         self.showSponsoredPreferenceKey = "veilgram.settings.v1.\(context.account.id.int64).showSponsoredMessages"
         self.showRoadmap = UserDefaults.standard.bool(forKey: self.roadmapPreferenceKey)
         self.adFilterEnabled = UserDefaults.standard.bool(forKey: self.adFilterPreferenceKey)
+        if UserDefaults.standard.object(forKey: self.adCollapsePreferenceKey) == nil {
+            UserDefaults.standard.set(true, forKey: self.adCollapsePreferenceKey)
+        }
         self.adCollapseEnabled = UserDefaults.standard.bool(forKey: self.adCollapsePreferenceKey)
         self.showSponsoredMessages = UserDefaults.standard.object(forKey: self.showSponsoredPreferenceKey) == nil ? true : UserDefaults.standard.bool(forKey: self.showSponsoredPreferenceKey)
         let accountPeerId = context.account.peerId.toInt64()
@@ -422,6 +425,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     @objc private func adFilterChanged(_ sender: UISwitch) {
         self.adFilterEnabled = sender.isOn
         UserDefaults.standard.set(sender.isOn, forKey: self.adFilterPreferenceKey)
+        VeilgramDiagnostics.recordEvent("channel-ad-filter", context: "settings", outcome: sender.isOn ? "enabled" : "disabled")
         if !sender.isOn {
             self.adCollapseEnabled = false
             UserDefaults.standard.set(false, forKey: self.adCollapsePreferenceKey)
@@ -432,6 +436,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     @objc private func showSponsoredMessagesChanged(_ sender: UISwitch) {
         self.showSponsoredMessages = sender.isOn
         UserDefaults.standard.set(sender.isOn, forKey: self.showSponsoredPreferenceKey)
+        VeilgramDiagnostics.recordEvent("official-sponsored-filter", context: "settings", outcome: sender.isOn ? "shown" : "hidden")
         NotificationCenter.default.post(
             name: Notification.Name("org.veilgram.ads.show-sponsored-changed"),
             object: NSNumber(value: self.accountContext.account.id.int64)
@@ -441,5 +446,6 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     @objc private func adCollapseChanged(_ sender: UISwitch) {
         self.adCollapseEnabled = sender.isOn
         UserDefaults.standard.set(sender.isOn, forKey: self.adCollapsePreferenceKey)
+        VeilgramDiagnostics.recordEvent("channel-ad-collapse", context: "settings", outcome: sender.isOn ? "enabled" : "disabled")
     }
 }

@@ -45,13 +45,15 @@ require(
 require(
     "inline-deleted",
     "veilgramDeletedBadgeNode" in chat_view
-    and 'string: "Deleted"' in chat_view,
+    and 'UIImage(systemName: "arrow.uturn.backward.circle.fill")' in chat_view
+    and "UIColor.systemRed" not in chat_view,
     "Retained deleted messages must have an inline Deleted indicator.",
 )
 require(
     "inline-edits",
     "veilgramEditHistoryButtonNode" in chat_view
-    and "previous edit" in chat_view
+    and '"Edited · \\(editCount)"' in chat_view
+    and 'UIImage(systemName: "pencil.circle")' in chat_view
     and "VeilgramArchiveRuntimeIndex.editRevisionCount" in chat_view
     and "veilgramEditHistoryPressed" in chat_view,
     "Messages with saved revisions must expose inline edit-history navigation.",

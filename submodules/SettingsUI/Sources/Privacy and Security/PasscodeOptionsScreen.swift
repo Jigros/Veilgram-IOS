@@ -18,6 +18,7 @@ import ViewControllerComponent
 import MultilineTextComponent
 import ListSectionComponent
 import ListActionItemComponent
+import VeilgramLocalFeatures
 
 private struct PasscodeOptionsScreenData: Equatable {
     var accessChallenge: PostboxAccessChallengeData
@@ -77,6 +78,7 @@ private final class PasscodeOptionsScreenModel {
     let sessionState: PasscodeSettingsSessionState
     private let allowFourDigitPasscode: Bool
     weak var controller: PasscodeOptionsScreen?
+    private var pendingCredentialOperation: UInt64?
 
     private(set) var state = PasscodeOptionsScreenState()
     private let statePromise = ValuePromise(PasscodeOptionsScreenState(), ignoreRepeated: true)
@@ -124,7 +126,14 @@ private final class PasscodeOptionsScreenModel {
 
         self.disposables.add((PasscodeCredentialStore.shared.changes
         |> deliverOnMainQueue).start(next: { [weak self] _ in
-            self?.refreshProtection(reportError: false)
+            guard let self else { return }
+            if let operation = self.pendingCredentialOperation {
+                self.pendingCredentialOperation = nil
+                self.sessionState.finish(operation: operation)
+                self.updateState()
+                TelegramCore.VeilgramDiagnostics.recordEvent("passcode-setup", context: "settings", outcome: "credential-changed")
+            }
+            self.refreshProtection(reportError: false)
         }))
 
         let accountId = context.account.id
@@ -192,6 +201,7 @@ private final class PasscodeOptionsScreenModel {
         }
         self.isClosed = true
         self.refreshGeneration &+= 1
+        self.pendingCredentialOperation = nil
         self.sessionState.close()
         self.activeBiometricContext?.invalidate()
         self.activeBiometricContext = nil
@@ -261,8 +271,11 @@ private final class PasscodeOptionsScreenModel {
         if refreshProtection {
             self.refreshProtection(reportError: false)
         }
-        if let error, (error as? PasscodeError) != .cancelled {
-            self.presentProtectionError()
+        if let error {
+            if (error as? PasscodeError) != .cancelled {
+                TelegramCore.VeilgramDiagnostics.recordError(error, context: "passcode.settings.operation")
+                self.presentProtectionError()
+            }
         }
     }
 
@@ -434,6 +447,7 @@ private final class PasscodeOptionsScreenModel {
             return
         }
         let generation = self.sessionState.generation
+        let previousCredential = self.state.protection?.passcode
         weak var setupController: ViewController?
         let controller = applicationPasscodeSetupController(context: self.context, session: session, change: session != nil, ownsAuthorizationSession: false, preferredModalWidth: 480.0, allowFourDigitPasscode: self.allowFourDigitPasscode, settingsSessionCompleted: { [weak self] session in
             guard let self, self.sessionState.accepts(operation: operation) else {
@@ -455,7 +469,12 @@ private final class PasscodeOptionsScreenModel {
                 return
             }
             self.state.data?.accessChallenge = accessChallengeData(reference: reference)
-            self.finishOperation(operation, refreshProtection: true)
+            if previousCredential == nil {
+                self.pendingCredentialOperation = operation
+            } else {
+                TelegramCore.VeilgramDiagnostics.recordEvent("passcode-setup", context: "settings", outcome: "credential-updated")
+                self.finishOperation(operation, refreshProtection: true)
+            }
             let _ = navigation.popViewController(animated: true)
         })
         setupController = controller

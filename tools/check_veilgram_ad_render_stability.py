@@ -9,6 +9,7 @@ render_runtime = (ROOT / "submodules/VeilgramLocalFeatures/Sources/VeilgramMessa
 node = (ROOT / "submodules/TelegramUI/Sources/ChatControllerNode.swift").read_text(encoding="utf-8")
 menu = (ROOT / "submodules/TelegramUI/Sources/Chat/ChatControllerOpenMessageContextMenu.swift").read_text(encoding="utf-8")
 history = (ROOT / "submodules/TelegramUI/Sources/ChatHistoryEntriesForView.swift").read_text(encoding="utf-8")
+history_node = (ROOT / "submodules/TelegramUI/Sources/ChatHistoryListNode.swift").read_text(encoding="utf-8")
 classifier = (ROOT / "submodules/TelegramUI/Sources/VeilgramChannelAdClassifier.swift").read_text(encoding="utf-8")
 
 checks = []
@@ -31,6 +32,8 @@ require(
     'showSponsoredPreferenceKey = "veilgram.settings.v1.\\(self.context.account.id.int64).showSponsoredMessages"' in node
     and "if !hideTopPanels, showSponsoredMessages, let _ = self.chatPresentationInterfaceState.adMessage" in node
     and 'if message.adAttribute != nil && !UserDefaults.standard.bool(forKey: "veilgram.settings.v1.\\(context.account.id.int64).showSponsoredMessages")' in history
+    and "let shouldShowSponsoredMessages = UserDefaults.standard.object(forKey: showSponsoredPreferenceKey) == nil" in history_node
+    and "self.allAdMessages = (shouldShowSponsoredMessages ? fixedMessage : nil, [], 0)" in history_node
     and "if !veilgramAdOptions.enabled && view.laterId == nil && !view.isLoading" in history
     and "disableScreenshots: isSecret" in menu
     and "signals.contains(\"disclosure\")" in classifier
@@ -42,7 +45,8 @@ require(
     "sponsored-preference-default-and-change",
     "showSponsoredPreferenceKey" in settings
     and "object(forKey: self.showSponsoredPreferenceKey) == nil ? true" in settings
-    and 'Notification.Name("org.veilgram.ads.show-sponsored-changed")' in settings,
+    and 'Notification.Name("org.veilgram.ads.show-sponsored-changed")' in settings
+    and "shouldShowSponsoredMessages" in history_node,
     "Sponsored surfaces must remain visible by default and use an account-scoped live setting.",
 )
 require(

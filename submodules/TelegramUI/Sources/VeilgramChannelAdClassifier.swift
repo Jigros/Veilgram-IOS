@@ -39,7 +39,8 @@ enum VeilgramChannelAdClassifier {
     static func options(accountId: Int64, defaults: UserDefaults = .standard) -> VeilgramChannelAdOptions {
         let prefix = "veilgram.settings.v1.\(accountId)"
         let enabled = defaults.bool(forKey: "\(prefix).channelAdFilterEnabled")
-        let collapse = enabled && defaults.bool(forKey: "\(prefix).channelAdCollapseEnabled")
+        let collapseKey = "\(prefix).channelAdCollapseEnabled"
+        let collapse = enabled && (defaults.object(forKey: collapseKey) == nil || defaults.bool(forKey: collapseKey))
         return VeilgramChannelAdOptions(
             enabled: enabled,
             collapseEnabled: collapse,

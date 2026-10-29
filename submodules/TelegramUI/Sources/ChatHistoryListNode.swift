@@ -1530,7 +1530,12 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     }
                 }
                 
-                self.allAdMessages = (messages.first, [], 0)
+                let showSponsoredPreferenceKey = "veilgram.settings.v1.\(self.context.account.id.int64).showSponsoredMessages"
+                let shouldShowSponsoredMessages = UserDefaults.standard.object(forKey: showSponsoredPreferenceKey) == nil
+                    ? true
+                    : UserDefaults.standard.bool(forKey: showSponsoredPreferenceKey)
+                let fixedMessage = messages.first
+                self.allAdMessages = (shouldShowSponsoredMessages ? fixedMessage : nil, [], 0)
             }
         }).strict()
     }
