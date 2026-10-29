@@ -425,7 +425,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     @objc private func adFilterChanged(_ sender: UISwitch) {
         self.adFilterEnabled = sender.isOn
         UserDefaults.standard.set(sender.isOn, forKey: self.adFilterPreferenceKey)
-        TelegramCore.VeilgramDiagnostics.recordEvent("channel-ad-filter", context: "settings", outcome: sender.isOn ? "enabled" : "disabled")
+        VeilgramLocalFeatures.VeilgramDiagnostics.recordEvent("channel-ad-filter", context: "settings", outcome: sender.isOn ? "enabled" : "disabled")
         if !sender.isOn {
             self.adCollapseEnabled = false
             UserDefaults.standard.set(false, forKey: self.adCollapsePreferenceKey)
@@ -436,7 +436,7 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     @objc private func showSponsoredMessagesChanged(_ sender: UISwitch) {
         self.showSponsoredMessages = sender.isOn
         UserDefaults.standard.set(sender.isOn, forKey: self.showSponsoredPreferenceKey)
-        TelegramCore.VeilgramDiagnostics.recordEvent("official-sponsored-filter", context: "settings", outcome: sender.isOn ? "shown" : "hidden")
+        VeilgramLocalFeatures.VeilgramDiagnostics.recordEvent("official-sponsored-filter", context: "settings", outcome: sender.isOn ? "shown" : "hidden")
         NotificationCenter.default.post(
             name: Notification.Name("org.veilgram.ads.show-sponsored-changed"),
             object: NSNumber(value: self.accountContext.account.id.int64)
@@ -446,6 +446,6 @@ final class VeilgramSettingsController: ViewController, UITableViewDataSource, U
     @objc private func adCollapseChanged(_ sender: UISwitch) {
         self.adCollapseEnabled = sender.isOn
         UserDefaults.standard.set(sender.isOn, forKey: self.adCollapsePreferenceKey)
-        TelegramCore.VeilgramDiagnostics.recordEvent("channel-ad-collapse", context: "settings", outcome: sender.isOn ? "enabled" : "disabled")
+        VeilgramLocalFeatures.VeilgramDiagnostics.recordEvent("channel-ad-collapse", context: "settings", outcome: sender.isOn ? "enabled" : "disabled")
     }
 }

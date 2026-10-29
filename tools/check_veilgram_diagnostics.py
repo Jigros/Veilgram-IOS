@@ -24,7 +24,7 @@ checks = {
     "passcode-success-logging": 'TelegramCore.VeilgramDiagnostics.recordEvent("passcode-setup", context: "settings", outcome: "credential-changed")' in settings_diagnostics,
     "video-failure-logging": 'TelegramCore.VeilgramDiagnostics.recordError(error, context: "gallery.picture-in-picture")' in gallery,
     "sponsored-post-outcomes": 'VeilgramDiagnostics.recordEvent("official-sponsored-filter"' in history and 'VeilgramDiagnostics.recordEvent("channel-ad-classifier"' in history and 'outcome: actionName' in history and "veilgramDecision.score" not in history and "veilgramDecision.signals" not in history,
-    "settings-outcome-logging": 'TelegramCore.VeilgramDiagnostics.recordEvent("channel-ad-collapse"' in settings and 'TelegramCore.VeilgramDiagnostics.recordEvent("passcode-setup"' in settings_diagnostics and "//submodules/TelegramCore:TelegramCore" in settings_build,
+    "settings-outcome-logging": 'VeilgramLocalFeatures.VeilgramDiagnostics.recordEvent("channel-ad-collapse"' in settings and 'TelegramCore.VeilgramDiagnostics.recordEvent("passcode-setup"' in settings_diagnostics and "//submodules/TelegramCore:TelegramCore" in settings_build,
     "default-collapse-enabled": "defaults.object(forKey: collapseKey) == nil || defaults.bool(forKey: collapseKey)" in classifier,
 }
 
