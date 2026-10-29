@@ -23,7 +23,7 @@ checks = {
     "passcode-success-logging": 'TelegramCore.VeilgramDiagnostics.recordEvent("passcode-setup", context: "settings", outcome: "credential-changed")' in settings_diagnostics,
     "video-failure-logging": 'TelegramCore.VeilgramDiagnostics.recordError(error, context: "gallery.picture-in-picture")' in gallery,
     "sponsored-post-outcomes": 'TelegramCore.VeilgramDiagnostics.recordEvent("official-sponsored-filter"' in history and 'TelegramCore.VeilgramDiagnostics.recordEvent("channel-ad-classifier"' in history and 'outcome: actionName' in history and "veilgramDecision.score" not in history and "veilgramDecision.signals" not in history,
-    "settings-outcome-logging": 'VeilgramDiagnostics.recordEvent("channel-ad-collapse"' in settings,
+    "settings-outcome-logging": 'TelegramCore.VeilgramDiagnostics.recordEvent("channel-ad-collapse"' in settings,
     "default-collapse-enabled": "defaults.object(forKey: collapseKey) == nil || defaults.bool(forKey: collapseKey)" in classifier,
     "gallery-does-not-import-extra-module": "import VeilgramLocalFeatures" not in gallery,
 }
